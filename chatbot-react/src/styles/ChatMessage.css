@@ -1,0 +1,26 @@
+.message {
+  max-width: 80%;
+  padding: 12px 16px;
+  border-radius: 10px;
+  line-height: 1.5;
+}
+
+.message.user {
+  align-self: flex-end;
+  background-color: #4a6fa5;
+  color: white;
+}
+
+.message.assistant {
+  align-self: flex-start;
+  background-color: #f0f0f0;
+  color: #333;
+}
+
+.message.system {
+  align-self: center;
+  background-color: #f8f8f8;
+  color: #666;
+  border: 1px solid #eee;
+  font-style: italic;
+} 

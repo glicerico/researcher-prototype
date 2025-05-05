@@ -1,0 +1,11 @@
+.model-selector {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.model-selector select {
+  padding: 5px 10px;
+  border-radius: 5px;
+  border: none;
+} 
