@@ -131,4 +131,5 @@ This creates a build directory with optimized production files that can be serve
 
 ## License
 
-MIT
+GPLv3
+
