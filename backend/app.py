@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from models import ChatRequest, ChatResponse, Message
+from models import ChatRequest, ChatResponse, Message, PersonalityConfig
 from graph import chat_graph
 import config
 import traceback
@@ -42,7 +42,11 @@ async def chat(request: ChatRequest):
             "messages": [{"role": m.role, "content": m.content} for m in request.messages],
             "model": request.model,
             "temperature": request.temperature,
-            "max_tokens": request.max_tokens
+            "max_tokens": request.max_tokens,
+            "personality": request.personality.dict() if request.personality else None,
+            "current_module": None,
+            "module_results": {},
+            "orchestrator_state": {}
         }
         
         # Run the graph
@@ -57,10 +61,14 @@ async def chat(request: ChatRequest):
         # Extract the assistant's response (the last message)
         assistant_message = result["messages"][-1]
         
+        # Get which module was used
+        module_used = result.get("current_module", "unknown")
+        
         return ChatResponse(
             response=assistant_message["content"],
             model=request.model,
-            usage={}  # In a real app, you might want to track token usage
+            usage={},  # In a real app, you might want to track token usage
+            module_used=module_used
         )
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
@@ -79,7 +87,11 @@ async def debug(request: ChatRequest):
             "messages": [{"role": m.role, "content": m.content} for m in request.messages],
             "model": request.model,
             "temperature": request.temperature,
-            "max_tokens": request.max_tokens
+            "max_tokens": request.max_tokens,
+            "personality": request.personality.dict() if request.personality else None,
+            "current_module": None,
+            "module_results": {},
+            "orchestrator_state": {}
         }
         
         # Return the state without processing it
@@ -94,6 +106,22 @@ async def debug(request: ChatRequest):
             "error": str(e),
             "traceback": traceback.format_exc()
         }
+
+
+@app.get("/personality-presets")
+async def get_personality_presets():
+    """Return predefined personality presets that users can choose from."""
+    presets = {
+        "default": PersonalityConfig(style="helpful", tone="friendly"),
+        "professional": PersonalityConfig(style="expert", tone="professional"),
+        "creative": PersonalityConfig(style="creative", tone="enthusiastic"),
+        "concise": PersonalityConfig(style="concise", tone="direct"),
+    }
+    
+    # Convert to dict for JSON response
+    return {
+        "presets": {k: v.dict() for k, v in presets.items()}
+    }
 
 
 if __name__ == "__main__":
