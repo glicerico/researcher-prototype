@@ -4,9 +4,22 @@ from langgraph.graph import StateGraph, END
 import config
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import logging
+import os
+from pathlib import Path
+
+# Import our storage components
+from storage.storage_manager import StorageManager
+from storage.user_manager import UserManager
+from storage.conversation_manager import ConversationManager
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
+
+# Initialize storage components
+storage_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage_data")
+storage_manager = StorageManager(storage_dir)
+user_manager = UserManager(storage_manager)
+conversation_manager = ConversationManager(storage_manager, user_manager)
 
 
 class ChatState(TypedDict):
@@ -18,6 +31,8 @@ class ChatState(TypedDict):
     current_module: Annotated[Optional[str], "The current active module"]
     module_results: Annotated[Dict[str, Any], "Results from different modules"]
     orchestrator_state: Annotated[Dict[str, Any], "State maintained by the orchestrator"]
+    user_id: Annotated[Optional[str], "The ID of the current user"]
+    conversation_id: Annotated[Optional[str], "The ID of the current conversation"]
 
 
 def create_chat_graph():
@@ -39,7 +54,44 @@ def create_chat_graph():
         # Initialize personality if it doesn't exist
         if "personality" not in state or not state["personality"]:
             state["personality"] = {"style": "helpful", "tone": "friendly"}
+        
+        # Handle user management - create or get user
+        user_id = state.get("user_id")
+        if not user_id or not user_manager.user_exists(user_id):
+            # Create a new user if needed
+            user_id = user_manager.create_user({
+                "created_from": "chat_graph",
+                "initial_personality": state.get("personality", {})
+            })
+            state["user_id"] = user_id
+            logger.info(f"Created new user: {user_id}")
+        else:
+            # Update personality from stored preferences if not explicitly provided
+            if not state.get("personality"):
+                state["personality"] = user_manager.get_personality(user_id)
+                logger.debug(f"Loaded personality for user {user_id}: {state['personality']}")
+                
+        # Handle conversation management
+        conversation_id = state.get("conversation_id")
+        if not conversation_id or not conversation_manager.get_conversation(user_id, conversation_id):
+            # Create a new conversation
+            conversation_id = conversation_manager.create_conversation(user_id, {
+                "name": f"Conversation {conversation_manager.list_conversations(user_id).__len__() + 1}",
+                "model": state.get("model", config.DEFAULT_MODEL)
+            })
+            state["conversation_id"] = conversation_id
+            logger.info(f"Created new conversation: {conversation_id} for user: {user_id}")
             
+            # Add any existing messages to the conversation
+            for message in state.get("messages", []):
+                conversation_manager.add_message(
+                    user_id, 
+                    conversation_id,
+                    message.get("role"),
+                    message.get("content"),
+                    message.get("metadata", {})
+                )
+        
         # Get the last user message
         last_message = None
         for msg in reversed(state["messages"]):
@@ -121,11 +173,30 @@ def create_chat_graph():
             response = llm.invoke(langchain_messages)
             logger.debug(f"Received response: {response}")
             
-            # Add the response to the messages
-            state["messages"].append({"role": "assistant", "content": response.content})
+            # Create the response message
+            assistant_message = {
+                "role": "assistant", 
+                "content": response.content,
+                "metadata": {"model": model, "module": "chat"}
+            }
+            
+            # Add the response to the messages in state
+            state["messages"].append(assistant_message)
             
             # Store the result in module_results
             state["module_results"]["chat"] = response.content
+            
+            # Save the response to conversation history
+            user_id = state.get("user_id")
+            conversation_id = state.get("conversation_id")
+            if user_id and conversation_id:
+                conversation_manager.add_message(
+                    user_id,
+                    conversation_id,
+                    "assistant",
+                    response.content,
+                    {"model": model, "module": "chat"}
+                )
             
         except Exception as e:
             logger.error(f"Error in chat_node: {str(e)}", exc_info=True)
@@ -152,11 +223,30 @@ def create_chat_graph():
         # Generate a simulated search response
         search_response = f"I searched for information about '{last_message}' and found some relevant results. [This is a simulated search response]"
         
-        # Add the response to the messages
-        state["messages"].append({"role": "assistant", "content": search_response})
+        # Create the response message
+        assistant_message = {
+            "role": "assistant", 
+            "content": search_response,
+            "metadata": {"module": "search"}
+        }
+        
+        # Add the response to the messages in state
+        state["messages"].append(assistant_message)
         
         # Store the result in module_results
         state["module_results"]["search"] = search_response
+        
+        # Save the response to conversation history
+        user_id = state.get("user_id")
+        conversation_id = state.get("conversation_id")
+        if user_id and conversation_id:
+            conversation_manager.add_message(
+                user_id,
+                conversation_id,
+                "assistant",
+                search_response,
+                {"module": "search"}
+            )
         
         return state
         
@@ -178,11 +268,30 @@ def create_chat_graph():
         # Generate a simulated analysis response
         analysis_response = f"I analyzed the data related to '{last_message}' and found some interesting patterns. [This is a simulated analysis response]"
         
-        # Add the response to the messages
-        state["messages"].append({"role": "assistant", "content": analysis_response})
+        # Create the response message
+        assistant_message = {
+            "role": "assistant", 
+            "content": analysis_response,
+            "metadata": {"module": "analyzer"}
+        }
+        
+        # Add the response to the messages in state
+        state["messages"].append(assistant_message)
         
         # Store the result in module_results
         state["module_results"]["analyzer"] = analysis_response
+        
+        # Save the response to conversation history
+        user_id = state.get("user_id")
+        conversation_id = state.get("conversation_id")
+        if user_id and conversation_id:
+            conversation_manager.add_message(
+                user_id,
+                conversation_id,
+                "assistant",
+                analysis_response,
+                {"module": "analyzer"}
+            )
         
         return state
     
