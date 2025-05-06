@@ -1,0 +1,145 @@
+.user-profile {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 15px;
+  background-color: #f8f9fa;
+}
+
+.user-profile-header {
+  background-color: #e9ecef;
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+}
+
+.user-profile-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.edit-profile-btn, .save-profile-btn {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.edit-profile-btn:hover, .save-profile-btn:hover {
+  background-color: #0069d9;
+}
+
+.cancel-edit-btn {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.cancel-edit-btn:hover {
+  background-color: #5a6268;
+}
+
+.user-profile-content {
+  padding: 15px;
+}
+
+.profile-summary {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.profile-info-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid #eee;
+}
+
+.profile-info-label {
+  font-weight: bold;
+  color: #495057;
+}
+
+.profile-info-value {
+  color: #212529;
+  text-transform: capitalize;
+}
+
+.profile-edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.form-group {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.form-group label {
+  font-weight: bold;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.form-group select {
+  padding: 8px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  background-color: white;
+}
+
+.preset-buttons {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  margin-top: 10px;
+}
+
+.preset-buttons label {
+  font-weight: bold;
+  color: #495057;
+  font-size: 0.9rem;
+}
+
+.presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+}
+
+.preset-btn {
+  background-color: #e9ecef;
+  border: 1px solid #ddd;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.preset-btn:hover {
+  background-color: #dee2e6;
+}
+
+.save-profile-btn {
+  margin-top: 10px;
+}
+
+.user-profile-loading, .user-profile-error {
+  padding: 15px;
+  text-align: center;
+  color: #6c757d;
+} 

@@ -1,0 +1,153 @@
+.user-selector {
+  width: 100%;
+  border: 1px solid #ddd;
+  border-radius: 8px;
+  overflow: hidden;
+  margin-bottom: 15px;
+  background-color: #f8f9fa;
+}
+
+.user-selector-header {
+  background-color: #e9ecef;
+  padding: 10px 15px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  border-bottom: 1px solid #ddd;
+}
+
+.user-selector-header h3 {
+  margin: 0;
+  font-size: 1rem;
+}
+
+.create-user-btn {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+.create-user-btn:hover {
+  background-color: #45a049;
+}
+
+.create-user-form {
+  padding: 10px 15px;
+  display: flex;
+  gap: 10px;
+  background-color: #e9ecef;
+  border-bottom: 1px solid #ddd;
+}
+
+.create-user-form input {
+  flex: 1;
+  padding: 5px 10px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.create-user-form button {
+  background-color: #4caf50;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+.user-list {
+  max-height: 300px;
+  overflow-y: auto;
+}
+
+.user-item {
+  padding: 10px 15px;
+  border-bottom: 1px solid #ddd;
+  cursor: pointer;
+  transition: background-color 0.2s;
+}
+
+.user-item:hover {
+  background-color: #e9ecef;
+}
+
+.user-item.selected {
+  background-color: #d1ecf1;
+}
+
+.user-info {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+}
+
+.user-name {
+  font-weight: bold;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.edit-name-btn {
+  background: none;
+  border: none;
+  cursor: pointer;
+  font-size: 0.8rem;
+  opacity: 0.6;
+  padding: 2px 5px;
+}
+
+.edit-name-btn:hover {
+  opacity: 1;
+}
+
+.edit-name-form {
+  display: flex;
+  gap: 5px;
+  margin-bottom: 5px;
+}
+
+.edit-name-form input {
+  flex: 1;
+  padding: 5px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+}
+
+.edit-name-form button {
+  background-color: #6c757d;
+  color: white;
+  border: none;
+  padding: 3px 8px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.7rem;
+}
+
+.edit-name-form button:first-of-type {
+  background-color: #4caf50;
+}
+
+.user-details {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  font-size: 0.8rem;
+  color: #6c757d;
+}
+
+.no-users {
+  padding: 15px;
+  text-align: center;
+  color: #6c757d;
+}
+
+.user-selector-loading {
+  padding: 15px;
+  text-align: center;
+  color: #6c757d;
+} 

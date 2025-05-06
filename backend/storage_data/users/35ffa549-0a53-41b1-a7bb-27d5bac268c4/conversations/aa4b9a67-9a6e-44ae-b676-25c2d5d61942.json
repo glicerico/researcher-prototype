@@ -1,0 +1,33 @@
+{
+  "conversation_id": "aa4b9a67-9a6e-44ae-b676-25c2d5d61942",
+  "user_id": "35ffa549-0a53-41b1-a7bb-27d5bac268c4",
+  "created_at": 1746570973.075404,
+  "updated_at": 1746570974.3944933,
+  "metadata": {
+    "name": "Conversation 1",
+    "model": "gpt-4o-mini"
+  },
+  "messages": [
+    {
+      "role": "system",
+      "content": "Hello! I'm your AI assistant. How can I help you today?",
+      "timestamp": 1746570973.0760386,
+      "metadata": {}
+    },
+    {
+      "role": "user",
+      "content": "hola",
+      "timestamp": 1746570973.0765967,
+      "metadata": {}
+    },
+    {
+      "role": "assistant",
+      "content": "\u00a1Hola! \u00bfC\u00f3mo puedo ayudarte hoy?",
+      "timestamp": 1746570974.3944926,
+      "metadata": {
+        "model": "gpt-4o-mini",
+        "module": "chat"
+      }
+    }
+  ]
+}
