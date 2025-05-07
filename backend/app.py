@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
-from models import ChatRequest, ChatResponse, Message, PersonalityConfig
+from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile, ConversationSummary, ConversationDetail
 from graph import chat_graph, user_manager, conversation_manager
 import config
 import traceback
@@ -58,15 +58,7 @@ class UserProfile(BaseModel):
     created_at: float
     personality: PersonalityConfig
     metadata: Optional[Dict[str, Any]] = {}
-
-
-class UserSummary(BaseModel):
-    user_id: str
-    created_at: float
-    personality_style: str
-    personality_tone: str
-    conversation_count: int
-    display_name: Optional[str] = None
+    display_name: Optional[str] = None  # Add display_name at the top-level for consistency
 
 
 @app.get("/")
@@ -205,11 +197,16 @@ async def get_current_user(user_id: str = Depends(get_user_id)):
     else:
         personality = PersonalityConfig()
     
+    # Get display name from metadata
+    metadata = user_data.get("metadata", {})
+    display_name = metadata.get("display_name", f"User {user_id[-6:]}")
+    
     return UserProfile(
         user_id=user_data["user_id"],
         created_at=user_data.get("created_at", 0),
         personality=personality,
-        metadata=user_data.get("metadata", {})
+        metadata=user_data.get("metadata", {}),
+        display_name=display_name
     )
 
 
@@ -238,10 +235,13 @@ async def list_users():
         if user_data:
             # Get personality details
             personality = user_data.get("personality", {})
-            style = personality.get("style", "helpful")
-            tone = personality.get("tone", "friendly")
+            personality_config = PersonalityConfig(
+                style=personality.get("style", "helpful"),
+                tone=personality.get("tone", "friendly"),
+                additional_traits=personality.get("additional_traits", {})
+            )
             
-            # Get a display name (use metadata or just use part of UUID)
+            # Get a display name (use metadata or fallback to part of UUID)
             metadata = user_data.get("metadata", {})
             display_name = metadata.get("display_name", f"User {user_id[-6:]}")
             
@@ -251,10 +251,9 @@ async def list_users():
             user_summaries.append(UserSummary(
                 user_id=user_id,
                 created_at=user_data.get("created_at", 0),
-                personality_style=style,
-                personality_tone=tone,
-                conversation_count=len(conversations),
-                display_name=display_name
+                personality=personality_config,
+                display_name=display_name,
+                conversation_count=len(conversations)
             ))
     
     # Sort by most recently created
@@ -279,7 +278,7 @@ async def create_user(display_name: Optional[str] = None):
 
 
 # Update user display name
-@app.patch("/users/{user_id}/display-name")
+@app.patch("/users/{user_id}/display-name", response_model=UserProfile)
 async def update_user_display_name(user_id: str, display_name: str):
     """Update a user's display name."""
     if not user_manager.user_exists(user_id):
@@ -289,7 +288,8 @@ async def update_user_display_name(user_id: str, display_name: str):
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update display name")
     
-    return {"success": True, "user_id": user_id, "display_name": display_name}
+    # Return the full user profile for consistency
+    return await get_current_user(user_id)
 
 
 # Conversation management endpoints
