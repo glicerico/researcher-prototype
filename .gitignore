@@ -36,6 +36,10 @@ venv/
 */venv/
 .env
 
+# Storage data
+backend/storage_data/
+*/backend/storage_data/
+
 # Misc
 .DS_Store
 .env.local
