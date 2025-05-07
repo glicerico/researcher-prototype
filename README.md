@@ -10,7 +10,41 @@ A simple chatbot web application with a React frontend and a flexible backend us
 - Uses OpenAI's o4-mini model by default
 - Component-based architecture for easy extensibility
 - Debug mode for troubleshooting
+- Multi-user support with individual chat histories
+- Customizable AI personality (style and tone)
+- Persistent data storage for conversations and user settings
 
+## User Guide
+
+### User Management
+
+The application supports multiple users:
+- **Create new users** via the user dropdown menu
+- **Switch between users** easily with the dropdown
+- Each user has their own conversation history and settings
+
+### Personality Customization
+
+Customize the AI assistant's behavior:
+- **Communication Style**: Choose between helpful, concise, expert, creative, or friendly
+- **Tone**: Set the tone to friendly, professional, casual, enthusiastic, or direct
+- **Quick Presets**: Apply pre-defined combinations with a single click
+
+### Conversation Features
+
+- Real-time responses from the AI assistant
+- Conversations are automatically saved
+- User interface displays typing indicators
+- System messages adapt based on personality settings
+
+### Data Persistence
+
+All user data and conversations are stored locally and persist between sessions, including:
+- User profiles and display names
+- Personality settings
+- Conversation history
+
+Data is stored in the `backend/storage_data` directory in JSON format. If you want to back up your data, you can copy this directory. Note that this directory is not tracked by version control.
 
 ## Setup
 
@@ -127,9 +161,32 @@ npm run build
 
 This creates a build directory with optimized production files that can be served by any static file server.
 
-
-
 ## License
 
 GPLv3
+
+## Troubleshooting
+
+### Common Issues
+
+1. **API Key Not Working**
+   - Make sure your OpenAI API key is correctly set in the `.env` file
+   - Verify that your API key is active and has sufficient credits
+   - Check backend logs for specific error messages
+
+2. **Frontend Not Connecting to Backend**
+   - Ensure the backend server is running on port 8000
+   - Check that you don't have CORS issues (in browser developer console)
+   - Verify the API URL in `chatbot-react/src/services/api.js` is correct
+
+3. **User Settings Not Updating**
+   - User settings are loaded when the dropdown is opened
+   - If you update settings in one tab, you may need to refresh other tabs
+   - Click the refresh button in the user dropdown to manually reload user data
+
+4. **Missing Storage Data**
+   - If `backend/storage_data` is missing, it will be created automatically on first run
+   - If you're using a fresh clone of the repository, you'll need to create users again
+
+For more technical issues, check the console logs in both the browser and the terminal running the backend server.
 
