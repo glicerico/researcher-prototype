@@ -2,7 +2,7 @@ import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getUsers, createUser, getCurrentUser } from '../services/api';
 import '../styles/UserDropdown.css';
 
-const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName }) => {
+const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName, profileUpdateTime = 0 }) => {
   const [users, setUsers] = useState([]);
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -12,7 +12,7 @@ const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName }) => 
   
   const dropdownRef = useRef(null);
   
-  // Load users when component mounts
+  // Load users when component mounts or when profileUpdateTime changes
   useEffect(() => {
     const loadUsers = async () => {
       try {
@@ -45,7 +45,7 @@ const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName }) => 
     };
     
     loadUsers();
-  }, [currentUserId, currentDisplayName, onUserSelected]);
+  }, [currentUserId, currentDisplayName, onUserSelected, profileUpdateTime]); // Add profileUpdateTime to dependency array
   
   // Handle clicks outside the dropdown to close it
   useEffect(() => {
@@ -60,6 +60,30 @@ const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName }) => 
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, []);
+  
+  // Reload users when dropdown is opened
+  useEffect(() => {
+    if (isDropdownOpen) {
+      const reloadUsers = async () => {
+        try {
+          console.log('Reloading users on dropdown open');
+          setIsLoading(true);
+          
+          const usersData = await getUsers();
+          setUsers(Array.isArray(usersData) ? usersData : []);
+          
+          console.log('Users reloaded:', usersData);
+        } catch (error) {
+          console.error('Error reloading users:', error);
+          // Don't show error message for reloads to avoid user confusion
+        } finally {
+          setIsLoading(false);
+        }
+      };
+      
+      reloadUsers();
+    }
+  }, [isDropdownOpen]);
   
   // Handle selecting a user
   const handleUserSelect = useCallback((userId, displayName) => {
@@ -111,7 +135,7 @@ const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName }) => 
     <div className="user-dropdown" ref={dropdownRef}>
       <button 
         className="selected-user-button"
-        onClick={() => setIsDropdownOpen(!isDropdownOpen)}
+        onClick={() => !isLoading && setIsDropdownOpen(!isDropdownOpen)}
         disabled={isLoading}
       >
         <span className="user-icon">👤</span>
@@ -119,13 +143,32 @@ const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName }) => 
           (currentDisplayName || 'Anonymous User') : 
           'Select User'
         }
-        <span className="dropdown-arrow">▼</span>
+        <span className="dropdown-arrow">{isLoading ? '⟳' : '▼'}</span>
       </button>
       
       {isDropdownOpen && (
         <div className="dropdown-menu">
           <div className="dropdown-menu-header">
             <h4>Select User</h4>
+            {!isLoading && (
+              <button 
+                className="refresh-button" 
+                onClick={async (e) => {
+                  e.stopPropagation();
+                  try {
+                    setIsLoading(true);
+                    const usersData = await getUsers();
+                    setUsers(Array.isArray(usersData) ? usersData : []);
+                  } catch (error) {
+                    console.error('Error refreshing users:', error);
+                  } finally {
+                    setIsLoading(false);
+                  }
+                }}
+              >
+                ⟳
+              </button>
+            )}
           </div>
           
           <div className="dropdown-menu-content">

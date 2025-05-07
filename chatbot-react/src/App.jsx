@@ -23,6 +23,7 @@ function App() {
   const [personality, setPersonality] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
   const [userDisplayName, setUserDisplayName] = useState('');
+  const [profileUpdateTime, setProfileUpdateTime] = useState(0);
   
   const messagesEndRef = useRef(null);
 
@@ -247,7 +248,27 @@ function App() {
   }, []);
 
   const handleProfileUpdated = useCallback((updatedPersonality) => {
+    console.log('Profile updated with new personality:', updatedPersonality);
+    
+    // Update personality in state
     setPersonality(updatedPersonality);
+    
+    // Trigger UserDropdown reload
+    setProfileUpdateTime(Date.now());
+    
+    // Update the system message immediately
+    const systemMessage = {
+      role: 'system', 
+      content: `You are a ${updatedPersonality.style || 'helpful'} assistant. Please respond in a ${updatedPersonality.tone || 'friendly'} tone.`
+    };
+    
+    // Update the first message if it's a system message
+    setMessages(prevMessages => {
+      if (prevMessages.length > 0 && prevMessages[0].role === 'system') {
+        return [systemMessage, ...prevMessages.slice(1)];
+      }
+      return [systemMessage, ...prevMessages];
+    });
   }, []);
 
   return (
@@ -264,6 +285,7 @@ function App() {
             onUserSelected={handleUserSelected} 
             currentUserId={userId} 
             currentDisplayName={userDisplayName || 'Anonymous User'}
+            profileUpdateTime={profileUpdateTime}
           />
           <DebugButton 
             messages={messages}
