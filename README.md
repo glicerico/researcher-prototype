@@ -134,32 +134,34 @@ The backend is designed to be flexible for future extensions:
 
 ### Visualizing the LangGraph
 
-The project includes a tool to visualize the LangGraph topology as a PNG image using Graphviz:
+The project includes a built-in visualization feature for the LangGraph. To generate a PNG diagram:
 
 ```bash
-# Generate a PNG visualization (default: graph.png)
-./visualize_graph.sh
+# Navigate to the backend directory
+cd backend
 
-# Most reliable method that works regardless of library versions:
-./visualize_graph.sh --direct-parse
+# Activate the virtual environment
+source venv/bin/activate  # On Linux/Mac
 
-# If you encounter version compatibility issues, update LangGraph:
-./visualize_graph.sh --update
-
-# Specify a custom output filename:
-./visualize_graph.sh --output my_graph.png
+# Run the graph.py module directly
+python graph.py
 ```
 
-The visualization script uses Graphviz to generate high-quality PNG images. You'll need Graphviz installed on your system:
+This will create a `graph.png` file in the current directory that shows the LangGraph structure. The visualization is generated using LangGraph's built-in visualization capabilities with Graphviz.
 
-```bash
-# Install Graphviz and development headers
-sudo apt-get install graphviz graphviz-dev
-```
+Requirements:
+- Graphviz must be installed on your system: `sudo apt-get install graphviz`
+- Make sure you've installed all Python dependencies from `requirements.txt` which includes the necessary packages for visualization
 
-If the pygraphviz installation fails due to missing development headers, the script will automatically fall back to direct source parsing mode which still produces the visualization correctly.
+> **Note**: Always run `graph.py` from within the activated virtual environment to ensure all dependencies are available.
 
-For more details, see the [Visualization Documentation](backend/VISUALIZATION.md).
+The visualization is useful for:
+- Understanding the flow of the application
+- Debugging graph structure issues
+- Documenting the architecture
+- Seeing how different nodes connect
+
+Simply run `python graph.py` whenever you make changes to the graph structure to generate an updated visualization.
 
 ### Extending the Frontend
 

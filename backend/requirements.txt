@@ -7,3 +7,4 @@ langchain-openai
 langgraph
 uuid
 pathlib
+pygraphviz
