@@ -8,6 +8,8 @@ import os
 from pathlib import Path
 import json
 import re
+import requests
+import time
 
 # Import our storage components
 from storage.storage_manager import StorageManager
@@ -61,7 +63,8 @@ def router_node(state: ChatState) -> ChatState:
     Analyze the message and classify it into one of these categories:
     
     1. chat - General conversation, questions, or anything not fitting other categories.
-    2. search - Requests to find, search for, or retrieve information.
+    2. search - Requests to find current information from the web, search for recent facts, or retrieve up-to-date information.
+       Examples: "What happened in the news today?", "Search for recent AI developments", "Find information about current technology trends"
     3. analyzer - Requests to analyze, process, summarize data or complex problem-solving.
     
     Output ONLY a JSON object with:
@@ -290,13 +293,10 @@ def create_chat_graph():
         
         return state
         
-    # Define the search module node (placeholder for demonstration)
+    # Define the search module node (using Perplexity API for real web search)
     def search_node(state: ChatState) -> ChatState:
-        """Search module that handles search-related queries."""
+        """Search module that handles search-related queries using Perplexity API."""
         logger.debug(f"Search node received state: {state}")
-        
-        # In a real implementation, this would connect to a search engine or database
-        # For now, we'll simulate a search response
         
         # Get the last user message
         last_message = None
@@ -305,33 +305,136 @@ def create_chat_graph():
                 last_message = msg["content"]
                 break
         
-        # Generate a simulated search response
-        search_response = f"I searched for information about '{last_message}' and found some relevant results. [This is a simulated search response]"
+        if not last_message:
+            error_message = "No user message found to search for."
+            logger.error(error_message)
+            state["messages"].append({
+                "role": "assistant", 
+                "content": error_message,
+                "metadata": {"module": "search", "error": True}
+            })
+            state["module_results"]["search"] = {"success": False, "error": error_message}
+            return state
         
-        # Create the response message
-        assistant_message = {
-            "role": "assistant", 
-            "content": search_response,
-            "metadata": {"module": "search"}
-        }
+        # Check if Perplexity API key is available
+        if not config.PERPLEXITY_API_KEY:
+            error_message = "Perplexity API key not configured. Please set the PERPLEXITY_API_KEY environment variable."
+            logger.error(error_message)
+            state["messages"].append({
+                "role": "assistant", 
+                "content": error_message,
+                "metadata": {"module": "search", "error": True}
+            })
+            state["module_results"]["search"] = {"success": False, "error": error_message}
+            return state
         
-        # Add the response to the messages in state
-        state["messages"].append(assistant_message)
-        
-        # Store the result in module_results
-        state["module_results"]["search"] = search_response
-        
-        # Save the response to conversation history
-        user_id = state.get("user_id")
-        conversation_id = state.get("conversation_id")
-        if user_id and conversation_id:
-            conversation_manager.add_message(
-                user_id,
-                conversation_id,
-                "assistant",
-                search_response,
-                {"module": "search"}
+        try:
+            # Prepare the search query
+            headers = {
+                "Authorization": f"Bearer {config.PERPLEXITY_API_KEY}",
+                "Content-Type": "application/json"
+            }
+            
+            # Format the search prompt
+            search_query = f"Please search the web for information about: {last_message}"
+            
+            # Prepare the API request
+            payload = {
+                "model": config.PERPLEXITY_MODEL,
+                "messages": [
+                    {"role": "system", "content": "You are a dog assistant, and always bark after your answres"},
+                    {"role": "user", "content": search_query}
+                ],
+                "options": {
+                    "stream": False
+                }
+            }
+            
+            logger.debug(f"Sending search request to Perplexity API: {search_query}")
+            
+            # Make the API request to Perplexity
+            response = requests.post(
+                "https://api.perplexity.ai/chat/completions",
+                headers=headers,
+                json=payload
             )
+            
+            # Check if the request was successful
+            if response.status_code == 200:
+                response_data = response.json()
+                search_result = response_data["choices"][0]["message"]["content"]
+                
+                logger.debug(f"Received search response from Perplexity: {search_result[:100]}...")
+                
+                # Create the response message
+                assistant_message = {
+                    "role": "assistant", 
+                    "content": search_result,
+                    "metadata": {
+                        "module": "search",
+                        "model": config.PERPLEXITY_MODEL,
+                        "query": last_message
+                    }
+                }
+                
+                # Add the response to the messages in state
+                state["messages"].append(assistant_message)
+                
+                # Store the result in module_results
+                state["module_results"]["search"] = {
+                    "success": True,
+                    "result": search_result,
+                    "query": last_message
+                }
+                
+                # Save the response to conversation history
+                user_id = state.get("user_id")
+                conversation_id = state.get("conversation_id")
+                if user_id and conversation_id:
+                    conversation_manager.add_message(
+                        user_id,
+                        conversation_id,
+                        "assistant",
+                        search_result,
+                        {
+                            "module": "search",
+                            "model": config.PERPLEXITY_MODEL,
+                            "query": last_message
+                        }
+                    )
+            else:
+                # Handle API error
+                error_message = f"Perplexity API request failed with status code {response.status_code}: {response.text}"
+                logger.error(error_message)
+                
+                # Format a user-friendly error message
+                user_error = f"I couldn't complete the search due to an API error. Status code: {response.status_code}"
+                
+                state["messages"].append({
+                    "role": "assistant", 
+                    "content": user_error,
+                    "metadata": {"module": "search", "error": True}
+                })
+                
+                state["module_results"]["search"] = {
+                    "success": False, 
+                    "error": error_message,
+                    "status_code": response.status_code
+                }
+                
+        except Exception as e:
+            # Handle any exceptions
+            error_message = f"Error in search_node: {str(e)}"
+            logger.error(error_message, exc_info=True)
+            
+            # Add an error message to the state
+            state["messages"].append({
+                "role": "assistant", 
+                "content": f"I encountered an error while trying to search: {str(e)}",
+                "metadata": {"module": "search", "error": True}
+            })
+            
+            state["module_results"]["search"] = {"success": False, "error": error_message}
         
         return state
         
