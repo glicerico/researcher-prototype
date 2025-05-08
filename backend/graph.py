@@ -202,6 +202,151 @@ def create_chat_graph():
         
         return state
     
+    # Define the search prompt optimizer node
+    def search_prompt_optimizer_node(state: ChatState) -> ChatState:
+        """Refines the user's query into an optimized search query using an LLM, considering conversation context."""
+        logger.debug("Search Prompt Optimizer node refining query with context")
+        
+        # Gather recent conversation history for context (e.g., last 5 messages)
+        # The messages in ChatState are dicts: {"role": ..., "content": ...}
+        history_for_refinement = []
+        raw_messages = state.get("messages", [])
+        
+        # Get the actual last user message to be refined
+        last_user_message_content = None
+        for msg in reversed(raw_messages):
+            if msg.get("role") == "user":
+                last_user_message_content = msg.get("content")
+                break
+        
+        if not last_user_message_content:
+            logger.warning("No user message found in search_prompt_optimizer_node. Cannot refine.")
+            state["workflow_context"]["refined_search_query"] = ""
+            return state
+
+        # Construct context: last N messages (ensure not to take too many for the optimizer LLM)
+        # We want the messages leading up to and including the last user message.
+        num_context_messages = 5 # System + up to 4 history messages
+        context_messages_for_llm = [] 
+        
+        # System prompt for the optimizer LLM
+        system_prompt = """
+        You are an expert at rephrasing user questions into effective search engine queries.
+        Analyze the provided conversation history and the LATEST user question.
+        Based on this context, transform the LATEST user question into a concise and keyword-focused search query
+        that is likely to yield the best results from a web search engine like Perplexity.
+        Focus on the core intent of the LATEST user question and use precise terminology, informed by the preceding conversation.
+        Output ONLY the refined search query for the LATEST user question, with no other text or explanation.
+        """
+        context_messages_for_llm.append(SystemMessage(content=system_prompt))
+
+        # Add recent history to context_messages_for_llm (HumanMessage, AIMessage)
+        # Convert dict messages from state to LangChain message objects for the optimizer
+        start_index = max(0, len(raw_messages) - (num_context_messages -1)) # -1 because system prompt is one
+        for msg_dict in raw_messages[start_index:]:
+            role = msg_dict.get("role")
+            content = msg_dict.get("content", "").strip()
+            if not content: # Skip empty messages
+                continue
+            if role == "user":
+                context_messages_for_llm.append(HumanMessage(content=content))
+            elif role == "assistant":
+                context_messages_for_llm.append(AIMessage(content=content))
+            # System messages from history are generally not passed to such an optimizer,
+            # as we have a specific one for this node.
+
+        # Ensure there's actually a human message to respond to, otherwise the LLM might be confused.
+        if not any(isinstance(m, HumanMessage) for m in context_messages_for_llm):
+            logger.warning("No human messages in context for search_prompt_optimizer. Using raw last user message.")
+            state["workflow_context"]["refined_search_query"] = last_user_message_content
+            return state
+            
+        optimizer_llm = ChatOpenAI(
+            model=config.ROUTER_MODEL, 
+            temperature=0.0,
+            max_tokens=100,
+            api_key=config.OPENAI_API_KEY
+        )
+        
+        try:
+            response = optimizer_llm.invoke(context_messages_for_llm)
+            refined_query = response.content.strip()
+            
+            state["workflow_context"]["refined_search_query"] = refined_query
+            logger.info(f"Refined search query with context: {refined_query}")
+            
+        except Exception as e:
+            logger.error(f"Error in search_prompt_optimizer_node (with context): {str(e)}. Using original query as fallback.")
+            state["workflow_context"]["refined_search_query"] = last_user_message_content
+            
+        return state
+
+    # Define the analysis task refiner node
+    def analysis_task_refiner_node(state: ChatState) -> ChatState:
+        """Refines the user's request into a detailed task for the analysis engine, considering conversation context."""
+        logger.debug("Analysis Task Refiner node refining task with context")
+
+        raw_messages = state.get("messages", [])
+        last_user_message_content = None
+        for msg in reversed(raw_messages):
+            if msg.get("role") == "user":
+                last_user_message_content = msg.get("content")
+                break
+        
+        if not last_user_message_content:
+            logger.warning("No user message found in analysis_task_refiner_node. Cannot refine.")
+            state["workflow_context"]["refined_analysis_task"] = ""
+            return state
+
+        num_context_messages = 5 # System + up to 4 history messages
+        context_messages_for_llm = []
+
+        system_prompt = """
+        You are an expert at breaking down user requests into clear, structured analytical tasks, considering the full conversation context.
+        Analyze the provided conversation history and the LATEST user request.
+        Based on this context, transform the LATEST user request into a detailed task description suitable for an advanced analysis engine.
+        Specify the information to be analyzed, the type of analysis required, and the desired output format if implied.
+        Ensure the refined task for the LATEST user question is actionable and self-contained based on the conversation.
+        Output ONLY the refined task description, with no other text or explanation.
+        """
+        context_messages_for_llm.append(SystemMessage(content=system_prompt))
+
+        start_index = max(0, len(raw_messages) - (num_context_messages - 1))
+        for msg_dict in raw_messages[start_index:]:
+            role = msg_dict.get("role")
+            content = msg_dict.get("content", "").strip()
+            if not content:
+                continue
+            if role == "user":
+                context_messages_for_llm.append(HumanMessage(content=content))
+            elif role == "assistant":
+                context_messages_for_llm.append(AIMessage(content=content))
+
+        if not any(isinstance(m, HumanMessage) for m in context_messages_for_llm):
+            logger.warning("No human messages in context for analysis_task_refiner. Using raw last user message.")
+            state["workflow_context"]["refined_analysis_task"] = last_user_message_content
+            return state
+
+        optimizer_llm = ChatOpenAI(
+            model=config.ROUTER_MODEL, 
+            temperature=0.0,
+            max_tokens=300, 
+            api_key=config.OPENAI_API_KEY
+        )
+
+        try:
+            response = optimizer_llm.invoke(context_messages_for_llm)
+            refined_task = response.content.strip()
+
+            state["workflow_context"]["refined_analysis_task"] = refined_task
+            logger.info(f"Refined analysis task with context: {refined_task}")
+
+        except Exception as e:
+            logger.error(f"Error in analysis_task_refiner_node (with context): {str(e)}. Using original request as fallback.")
+            state["workflow_context"]["refined_analysis_task"] = last_user_message_content
+            
+        return state
+
     # Define the chat module node
     def chat_node(state: ChatState) -> ChatState:
         """Process the chat using the specified model."""
@@ -255,9 +400,19 @@ def create_chat_graph():
             logger.debug(f"Sending messages to LLM: {langchain_messages}")
             
             # Ensure we have at least one message
-            if not langchain_messages:
-                raise ValueError("No valid messages to send to the model")
-            
+            if not langchain_messages or len(langchain_messages) <=1: # Ensure more than just system message
+                # If only system message, it means no user/assistant messages were valid to process
+                # This could happen if user sends empty message or only system messages in input state.
+                # Adding a specific user-facing message if appropriate, or just log and return.
+                logger.warning("No valid user/assistant messages to send to the model in chat_node.")
+                # Decide on a response for this case, e.g., a polite "I need more information"
+                # For now, just pass through, which might result in an empty AI response if LLM is called with only system.
+                # Or better, create a default response.
+                if not any(m.type == 'human' for m in langchain_messages):
+                     state["messages"].append({"role": "assistant", "content": "I received an empty message. How can I help you?", "metadata": {"module": "chat"}})
+                     state["module_results"]["chat"] = "I received an empty message. How can I help you?"
+                     return state
+
             response = llm.invoke(langchain_messages)
             logger.debug(f"Received response: {response}")
             
@@ -289,24 +444,36 @@ def create_chat_graph():
         except Exception as e:
             logger.error(f"Error in chat_node: {str(e)}", exc_info=True)
             # Add an error message to the state
-            state["error"] = str(e)
-        
+            state["error"] = str(e) # Storing general error
+            # Also append a user-facing error message
+            state["messages"].append({
+                "role": "assistant", 
+                "content": f"I encountered an error processing your request: {str(e)}", 
+                "metadata": {"module":"chat", "error": True}
+            })
+            state["module_results"]["chat"] = {"success": False, "error": str(e)}
+
         return state
         
     # Define the search module node (using Perplexity API for real web search)
     def search_node(state: ChatState) -> ChatState:
-        """Search module that handles search-related queries using Perplexity API."""
+        """Search module that handles search-related queries using Perplexity API, using a refined query if available."""
         logger.debug(f"Search node received state: {state}")
         
-        # Get the last user message
-        last_message = None
-        for msg in reversed(state["messages"]):
-            if msg["role"] == "user":
-                last_message = msg["content"]
-                break
+        # Use refined search query from workflow_context if available, otherwise fallback to last user message
+        query_to_search = state.get("workflow_context", {}).get("refined_search_query")
         
-        if not last_message:
-            error_message = "No user message found to search for."
+        if not query_to_search:
+            logger.warning("No refined_search_query found in workflow_context. Falling back to last user message for search.")
+            last_user_message_content = None
+            for msg in reversed(state["messages"]):
+                if msg["role"] == "user":
+                    last_user_message_content = msg["content"]
+                    break
+            query_to_search = last_user_message_content
+
+        if not query_to_search: # If still no query (e.g. no user message at all)
+            error_message = "No query found to search for (neither refined nor original)."
             logger.error(error_message)
             state["messages"].append({
                 "role": "assistant", 
@@ -335,22 +502,23 @@ def create_chat_graph():
                 "Content-Type": "application/json"
             }
             
-            # Format the search prompt
-            search_query = f"Please search the web for information about: {last_message}"
+            # Format the search prompt FOR PERPLEXITY (system prompt here is for Perplexity's behavior)
+            # The query_to_search is the user's intent, possibly refined.
+            perplexity_messages = [
+                {"role": "system", "content": "You are a helpful and accurate web search assistant. Provide comprehensive answers based on web search results."},
+                {"role": "user", "content": query_to_search} # This is the actual search query
+            ]
             
             # Prepare the API request
             payload = {
                 "model": config.PERPLEXITY_MODEL,
-                "messages": [
-                    {"role": "system", "content": "You are a dog assistant, and always bark after your answres"},
-                    {"role": "user", "content": search_query}
-                ],
-                "options": {
-                    "stream": False
+                "messages": perplexity_messages,
+                "options": { # Perplexity specific options if any, e.g. search depth, focus.
+                    "stream": False 
                 }
             }
             
-            logger.debug(f"Sending search request to Perplexity API: {search_query}")
+            logger.debug(f"Sending search request to Perplexity API with query: {query_to_search}")
             
             # Make the API request to Perplexity
             response = requests.post(
@@ -373,7 +541,7 @@ def create_chat_graph():
                     "metadata": {
                         "module": "search",
                         "model": config.PERPLEXITY_MODEL,
-                        "query": last_message
+                        "original_query": query_to_search # Storing the query that was actually searched
                     }
                 }
                 
@@ -384,7 +552,7 @@ def create_chat_graph():
                 state["module_results"]["search"] = {
                     "success": True,
                     "result": search_result,
-                    "query": last_message
+                    "query_used": query_to_search
                 }
                 
                 # Save the response to conversation history
@@ -399,7 +567,7 @@ def create_chat_graph():
                         {
                             "module": "search",
                             "model": config.PERPLEXITY_MODEL,
-                            "query": last_message
+                            "query_used": query_to_search
                         }
                     )
             else:
@@ -440,34 +608,46 @@ def create_chat_graph():
         
     # Define the analyzer module node (placeholder for demonstration)
     def analyzer_node(state: ChatState) -> ChatState:
-        """Analyzer module that processes data-related queries."""
+        """Analyzer module that processes data-related queries, using a refined task if available."""
         logger.debug(f"Analyzer node received state: {state}")
         
-        # In a real implementation, this would analyze data
-        # For now, we'll simulate an analysis response
-        
-        # Get the last user message
-        last_message = None
+        refined_task = state.get("workflow_context", {}).get("refined_analysis_task")
+        original_user_query = None
         for msg in reversed(state["messages"]):
             if msg["role"] == "user":
-                last_message = msg["content"]
+                original_user_query = msg["content"]
                 break
         
-        # Generate a simulated analysis response
-        analysis_response = f"I analyzed the data related to '{last_message}' and found some interesting patterns. [This is a simulated analysis response]"
+        task_to_analyze = refined_task if refined_task else original_user_query
+
+        if not task_to_analyze:
+            error_message = "No task found for analyzer (neither refined nor original)."
+            logger.error(error_message)
+            state["messages"].append({
+                "role": "assistant", 
+                "content": error_message,
+                "metadata": {"module": "analyzer", "error": True}
+            })
+            state["module_results"]["analyzer"] = {"success": False, "error": error_message}
+            return state
+
+        logger.info(f"Analyzer node would process task: {task_to_analyze[:200]}...")
+        # In a real implementation, this would use 'task_to_analyze' to perform analysis
+        
+        analysis_response = f"I have analyzed the task related to: '{task_to_analyze}'. [This is a simulated analysis response based on the (refined) task description]"
         
         # Create the response message
         assistant_message = {
             "role": "assistant", 
             "content": analysis_response,
-            "metadata": {"module": "analyzer"}
+            "metadata": {"module": "analyzer", "task_processed": task_to_analyze}
         }
         
         # Add the response to the messages in state
         state["messages"].append(assistant_message)
         
         # Store the result in module_results
-        state["module_results"]["analyzer"] = analysis_response
+        state["module_results"]["analyzer"] = {"success": True, "result": analysis_response, "task_processed": task_to_analyze}
         
         # Save the response to conversation history
         user_id = state.get("user_id")
@@ -478,7 +658,7 @@ def create_chat_graph():
                 conversation_id,
                 "assistant",
                 analysis_response,
-                {"module": "analyzer"}
+                {"module": "analyzer", "task_processed": task_to_analyze}
             )
         
         return state
@@ -486,6 +666,11 @@ def create_chat_graph():
     # Define the router function for conditional branching
     def router(state: ChatState) -> str:
         """Route to the appropriate module based on the current_module state."""
+        # This router now potentially routes to optimizer nodes first
+        # The optimizer nodes themselves don't change current_module, so the next step
+        # (search or analyzer) is determined by the original router decision.
+        # The conditional edges will handle this.
+        logger.debug(f"Router function routing to: {state['current_module']}")
         return state["current_module"]
     
     # Create the graph
@@ -494,6 +679,8 @@ def create_chat_graph():
     # Add the nodes
     builder.add_node("initializer", initializer_node)
     builder.add_node("router", router_node)
+    builder.add_node("search_prompt_optimizer", search_prompt_optimizer_node)
+    builder.add_node("analysis_task_refiner", analysis_task_refiner_node)
     builder.add_node("chat", chat_node)
     builder.add_node("search", search_node)
     builder.add_node("analyzer", analyzer_node)
@@ -501,21 +688,28 @@ def create_chat_graph():
     # Set the entry point
     builder.set_entry_point("initializer")
     
-    # Define the flow: initializer -> router -> specific module
+    # Define the flow: initializer -> router
     builder.add_edge("initializer", "router")
     
-    # Add conditional edges from router to processing modules
+    # Conditional edges from router:
+    # If "search", go to optimizer, then to search_node
+    # If "analyzer", go to refiner, then to analyzer_node
+    # If "chat", go directly to chat_node
     builder.add_conditional_edges(
         "router",
-        router,
+        router, # The router function determines the value of state["current_module"]
         {
             "chat": "chat",
-            "search": "search",
-            "analyzer": "analyzer"
+            "search": "search_prompt_optimizer", # Route to optimizer first
+            "analyzer": "analysis_task_refiner"  # Route to refiner first
         }
     )
+
+    # Edges from optimizer/refiner to their respective processing nodes
+    builder.add_edge("search_prompt_optimizer", "search")
+    builder.add_edge("analysis_task_refiner", "analyzer")
     
-    # Set all processing nodes to end
+    # Set all final processing nodes to end
     builder.add_edge("chat", END)
     builder.add_edge("search", END)
     builder.add_edge("analyzer", END)
