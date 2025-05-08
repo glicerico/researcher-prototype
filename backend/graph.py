@@ -34,7 +34,7 @@ class ChatState(TypedDict):
     personality: Annotated[Optional[Dict[str, Any]], "User's personality configuration"]
     current_module: Annotated[Optional[str], "The current active module"]
     module_results: Annotated[Dict[str, Any], "Results from different modules"]
-    orchestrator_state: Annotated[Dict[str, Any], "State maintained by the orchestrator"]
+    workflow_context: Annotated[Dict[str, Any], "Contextual data for the current workflow execution."]
     user_id: Annotated[Optional[str], "The ID of the current user"]
     conversation_id: Annotated[Optional[str], "The ID of the current conversation"]
     routing_analysis: Annotated[Optional[Dict[str, Any]], "Analysis from the router"]
@@ -144,16 +144,16 @@ def router_node(state: ChatState) -> ChatState:
 
 
 def create_chat_graph():
-    """Create a LangGraph for chat processing with an orchestrator."""
+    """Create a LangGraph graph for orchestrating the flow of the interaction."""
     
-    # Define the orchestrator node
-    def orchestrator_node(state: ChatState) -> ChatState:
-        """Central coordinator that handles user and conversation management."""
-        logger.debug(f"Orchestrator node received state: {state}")
+    # Define the initializer node
+    def initializer_node(state: ChatState) -> ChatState:
+        """Handles user, conversation, and initial state setup."""
+        logger.debug(f"Initializer node received state: {state}")
         
-        # Initialize orchestrator state if it doesn't exist
-        if "orchestrator_state" not in state or not state["orchestrator_state"]:
-            state["orchestrator_state"] = {}
+        # Initialize workflow_context if it doesn't exist
+        if "workflow_context" not in state or not state["workflow_context"]:
+            state["workflow_context"] = {}
         
         # Initialize module_results if it doesn't exist
         if "module_results" not in state or not state["module_results"]:
@@ -492,17 +492,17 @@ def create_chat_graph():
     builder = StateGraph(ChatState)
     
     # Add the nodes
-    builder.add_node("orchestrator", orchestrator_node)
+    builder.add_node("initializer", initializer_node)
     builder.add_node("router", router_node)
     builder.add_node("chat", chat_node)
     builder.add_node("search", search_node)
     builder.add_node("analyzer", analyzer_node)
     
     # Set the entry point
-    builder.set_entry_point("orchestrator")
+    builder.set_entry_point("initializer")
     
-    # Define the flow: orchestrator -> router -> specific module
-    builder.add_edge("orchestrator", "router")
+    # Define the flow: initializer -> router -> specific module
+    builder.add_edge("initializer", "router")
     
     # Add conditional edges from router to processing modules
     builder.add_conditional_edges(
