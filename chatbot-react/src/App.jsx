@@ -91,11 +91,6 @@ function App() {
     loadUserData();
   }, [userId]);
 
-  // Scroll to bottom when messages change
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
-  }, [messages]);
-
   // Generate a system message based on personality
   const getSystemMessage = useCallback(() => {
     if (!personality) {
@@ -294,6 +289,89 @@ function App() {
     });
   }, []);
 
+  // Add a ref to track user scroll position
+  const chatContainerRef = useRef(null);
+  // Add state to track if user is manually scrolling
+  const [userScrolling, setUserScrolling] = useState(false);
+
+  // Add scroll event listener to detect manual scrolling
+  useEffect(() => {
+    // Reference to chat container
+    const chatContainer = document.getElementById('chat-messages');
+    if (!chatContainer) return;
+    
+    // Scroll tracking variables
+    let isUserScrolling = false;
+    let userScrollingTimeout = null;
+    
+    const handleScroll = () => {
+      const { scrollTop, scrollHeight, clientHeight } = chatContainer;
+      const isAtBottom = scrollHeight - scrollTop - clientHeight < 30;
+      
+      // If user scrolls up (away from bottom), mark as user scrolling
+      if (!isAtBottom) {
+        isUserScrolling = true;
+        setUserScrolling(true);
+        
+        // Clear existing timeout if any
+        if (userScrollingTimeout) {
+          clearTimeout(userScrollingTimeout);
+        }
+        
+        // Reset after a period of inactivity (3 seconds)
+        userScrollingTimeout = setTimeout(() => {
+          const currentPos = chatContainer.scrollTop;
+          const currentMax = chatContainer.scrollHeight - chatContainer.clientHeight;
+          const currentIsAtBottom = (currentMax - currentPos) < 30;
+          
+          // Only reset if user has scrolled back to bottom
+          if (currentIsAtBottom) {
+            isUserScrolling = false;
+            setUserScrolling(false);
+          }
+        }, 3000);
+      } else {
+        // User manually scrolled to bottom, reset the tracking
+        isUserScrolling = false;
+        setUserScrolling(false);
+        
+        if (userScrollingTimeout) {
+          clearTimeout(userScrollingTimeout);
+          userScrollingTimeout = null;
+        }
+      }
+    };
+    
+    chatContainer.addEventListener('scroll', handleScroll);
+    
+    // Cleanup function
+    return () => {
+      chatContainer.removeEventListener('scroll', handleScroll);
+      if (userScrollingTimeout) {
+        clearTimeout(userScrollingTimeout);
+      }
+    };
+  }, []); // No dependencies so it only runs once on mount
+
+  // Scroll to bottom when messages change, respecting user scrolling
+  useEffect(() => {
+    // Don't auto-scroll if user is manually scrolling
+    if (!userScrolling && messagesEndRef.current) {
+      // Brief delay to ensure content has rendered
+      setTimeout(() => {
+        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      }, 100);
+    }
+  }, [messages, userScrolling]);
+
+  // Handle manual scrolling to latest message
+  const scrollToLatest = () => {
+    if (messagesEndRef.current) {
+      messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+      // Will be reset automatically by the scroll handler
+    }
+  };
+
   return (
     <div className="chat-container">
       <div className="chat-header">
@@ -341,7 +419,7 @@ function App() {
         </div>
       )}
       
-      <div className="chat-messages" id="chat-messages">
+      <div className="chat-messages" id="chat-messages" ref={chatContainerRef}>
         {messages.map((msg, index) => (
           <ChatMessage 
             key={index} 
@@ -352,6 +430,15 @@ function App() {
         ))}
         {isTyping && <TypingIndicator />}
         <div ref={messagesEndRef} />
+        
+        {userScrolling && (
+          <button 
+            className="scroll-to-latest-button"
+            onClick={scrollToLatest}
+          >
+            ↓ Latest Messages
+          </button>
+        )}
       </div>
       
       <ChatInput 
