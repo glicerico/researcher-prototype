@@ -2,7 +2,7 @@ from fastapi import FastAPI, HTTPException, Depends, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile, ConversationSummary, ConversationDetail
-from graph import chat_graph, user_manager, conversation_manager
+from graph import chat_graph, user_manager, conversation_manager, router_node
 import config
 import traceback
 import logging
@@ -117,11 +117,15 @@ async def chat(
         # Get the conversation ID that was used/created
         conversation_id = result.get("conversation_id")
         
+        # Get routing analysis if available
+        routing_analysis = result.get("routing_analysis")
+        
         return ChatResponse(
             response=assistant_message["content"],
             model=request.model,
             usage={},  # In a real app, you might want to track token usage
-            module_used=module_used
+            module_used=module_used,
+            routing_analysis=routing_analysis
         )
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
@@ -153,12 +157,21 @@ async def debug(
             "conversation_id": conversation_id
         }
         
-        # Return the state without processing it
+        # For debug only: process just the routing part
+        routing_result = router_node(state.copy())
+        
+        # Return the state without full processing
         return {
             "request_received": True,
-            "state": state,
-            "api_key_set": bool(config.OPENAI_API_KEY),  # Check if API key is set
-            "model": request.model
+            "initial_state": state,
+            "api_key_set": bool(config.OPENAI_API_KEY),
+            "model": request.model,
+            "router_model": config.ROUTER_MODEL,
+            "routing_result": {
+                "decision": routing_result.get("current_module"),
+                "full_analysis": routing_result.get("routing_analysis"),
+            },
+            "supported_models": config.SUPPORTED_MODELS
         }
     except Exception as e:
         return {

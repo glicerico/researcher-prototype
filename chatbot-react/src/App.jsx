@@ -156,8 +156,17 @@ function App() {
         personality // Include personality in the request
       );
       
-      // Add assistant response
-      setMessages([...updatedMessages, { role: 'assistant', content: response.response }]);
+      console.log('Chat response:', response);
+      
+      // Add assistant response with routing info
+      setMessages([
+        ...updatedMessages, 
+        { 
+          role: 'assistant', 
+          content: response.response,
+          routingInfo: response.routing_analysis || { module_used: response.module_used }
+        }
+      ]);
     } catch (error) {
       console.error('Error sending message:', error);
       setMessages([
@@ -171,18 +180,32 @@ function App() {
   };
 
   const handleDebugInfo = (debugData) => {
+    // Create formatted debug info
+    const routingInfo = debugData.routing_result ? 
+      `Routing Decision: ${debugData.routing_result.decision}
+       Routing Analysis: ${JSON.stringify(debugData.routing_result.full_analysis, null, 2)}` : 
+      'No routing information available';
+      
+    const debugContent = `
+      Debug Info:
+      API Key Set: ${debugData.api_key_set}
+      Model: ${debugData.model}
+      Router Model: ${debugData.router_model || 'Not specified'}
+      Messages: ${debugData.initial_state.messages.length}
+      
+      Routing Information:
+      ${routingInfo}
+      
+      Full Debug Data:
+      ${JSON.stringify(debugData, null, 2)}
+    `;
+    
     // Add debug info to messages
     setMessages([
       ...messages,
       { 
         role: 'system', 
-        content: `
-          Debug Info:
-          API Key Set: ${debugData.api_key_set}
-          Model: ${debugData.model}
-          Messages: ${debugData.state.messages.length}
-          ${JSON.stringify(debugData, null, 2)}
-        `
+        content: debugContent
       }
     ]);
   };
@@ -320,7 +343,12 @@ function App() {
       
       <div className="chat-messages" id="chat-messages">
         {messages.map((msg, index) => (
-          <ChatMessage key={index} role={msg.role} content={msg.content} />
+          <ChatMessage 
+            key={index} 
+            role={msg.role} 
+            content={msg.content} 
+            routingInfo={msg.routingInfo}
+          />
         ))}
         {isTyping && <TypingIndicator />}
         <div ref={messagesEndRef} />

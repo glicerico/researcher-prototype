@@ -6,6 +6,8 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 import logging
 import os
 from pathlib import Path
+import json
+import re
 
 # Import our storage components
 from storage.storage_manager import StorageManager
@@ -33,6 +35,109 @@ class ChatState(TypedDict):
     orchestrator_state: Annotated[Dict[str, Any], "State maintained by the orchestrator"]
     user_id: Annotated[Optional[str], "The ID of the current user"]
     conversation_id: Annotated[Optional[str], "The ID of the current conversation"]
+    routing_analysis: Annotated[Optional[Dict[str, Any]], "Analysis from the router"]
+
+
+# Define the intelligent router node at module level
+def router_node(state: ChatState) -> ChatState:
+    """Uses a lightweight LLM to analyze the message and determine routing."""
+    logger.debug("Router node analyzing message")
+    
+    # Get the last user message
+    last_message = None
+    for msg in reversed(state["messages"]):
+        if msg["role"] == "user":
+            last_message = msg["content"]
+            break
+            
+    if not last_message:
+        state["current_module"] = "chat"  # Default to chat module if no user message
+        state["routing_analysis"] = {"decision": "chat", "reason": "No user message found"}
+        return state
+    
+    # Create a system prompt for the router
+    system_prompt = """
+    You are a message router that determines the best module to handle a user's request. 
+    Analyze the message and classify it into one of these categories:
+    
+    1. chat - General conversation, questions, or anything not fitting other categories.
+    2. search - Requests to find, search for, or retrieve information.
+    3. analyzer - Requests to analyze, process, summarize data or complex problem-solving.
+    
+    Output ONLY a JSON object with:
+    - module: The chosen module name (chat, search, or analyzer)
+    - reason: A brief explanation of why this module was chosen
+    - complexity: Rate the complexity from 1-10 (1=very simple, 10=very complex)
+    """
+    
+    # Initialize the GPT-3.5-Turbo model for routing
+    router_llm = ChatOpenAI(
+        model=config.ROUTER_MODEL,
+        temperature=0.0,  # Keep deterministic
+        max_tokens=150,   # Short response is sufficient
+        api_key=config.OPENAI_API_KEY
+    )
+    
+    try:
+        # Send the message to the router model
+        router_messages = [
+            SystemMessage(content=system_prompt),
+            HumanMessage(content=last_message)
+        ]
+        
+        response = router_llm.invoke(router_messages)
+        
+        # Parse the response - expect JSON format
+        # Extract JSON from the response (it might be wrapped in markdown code blocks)
+        content = response.content
+        json_match = re.search(r'```json\s*([\s\S]*?)\s*```', content)
+        if json_match:
+            json_str = json_match.group(1)
+        else:
+            json_str = content
+            
+        # Clean any remaining markdown or non-json text
+        json_str = re.sub(r'[^{]*({.*})[^}]*', r'\1', json_str, flags=re.DOTALL)
+        
+        try:
+            routing_data = json.loads(json_str)
+            
+            # Extract routing decision
+            module = routing_data.get("module", "chat").lower()
+            reason = routing_data.get("reason", "Default routing")
+            complexity = int(routing_data.get("complexity", 5))
+            
+            # Validate module name
+            if module not in ["chat", "search", "analyzer"]:
+                module = "chat"  # Default to chat for unrecognized modules
+            
+            # Set the routing decision
+            state["current_module"] = module
+            state["routing_analysis"] = {
+                "decision": module,
+                "reason": reason,
+                "complexity": complexity,
+                "model_used": config.ROUTER_MODEL
+            }
+            
+            logger.info(f"Router selected module: {module} (complexity: {complexity})")
+            logger.debug(f"Routing reason: {reason}")
+            
+        except json.JSONDecodeError:
+            logger.error(f"Failed to parse router response as JSON: {content}")
+            state["current_module"] = "chat"  # Default fallback
+            state["routing_analysis"] = {
+                "decision": "chat", 
+                "reason": "Error parsing router response",
+                "raw_response": content
+            }
+    
+    except Exception as e:
+        logger.error(f"Error in router_node: {str(e)}")
+        state["current_module"] = "chat"  # Default fallback
+        state["routing_analysis"] = {"decision": "chat", "reason": f"Error: {str(e)}"}
+        
+    return state
 
 
 def create_chat_graph():
@@ -40,7 +145,7 @@ def create_chat_graph():
     
     # Define the orchestrator node
     def orchestrator_node(state: ChatState) -> ChatState:
-        """Central coordinator that routes messages to appropriate modules."""
+        """Central coordinator that handles user and conversation management."""
         logger.debug(f"Orchestrator node received state: {state}")
         
         # Initialize orchestrator state if it doesn't exist
@@ -92,26 +197,6 @@ def create_chat_graph():
                     message.get("metadata", {})
                 )
         
-        # Get the last user message
-        last_message = None
-        for msg in reversed(state["messages"]):
-            if msg["role"] == "user":
-                last_message = msg["content"]
-                break
-                
-        if not last_message:
-            state["current_module"] = "chat"  # Default to chat module if no user message
-            return state
-            
-        # Simple routing logic - can be enhanced with more sophisticated intent detection
-        if "search" in last_message.lower() or "find" in last_message.lower():
-            state["current_module"] = "search"
-        elif "analyze" in last_message.lower() or "data" in last_message.lower():
-            state["current_module"] = "analyzer"
-        else:
-            state["current_module"] = "chat"
-            
-        logger.debug(f"Orchestrator routed to module: {state['current_module']}")
         return state
     
     # Define the chat module node
@@ -305,6 +390,7 @@ def create_chat_graph():
     
     # Add the nodes
     builder.add_node("orchestrator", orchestrator_node)
+    builder.add_node("router", router_node)
     builder.add_node("chat", chat_node)
     builder.add_node("search", search_node)
     builder.add_node("analyzer", analyzer_node)
@@ -312,9 +398,12 @@ def create_chat_graph():
     # Set the entry point
     builder.set_entry_point("orchestrator")
     
-    # Add edges with conditional routing
+    # Define the flow: orchestrator -> router -> specific module
+    builder.add_edge("orchestrator", "router")
+    
+    # Add conditional edges from router to processing modules
     builder.add_conditional_edges(
-        "orchestrator",
+        "router",
         router,
         {
             "chat": "chat",

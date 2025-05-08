@@ -9,8 +9,8 @@ class Message(BaseModel):
 
 class PersonalityConfig(BaseModel):
     """Configuration for the user's personality settings."""
-    style: Optional[str] = "helpful"  # e.g., "helpful", "concise", "expert", "creative"
-    tone: Optional[str] = "friendly"  # e.g., "friendly", "professional", "casual"
+    style: Optional[str] = "helpful"  # helpful, concise, expert, creative, etc.
+    tone: Optional[str] = "friendly"  # friendly, professional, casual, enthusiastic, direct, etc.
     additional_traits: Optional[Dict[str, Any]] = Field(default_factory=dict)
 
 
@@ -54,15 +54,23 @@ class ConversationDetail(BaseModel):
 
 class ChatRequest(BaseModel):
     messages: List[Message]
-    model: Optional[str] = "gpt-4o-mini"
-    temperature: Optional[float] = 0.7
-    max_tokens: Optional[int] = 1000
+    model: str = "gpt-4o-mini"
+    temperature: float = 0.7
+    max_tokens: int = 1000
     stream: Optional[bool] = False
     personality: Optional[PersonalityConfig] = None
+
+
+class RoutingAnalysis(BaseModel):
+    decision: str
+    reason: str
+    complexity: Optional[int] = None
+    model_used: Optional[str] = None
 
 
 class ChatResponse(BaseModel):
     response: str
     model: str
-    usage: Optional[Dict[str, Any]] = None
-    module_used: Optional[str] = None  # Which module handled the request 
+    usage: Dict[str, Any] = {}
+    module_used: str = "chat"
+    routing_analysis: Optional[RoutingAnalysis] = None 

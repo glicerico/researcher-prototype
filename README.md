@@ -132,6 +132,35 @@ The backend is designed to be flexible for future extensions:
 - Add new nodes to the LangGraph in graph.py
 - Add new API endpoints in app.py
 
+### Visualizing the LangGraph
+
+The project includes a tool to visualize the LangGraph topology as a PNG image using Graphviz:
+
+```bash
+# Generate a PNG visualization (default: graph.png)
+./visualize_graph.sh
+
+# Most reliable method that works regardless of library versions:
+./visualize_graph.sh --direct-parse
+
+# If you encounter version compatibility issues, update LangGraph:
+./visualize_graph.sh --update
+
+# Specify a custom output filename:
+./visualize_graph.sh --output my_graph.png
+```
+
+The visualization script uses Graphviz to generate high-quality PNG images. You'll need Graphviz installed on your system:
+
+```bash
+# Install Graphviz and development headers
+sudo apt-get install graphviz graphviz-dev
+```
+
+If the pygraphviz installation fails due to missing development headers, the script will automatically fall back to direct source parsing mode which still produces the visualization correctly.
+
+For more details, see the [Visualization Documentation](backend/VISUALIZATION.md).
+
 ### Extending the Frontend
 
 The React frontend is component-based, making it easy to add new features:
