@@ -10,6 +10,7 @@ import json
 import re
 import requests
 import time
+import inspect
 
 # Import our storage components
 from storage.storage_manager import StorageManager
@@ -40,10 +41,15 @@ class ChatState(TypedDict):
     routing_analysis: Annotated[Optional[Dict[str, Any]], "Analysis from the router"]
 
 
+def get_current_datetime_str() -> str:
+    return time.strftime("%Y-%m-%d %H:%M:%S %Z", time.localtime())
+
+
 # Define the intelligent router node at module level
 def router_node(state: ChatState) -> ChatState:
     """Uses a lightweight LLM to analyze the message and determine routing."""
     logger.debug("Router node analyzing message")
+    current_time_str = get_current_datetime_str() # Get current time
     
     # Get the last user message
     last_message = None
@@ -53,12 +59,13 @@ def router_node(state: ChatState) -> ChatState:
             break
             
     if not last_message:
-        state["current_module"] = "chat"  # Default to chat module if no user message
+        state["current_module"] = "chat"  # Default to chat module if no user message found
         state["routing_analysis"] = {"decision": "chat", "reason": "No user message found"}
         return state
     
     # Create a system prompt for the router
-    system_prompt = """
+    system_prompt = f"""
+    Current date and time: {current_time_str}
     You are a message router that determines the best module to handle a user's request. 
     Analyze the message and classify it into one of these categories:
     
@@ -206,6 +213,7 @@ def create_chat_graph():
     def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         """Refines the user's query into an optimized search query using an LLM, considering conversation context."""
         logger.debug("Search Prompt Optimizer node refining query with context")
+        current_time_str = get_current_datetime_str()
         
         # Gather recent conversation history for context (e.g., last 5 messages)
         # The messages in ChatState are dicts: {"role": ..., "content": ...}
@@ -230,7 +238,8 @@ def create_chat_graph():
         context_messages_for_llm = [] 
         
         # System prompt for the optimizer LLM
-        system_prompt = """
+        system_prompt = f"""
+        Current date and time: {current_time_str}
         You are an expert at rephrasing user questions into effective search engine queries.
         Analyze the provided conversation history and the LATEST user question.
         Based on this context, transform the LATEST user question into a concise and keyword-focused search query
@@ -285,7 +294,7 @@ def create_chat_graph():
     def analysis_task_refiner_node(state: ChatState) -> ChatState:
         """Refines the user's request into a detailed task for the analysis engine, considering conversation context."""
         logger.debug("Analysis Task Refiner node refining task with context")
-
+        current_time_str = get_current_datetime_str()
         raw_messages = state.get("messages", [])
         last_user_message_content = None
         for msg in reversed(raw_messages):
@@ -301,7 +310,8 @@ def create_chat_graph():
         num_context_messages = 5 # System + up to 4 history messages
         context_messages_for_llm = []
 
-        system_prompt = """
+        system_prompt = f"""
+        Current date and time: {current_time_str}
         You are an expert at breaking down user requests into clear, structured analytical tasks, considering the full conversation context.
         Analyze the provided conversation history and the LATEST user request.
         Based on this context, transform the LATEST user request into a detailed task description suitable for an advanced analysis engine.
@@ -351,17 +361,18 @@ def create_chat_graph():
     def chat_node(state: ChatState) -> ChatState:
         """Process the chat using the specified model."""
         logger.debug(f"Chat node received state: {state}")
+        current_time_str = get_current_datetime_str()
         model = state.get("model", config.DEFAULT_MODEL)
         temperature = state.get("temperature", 0.7)
         max_tokens = state.get("max_tokens", 1000)
         personality = state.get("personality", {})
         
         # Create system message based on personality if available
-        system_message_content = "You are a helpful assistant."
+        system_message_content = f"Current date and time: {current_time_str}. You are a helpful assistant."
         if personality:
             style = personality.get("style", "helpful")
             tone = personality.get("tone", "friendly")
-            system_message_content = f"You are a {style} assistant. Please respond in a {tone} tone."
+            system_message_content = f"Current date and time: {current_time_str}. You are a {style} assistant. Please respond in a {tone} tone."
         
         # Initialize the model
         llm = ChatOpenAI(
@@ -457,8 +468,9 @@ def create_chat_graph():
         
     # Define the search module node (using Perplexity API for real web search)
     def search_node(state: ChatState) -> ChatState:
-        """Search module that handles search-related queries using Perplexity API, using a refined query if available."""
+        """Search module that handles search-related queries using Perplexity API."""
         logger.debug(f"Search node received state: {state}")
+        current_time_str = get_current_datetime_str() # Get current time
         
         # Use refined search query from workflow_context if available, otherwise fallback to last user message
         query_to_search = state.get("workflow_context", {}).get("refined_search_query")
@@ -504,8 +516,9 @@ def create_chat_graph():
             
             # Format the search prompt FOR PERPLEXITY (system prompt here is for Perplexity's behavior)
             # The query_to_search is the user's intent, possibly refined.
+            perplexity_system_prompt = f"Current date and time: {current_time_str}. You are a helpful and accurate web search assistant. Provide comprehensive answers based on web search results."
             perplexity_messages = [
-                {"role": "system", "content": "You are a helpful and accurate web search assistant. Provide comprehensive answers based on web search results."},
+                {"role": "system", "content": perplexity_system_prompt},
                 {"role": "user", "content": query_to_search} # This is the actual search query
             ]
             
@@ -610,6 +623,7 @@ def create_chat_graph():
     def analyzer_node(state: ChatState) -> ChatState:
         """Analyzer module that processes data-related queries, using a refined task if available."""
         logger.debug(f"Analyzer node received state: {state}")
+        current_time_str = get_current_datetime_str() # For future LLM call in analyzer
         
         refined_task = state.get("workflow_context", {}).get("refined_analysis_task")
         original_user_query = None
@@ -631,10 +645,13 @@ def create_chat_graph():
             state["module_results"]["analyzer"] = {"success": False, "error": error_message}
             return state
 
-        logger.info(f"Analyzer node would process task: {task_to_analyze[:200]}...")
-        # In a real implementation, this would use 'task_to_analyze' to perform analysis
+        logger.info(f"Analyzer node processing task (simulated): {task_to_analyze[:200]}...")
         
-        analysis_response = f"I have analyzed the task related to: '{task_to_analyze}'. [This is a simulated analysis response based on the (refined) task description]"
+        # If this node were making an LLM call for analysis:
+        # analysis_system_prompt = f"Current date and time: {current_time_str}. You are an advanced data analyzer..."
+        # ... then use this prompt with the LLM ...
+        
+        analysis_response = f"Based on the task related to '{task_to_analyze}', I have performed a simulated analysis. [This is a simulated analysis response based on the (refined) task description]"
         
         # Create the response message
         assistant_message = {
