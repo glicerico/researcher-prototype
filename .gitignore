@@ -39,6 +39,7 @@ venv/
 # Storage data
 backend/storage_data/
 */backend/storage_data/
+backend/graph.png
 
 # Misc
 .DS_Store
