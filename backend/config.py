@@ -13,7 +13,7 @@ OPENAI_API_KEY = os.getenv("OPENAI_API_KEY")
 DEFAULT_MODEL = os.getenv("DEFAULT_MODEL", "gpt-4o-mini")
 
 # Router model - cheaper model for routing decisions
-ROUTER_MODEL = os.getenv("ROUTER_MODEL", "gpt-3.5-turbo")
+ROUTER_MODEL = os.getenv("ROUTER_MODEL", "gpt-4o-mini")
 
 # Perplexity configuration for web search
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
@@ -23,6 +23,5 @@ PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar")
 SUPPORTED_MODELS = {
     "gpt-4o-mini": "OpenAI GPT-4o-mini",
     "gpt-4o": "OpenAI GPT-4o",
-    "gpt-3.5-turbo": "OpenAI GPT-3.5-Turbo",
     # Add more models as needed
 } 
