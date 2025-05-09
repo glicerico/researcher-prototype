@@ -357,115 +357,6 @@ def create_chat_graph():
             
         return state
 
-    # Define the chat module node
-    def chat_node(state: ChatState) -> ChatState:
-        """Process the chat using the specified model."""
-        logger.debug(f"Chat node received state: {state}")
-        current_time_str = get_current_datetime_str()
-        model = state.get("model", config.DEFAULT_MODEL)
-        temperature = state.get("temperature", 0.7)
-        max_tokens = state.get("max_tokens", 1000)
-        personality = state.get("personality", {})
-        
-        # Create system message based on personality if available
-        system_message_content = f"Current date and time: {current_time_str}. You are a helpful assistant."
-        if personality:
-            style = personality.get("style", "helpful")
-            tone = personality.get("tone", "friendly")
-            system_message_content = f"Current date and time: {current_time_str}. You are a {style} assistant. Please respond in a {tone} tone."
-        
-        # Initialize the model
-        llm = ChatOpenAI(
-            model=model,
-            temperature=temperature,
-            max_tokens=max_tokens,
-            api_key=config.OPENAI_API_KEY
-        )
-        
-        # Convert dict messages to LangChain message objects
-        langchain_messages = []
-        
-        # Add system message first
-        langchain_messages.append(SystemMessage(content=system_message_content))
-        
-        for msg in state["messages"]:
-            role = msg["role"]
-            content = msg["content"]
-            
-            # Skip system messages as we've already added our own
-            if role == "system":
-                continue
-                
-            # Trim whitespace from content
-            if isinstance(content, str):
-                content = content.strip()
-            
-            if role == "user":
-                langchain_messages.append(HumanMessage(content=content))
-            elif role == "assistant":
-                langchain_messages.append(AIMessage(content=content))
-            else:
-                logger.warning(f"Unknown message role: {role}")
-        
-        try:
-            logger.debug(f"Sending messages to LLM: {langchain_messages}")
-            
-            # Ensure we have at least one message
-            if not langchain_messages or len(langchain_messages) <=1: # Ensure more than just system message
-                # If only system message, it means no user/assistant messages were valid to process
-                # This could happen if user sends empty message or only system messages in input state.
-                # Adding a specific user-facing message if appropriate, or just log and return.
-                logger.warning("No valid user/assistant messages to send to the model in chat_node.")
-                # Decide on a response for this case, e.g., a polite "I need more information"
-                # For now, just pass through, which might result in an empty AI response if LLM is called with only system.
-                # Or better, create a default response.
-                if not any(m.type == 'human' for m in langchain_messages):
-                     state["messages"].append({"role": "assistant", "content": "I received an empty message. How can I help you?", "metadata": {"module": "chat"}})
-                     state["module_results"]["chat"] = "I received an empty message. How can I help you?"
-                     return state
-
-            response = llm.invoke(langchain_messages)
-            logger.debug(f"Received response: {response}")
-            
-            # Create the response message
-            assistant_message = {
-                "role": "assistant", 
-                "content": response.content,
-                "metadata": {"model": model, "module": "chat"}
-            }
-            
-            # Add the response to the messages in state
-            state["messages"].append(assistant_message)
-            
-            # Store the result in module_results
-            state["module_results"]["chat"] = response.content
-            
-            # Save the response to conversation history
-            user_id = state.get("user_id")
-            conversation_id = state.get("conversation_id")
-            if user_id and conversation_id:
-                conversation_manager.add_message(
-                    user_id,
-                    conversation_id,
-                    "assistant",
-                    response.content,
-                    {"model": model, "module": "chat"}
-                )
-            
-        except Exception as e:
-            logger.error(f"Error in chat_node: {str(e)}", exc_info=True)
-            # Add an error message to the state
-            state["error"] = str(e) # Storing general error
-            # Also append a user-facing error message
-            state["messages"].append({
-                "role": "assistant", 
-                "content": f"I encountered an error processing your request: {str(e)}", 
-                "metadata": {"module":"chat", "error": True}
-            })
-            state["module_results"]["chat"] = {"success": False, "error": str(e)}
-
-        return state
-        
     # Define the search module node (using Perplexity API for real web search)
     def search_node(state: ChatState) -> ChatState:
         """Search module that handles search-related queries using Perplexity API."""
@@ -690,6 +581,197 @@ def create_chat_graph():
         logger.debug(f"Router function routing to: {state['current_module']}")
         return state["current_module"]
     
+    # Define the LLM Agent node (replacing the chat_node)
+    def integrator_node(state: ChatState) -> ChatState:
+        """Core thinking component that integrates all available context and generates a response."""
+        logger.debug(f"Integrator node processing state")
+        current_time_str = get_current_datetime_str()
+        model = state.get("model", config.DEFAULT_MODEL)
+        temperature = state.get("temperature", 0.7)
+        max_tokens = state.get("max_tokens", 1000)
+        personality = state.get("personality", {})
+        
+        # Create system message based on personality if available
+        system_message_content = f"Current date and time: {current_time_str}. You are a helpful assistant."
+        if personality:
+            style = personality.get("style", "helpful")
+            tone = personality.get("tone", "friendly")
+            system_message_content = f"Current date and time: {current_time_str}. You are a {style} assistant. Please respond in a {tone} tone."
+        
+        # Enhance the system message to include the agent's role as a central reasoning component
+        system_message_content += "\nYou are the central reasoning component of an AI assistant system. Your task is to integrate all available information and generate a coherent, thoughtful response."
+        
+        # Check if search or analysis results are available and integrate them
+        search_results = state.get("module_results", {}).get("search", {})
+        analysis_results = state.get("module_results", {}).get("analyzer", {})
+        
+        # Append contextual information to the system message
+        if search_results and not isinstance(search_results, str):
+            if search_results.get("success", False) and search_results.get("result"):
+                system_message_content += f"\n\nRelevant search results are available related to: {search_results.get('query_used', 'unknown query')}."
+                system_message_content += "\nIncorporate this information into your response when relevant."
+        
+        if analysis_results and not isinstance(analysis_results, str):
+            if analysis_results.get("success", False) and analysis_results.get("result"):
+                system_message_content += f"\n\nRelevant analysis results are available related to: {analysis_results.get('task_processed', 'unknown task')}."
+                system_message_content += "\nIntegrate these analytical insights into your response when relevant."
+        
+        # Initialize the model
+        llm = ChatOpenAI(
+            model=model,
+            temperature=temperature,
+            max_tokens=max_tokens,
+            api_key=config.OPENAI_API_KEY
+        )
+        
+        # Convert dict messages to LangChain message objects
+        langchain_messages = []
+        
+        # Add system message first
+        langchain_messages.append(SystemMessage(content=system_message_content))
+        
+        # Keep track of whether we need to add search/analysis results to the message history
+        add_search_result = bool(search_results and not isinstance(search_results, str) and search_results.get("success", False))
+        add_analysis_result = bool(analysis_results and not isinstance(analysis_results, str) and analysis_results.get("success", False))
+        
+        # Process the conversation history
+        for msg in state["messages"]:
+            role = msg["role"]
+            content = msg["content"]
+            
+            # Skip system messages as we've already added our own
+            if role == "system":
+                continue
+            
+            # Trim whitespace from content
+            if isinstance(content, str):
+                content = content.strip()
+            
+            # Handle assistant messages with module metadata
+            if role == "assistant" and msg.get("metadata", {}).get("module") in ["search", "analyzer"]:
+                # Skip directly adding these to avoid duplication - we'll add them at appropriate places
+                continue
+            
+            if role == "user":
+                langchain_messages.append(HumanMessage(content=content))
+                
+                # Add search/analysis results right after the user's message that triggered them
+                if add_search_result and msg == state["messages"][-1]:
+                    search_result_text = search_results.get("result", "")
+                    if search_result_text:
+                        # Format search results as an assistant message
+                        search_msg = f"[Search Results]: {search_result_text}"
+                        langchain_messages.append(AIMessage(content=search_msg))
+                        add_search_result = False
+                
+                if add_analysis_result and msg == state["messages"][-1]:
+                    analysis_result_text = analysis_results.get("result", "")
+                    if analysis_result_text:
+                        # Format analysis results as an assistant message
+                        analysis_msg = f"[Analysis Results]: {analysis_result_text}"
+                        langchain_messages.append(AIMessage(content=analysis_msg))
+                        add_analysis_result = False
+                    
+            elif role == "assistant":
+                langchain_messages.append(AIMessage(content=content))
+            else:
+                logger.warning(f"Unknown message role: {role}")
+        
+        try:
+            logger.debug(f"Sending messages to Integrator: {langchain_messages}")
+            
+            # Ensure we have at least one message
+            if not langchain_messages or len(langchain_messages) <= 1:  # Ensure more than just system message
+                logger.warning("No valid user/assistant messages to send to the model in integrator_node.")
+                if not any(m.type == 'human' for m in langchain_messages):
+                     state["workflow_context"]["integrator_response"] = "I received an empty message. How can I help you?"
+                     return state
+            
+            response = llm.invoke(langchain_messages)
+            logger.debug(f"Received response from Integrator: {response}")
+            
+            # Store the Integrator's response in the workflow context for the renderer
+            state["workflow_context"]["integrator_response"] = response.content
+            
+            # Also store in module_results for consistency
+            state["module_results"]["integrator"] = response.content
+            
+        except Exception as e:
+            logger.error(f"Error in integrator_node: {str(e)}", exc_info=True)
+            # Store the error in workflow context
+            state["workflow_context"]["integrator_error"] = str(e)
+            state["workflow_context"]["integrator_response"] = f"I encountered an error processing your request: {str(e)}"
+        
+        return state
+
+    # Define the Response Renderer node
+    def response_renderer_node(state: ChatState) -> ChatState:
+        """Post-processes the LLM output to enforce style, insert follow-up suggestions, and apply user persona settings."""
+        logger.debug("Response Renderer node processing output")
+        
+        # Get the raw response from the Integrator
+        raw_response = state.get("workflow_context", {}).get("integrator_response", "")
+        
+        if not raw_response:
+            error = state.get("workflow_context", {}).get("integrator_error", "Unknown error")
+            logger.error(f"No response from Integrator to render. Error: {error}")
+            state["messages"].append({
+                "role": "assistant", 
+                "content": f"I apologize, but I encountered an error generating a response: {error}",
+                "metadata": {"error": True}
+            })
+            return state
+        
+        # Get personality settings to apply to the response
+        personality = state.get("personality", {})
+        style = personality.get("style", "helpful")
+        tone = personality.get("tone", "friendly")
+        
+        # In a more advanced implementation, this node could use an LLM to reformat the response
+        # For now, we'll just apply some basic formatting and add follow-up suggestions when appropriate
+        formatted_response = raw_response
+        
+        # Add follow-up suggestions if appropriate (for demonstration, add to all responses)
+        should_add_suggestions = True
+        
+        if should_add_suggestions:
+            # In a more sophisticated implementation, these suggestions would be contextually generated
+            formatted_response += "\n\nIs there anything else you'd like to know about this topic?"
+        
+        # Create the final assistant message
+        assistant_message = {
+            "role": "assistant", 
+            "content": formatted_response,
+            "metadata": {
+                "rendered": True,
+                "style": style,
+                "tone": tone,
+                "module_used": state.get("current_module")
+            }
+        }
+        
+        # Add the rendered response to the messages in state
+        state["messages"].append(assistant_message)
+        
+        # Save the response to conversation history
+        user_id = state.get("user_id")
+        conversation_id = state.get("conversation_id")
+        if user_id and conversation_id:
+            conversation_manager.add_message(
+                user_id,
+                conversation_id,
+                "assistant",
+                formatted_response,
+                {
+                    "rendered": True,
+                    "style": style,
+                    "tone": tone,
+                    "module_used": state.get("current_module")
+                }
+            )
+        
+        return state
+
     # Create the graph
     builder = StateGraph(ChatState)
     
@@ -698,9 +780,10 @@ def create_chat_graph():
     builder.add_node("router", router_node)
     builder.add_node("search_prompt_optimizer", search_prompt_optimizer_node)
     builder.add_node("analysis_task_refiner", analysis_task_refiner_node)
-    builder.add_node("chat", chat_node)
     builder.add_node("search", search_node)
     builder.add_node("analyzer", analyzer_node)
+    builder.add_node("integrator", integrator_node)
+    builder.add_node("response_renderer", response_renderer_node)
     
     # Set the entry point
     builder.set_entry_point("initializer")
@@ -709,27 +792,32 @@ def create_chat_graph():
     builder.add_edge("initializer", "router")
     
     # Conditional edges from router:
-    # If "search", go to optimizer, then to search_node
-    # If "analyzer", go to refiner, then to analyzer_node
-    # If "chat", go directly to chat_node
+    # - "chat" now goes directly to Integrator
+    # - "search" goes to optimizer, then to search, then to Integrator
+    # - "analyzer" goes to refiner, then to analyzer, then to Integrator
     builder.add_conditional_edges(
         "router",
-        router, # The router function determines the value of state["current_module"]
+        router,
         {
-            "chat": "chat",
-            "search": "search_prompt_optimizer", # Route to optimizer first
-            "analyzer": "analysis_task_refiner"  # Route to refiner first
+            "chat": "integrator",
+            "search": "search_prompt_optimizer",
+            "analyzer": "analysis_task_refiner"
         }
     )
 
     # Edges from optimizer/refiner to their respective processing nodes
     builder.add_edge("search_prompt_optimizer", "search")
     builder.add_edge("analysis_task_refiner", "analyzer")
-    
-    # Set all final processing nodes to end
-    builder.add_edge("chat", END)
-    builder.add_edge("search", END)
-    builder.add_edge("analyzer", END)
+
+    # All processing nodes now go to the Integrator
+    builder.add_edge("search", "integrator")
+    builder.add_edge("analyzer", "integrator")
+
+    # Integrator always goes to Response Renderer
+    builder.add_edge("integrator", "response_renderer")
+
+    # Response Renderer is the final node
+    builder.add_edge("response_renderer", END)
     
     # Compile the graph
     graph = builder.compile()
