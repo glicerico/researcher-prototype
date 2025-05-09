@@ -3,21 +3,22 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 import config
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-import logging
 import os
 from pathlib import Path
 import json
 import re
 import requests
 import time
+import inspect  # Keep this if it's being used elsewhere in the file
+
+# Use the centralized logging configuration
+from logging_config import get_logger
+logger = get_logger(__name__)
 
 # Import our storage components
 from storage.storage_manager import StorageManager
 from storage.user_manager import UserManager
 from storage.conversation_manager import ConversationManager
-
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 # Initialize storage components
 storage_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage_data")
@@ -43,7 +44,7 @@ class ChatState(TypedDict):
 # Define the intelligent router node at module level
 def router_node(state: ChatState) -> ChatState:
     """Uses a lightweight LLM to analyze the message and determine routing."""
-    logger.debug("Router node analyzing message")
+    logger.info("🔀 Router: Analyzing message to determine processing path")
     
     # Get the last user message
     last_message = None
@@ -55,7 +56,12 @@ def router_node(state: ChatState) -> ChatState:
     if not last_message:
         state["current_module"] = "chat"  # Default to chat module if no user message
         state["routing_analysis"] = {"decision": "chat", "reason": "No user message found"}
+        logger.info("🔀 Router: No user message found, defaulting to chat module")
         return state
+    
+    # Log the user message for traceability (truncate if too long)
+    display_msg = last_message[:75] + "..." if len(last_message) > 75 else last_message
+    logger.info(f"🔀 Router: Processing user message: \"{display_msg}\"")
     
     # Create a system prompt for the router
     system_prompt = """
@@ -123,7 +129,7 @@ def router_node(state: ChatState) -> ChatState:
                 "model_used": config.ROUTER_MODEL
             }
             
-            logger.info(f"Router selected module: {module} (complexity: {complexity})")
+            logger.info(f"🔀 Router: Selected module '{module}' (complexity: {complexity}) for message: \"{display_msg}\"")
             logger.debug(f"Routing reason: {reason}")
             
         except json.JSONDecodeError:
@@ -134,11 +140,13 @@ def router_node(state: ChatState) -> ChatState:
                 "reason": "Error parsing router response",
                 "raw_response": content
             }
+            logger.info("🔀 Router: Error parsing response, defaulting to chat module")
     
     except Exception as e:
         logger.error(f"Error in router_node: {str(e)}")
         state["current_module"] = "chat"  # Default fallback
         state["routing_analysis"] = {"decision": "chat", "reason": f"Error: {str(e)}"}
+        logger.info("🔀 Router: Exception occurred, defaulting to chat module")
         
     return state
 
@@ -149,6 +157,7 @@ def create_chat_graph():
     # Define the orchestrator node
     def orchestrator_node(state: ChatState) -> ChatState:
         """Central coordinator that handles user and conversation management."""
+        logger.info("🔄 Orchestrator: Processing user and conversation state")
         logger.debug(f"Orchestrator node received state: {state}")
         
         # Initialize orchestrator state if it doesn't exist
@@ -172,7 +181,7 @@ def create_chat_graph():
                 "initial_personality": state.get("personality", {})
             })
             state["user_id"] = user_id
-            logger.info(f"Created new user: {user_id}")
+            logger.info(f"🔄 Orchestrator: Created new user: {user_id}")
         else:
             # Update personality from stored preferences if not explicitly provided
             if not state.get("personality"):
@@ -188,7 +197,7 @@ def create_chat_graph():
                 "model": state.get("model", config.DEFAULT_MODEL)
             })
             state["conversation_id"] = conversation_id
-            logger.info(f"Created new conversation: {conversation_id} for user: {user_id}")
+            logger.info(f"🔄 Orchestrator: Created new conversation: {conversation_id} for user: {user_id}")
             
             # Add any existing messages to the conversation
             for message in state.get("messages", []):
@@ -205,11 +214,23 @@ def create_chat_graph():
     # Define the chat module node
     def chat_node(state: ChatState) -> ChatState:
         """Process the chat using the specified model."""
+        logger.info("💬 Chat: Processing message with model " + state.get("model", config.DEFAULT_MODEL))
         logger.debug(f"Chat node received state: {state}")
         model = state.get("model", config.DEFAULT_MODEL)
         temperature = state.get("temperature", 0.7)
         max_tokens = state.get("max_tokens", 1000)
         personality = state.get("personality", {})
+        
+        # Get last user message for logging
+        last_message = None
+        for msg in reversed(state["messages"]):
+            if msg["role"] == "user":
+                last_message = msg["content"]
+                break
+                
+        if last_message:
+            display_msg = last_message[:75] + "..." if len(last_message) > 75 else last_message
+            logger.info(f"💬 Chat: Input message: \"{display_msg}\"")
         
         # Create system message based on personality if available
         system_message_content = "You are a helpful assistant."
@@ -268,6 +289,10 @@ def create_chat_graph():
                 "metadata": {"model": model, "module": "chat"}
             }
             
+            # Log the response for traceability
+            display_response = response.content[:75] + "..." if len(response.content) > 75 else response.content
+            logger.info(f"💬 Chat: Generated response: \"{display_response}\"")
+            
             # Add the response to the messages in state
             state["messages"].append(assistant_message)
             
@@ -296,6 +321,7 @@ def create_chat_graph():
     # Define the search module node (using Perplexity API for real web search)
     def search_node(state: ChatState) -> ChatState:
         """Search module that handles search-related queries using Perplexity API."""
+        logger.info("🔍 Search: Processing query with Perplexity API")
         logger.debug(f"Search node received state: {state}")
         
         # Get the last user message
@@ -315,6 +341,10 @@ def create_chat_graph():
             })
             state["module_results"]["search"] = {"success": False, "error": error_message}
             return state
+        
+        # Log the search query
+        display_msg = last_message[:75] + "..." if len(last_message) > 75 else last_message
+        logger.info(f"🔍 Search: Searching for: \"{display_msg}\"")
         
         # Check if Perplexity API key is available
         if not config.PERPLEXITY_API_KEY:
@@ -363,6 +393,10 @@ def create_chat_graph():
             if response.status_code == 200:
                 response_data = response.json()
                 search_result = response_data["choices"][0]["message"]["content"]
+                
+                # Log the search result
+                display_result = search_result[:75] + "..." if len(search_result) > 75 else search_result
+                logger.info(f"🔍 Search: Result received: \"{display_result}\"")
                 
                 logger.debug(f"Received search response from Perplexity: {search_result[:100]}...")
                 
@@ -441,6 +475,7 @@ def create_chat_graph():
     # Define the analyzer module node (placeholder for demonstration)
     def analyzer_node(state: ChatState) -> ChatState:
         """Analyzer module that processes data-related queries."""
+        logger.info("🧩 Analyzer: Processing analysis request")
         logger.debug(f"Analyzer node received state: {state}")
         
         # In a real implementation, this would analyze data
@@ -452,9 +487,17 @@ def create_chat_graph():
             if msg["role"] == "user":
                 last_message = msg["content"]
                 break
+                
+        if last_message:
+            display_msg = last_message[:75] + "..." if len(last_message) > 75 else last_message
+            logger.info(f"🧩 Analyzer: Analyzing: \"{display_msg}\"")
         
         # Generate a simulated analysis response
         analysis_response = f"I analyzed the data related to '{last_message}' and found some interesting patterns. [This is a simulated analysis response]"
+        
+        # Log the analysis result
+        display_result = analysis_response[:75] + "..." if len(analysis_response) > 75 else analysis_response
+        logger.info(f"🧩 Analyzer: Analysis result: \"{display_result}\"")
         
         # Create the response message
         assistant_message = {
@@ -486,6 +529,7 @@ def create_chat_graph():
     # Define the router function for conditional branching
     def router(state: ChatState) -> str:
         """Route to the appropriate module based on the current_module state."""
+        logger.info(f"⚡ Flow: Routing to '{state['current_module']}' module")
         return state["current_module"]
     
     # Create the graph
