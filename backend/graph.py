@@ -3,7 +3,6 @@ from langchain_openai import ChatOpenAI
 from langgraph.graph import StateGraph, END
 import config
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
-import logging
 import os
 from pathlib import Path
 import json
@@ -12,13 +11,14 @@ import requests
 import time
 import inspect
 
+# Use the centralized logging configuration
+from logging_config import get_logger
+logger = get_logger(__name__)
+
 # Import our storage components
 from storage.storage_manager import StorageManager
 from storage.user_manager import UserManager
 from storage.conversation_manager import ConversationManager
-
-logging.basicConfig(level=logging.DEBUG)
-logger = logging.getLogger(__name__)
 
 # Initialize storage components
 storage_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage_data")
@@ -48,8 +48,7 @@ def get_current_datetime_str() -> str:
 # Define the intelligent router node at module level
 def router_node(state: ChatState) -> ChatState:
     """Uses a lightweight LLM to analyze the message and determine routing."""
-    logger.debug("Router node analyzing message")
-    current_time_str = get_current_datetime_str() # Get current time
+    logger.info("🔀 Router: Analyzing message to determine processing path")
     
     # Get the last user message
     last_message = None
@@ -61,11 +60,16 @@ def router_node(state: ChatState) -> ChatState:
     if not last_message:
         state["current_module"] = "chat"  # Default to chat module if no user message found
         state["routing_analysis"] = {"decision": "chat", "reason": "No user message found"}
+        logger.info("🔀 Router: No user message found, defaulting to chat module")
         return state
+    
+    # Log the user message for traceability (truncate if too long)
+    display_msg = last_message[:75] + "..." if len(last_message) > 75 else last_message
+    logger.info(f"🔀 Router: Processing user message: \"{display_msg}\"")
     
     # Create a system prompt for the router
     system_prompt = f"""
-    Current date and time: {current_time_str}
+    Current date and time: {get_current_datetime_str()}
     You are a message router that determines the best module to handle a user's request. 
     Analyze the message and classify it into one of these categories:
     
@@ -130,7 +134,7 @@ def router_node(state: ChatState) -> ChatState:
                 "model_used": config.ROUTER_MODEL
             }
             
-            logger.info(f"Router selected module: {module} (complexity: {complexity})")
+            logger.info(f"🔀 Router: Selected module '{module}' (complexity: {complexity}) for message: \"{display_msg}\"")
             logger.debug(f"Routing reason: {reason}")
             
         except json.JSONDecodeError:
@@ -141,11 +145,13 @@ def router_node(state: ChatState) -> ChatState:
                 "reason": "Error parsing router response",
                 "raw_response": content
             }
+            logger.info("🔀 Router: Error parsing response, defaulting to chat module")
     
     except Exception as e:
         logger.error(f"Error in router_node: {str(e)}")
         state["current_module"] = "chat"  # Default fallback
         state["routing_analysis"] = {"decision": "chat", "reason": f"Error: {str(e)}"}
+        logger.info("🔀 Router: Exception occurred, defaulting to chat module")
         
     return state
 
@@ -156,6 +162,7 @@ def create_chat_graph():
     # Define the initializer node
     def initializer_node(state: ChatState) -> ChatState:
         """Handles user, conversation, and initial state setup."""
+        logger.info("🔄 Initializer: Setting up user and conversation state")
         logger.debug(f"Initializer node received state: {state}")
         
         # Initialize workflow_context if it doesn't exist
@@ -212,6 +219,7 @@ def create_chat_graph():
     # Define the search prompt optimizer node
     def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         """Refines the user's query into an optimized search query using an LLM, considering conversation context."""
+        logger.info("🔍 Search Optimizer: Refining user query for search")
         logger.debug("Search Prompt Optimizer node refining query with context")
         current_time_str = get_current_datetime_str()
         
@@ -232,6 +240,10 @@ def create_chat_graph():
             state["workflow_context"]["refined_search_query"] = ""
             return state
 
+        # Log the user message being refined
+        display_msg = last_user_message_content[:75] + "..." if len(last_user_message_content) > 75 else last_user_message_content
+        logger.info(f"🔍 Search Optimizer: Refining query: \"{display_msg}\"")
+        
         # Construct context: last N messages (ensure not to take too many for the optimizer LLM)
         # We want the messages leading up to and including the last user message.
         num_context_messages = 5 # System + up to 4 history messages
@@ -281,6 +293,10 @@ def create_chat_graph():
             response = optimizer_llm.invoke(context_messages_for_llm)
             refined_query = response.content.strip()
             
+            # Log the refined query
+            display_refined = refined_query[:75] + "..." if len(refined_query) > 75 else refined_query
+            logger.info(f"🔍 Search Optimizer: Produced refined query: \"{display_refined}\"")
+            
             state["workflow_context"]["refined_search_query"] = refined_query
             logger.info(f"Refined search query with context: {refined_query}")
             
@@ -293,6 +309,7 @@ def create_chat_graph():
     # Define the analysis task refiner node
     def analysis_task_refiner_node(state: ChatState) -> ChatState:
         """Refines the user's request into a detailed task for the analysis engine, considering conversation context."""
+        logger.info("🧩 Analysis Refiner: Refining user request into analysis task")
         logger.debug("Analysis Task Refiner node refining task with context")
         current_time_str = get_current_datetime_str()
         raw_messages = state.get("messages", [])
@@ -306,6 +323,10 @@ def create_chat_graph():
             logger.warning("No user message found in analysis_task_refiner_node. Cannot refine.")
             state["workflow_context"]["refined_analysis_task"] = ""
             return state
+            
+        # Log the user message being refined
+        display_msg = last_user_message_content[:75] + "..." if len(last_user_message_content) > 75 else last_user_message_content
+        logger.info(f"🧩 Analysis Refiner: Refining task: \"{display_msg}\"")
 
         num_context_messages = 5 # System + up to 4 history messages
         context_messages_for_llm = []
@@ -347,6 +368,10 @@ def create_chat_graph():
         try:
             response = optimizer_llm.invoke(context_messages_for_llm)
             refined_task = response.content.strip()
+            
+            # Log the refined task
+            display_refined = refined_task[:75] + "..." if len(refined_task) > 75 else refined_task
+            logger.info(f"🧩 Analysis Refiner: Produced refined task: \"{display_refined}\"")
 
             state["workflow_context"]["refined_analysis_task"] = refined_task
             logger.info(f"Refined analysis task with context: {refined_task}")
@@ -360,8 +385,8 @@ def create_chat_graph():
     # Define the search module node (using Perplexity API for real web search)
     def search_node(state: ChatState) -> ChatState:
         """Search module that handles search-related queries using Perplexity API."""
+        logger.info("🔍 Search: Processing query with Perplexity API")
         logger.debug(f"Search node received state: {state}")
-        current_time_str = get_current_datetime_str() # Get current time
         
         # Use refined search query from workflow_context if available, otherwise fallback to last user message
         query_to_search = state.get("workflow_context", {}).get("refined_search_query")
@@ -386,6 +411,10 @@ def create_chat_graph():
             state["module_results"]["search"] = {"success": False, "error": error_message}
             return state
         
+        # Log the search query
+        display_msg = query_to_search[:75] + "..." if len(query_to_search) > 75 else query_to_search
+        logger.info(f"🔍 Search: Searching for: \"{display_msg}\"")
+        
         # Check if Perplexity API key is available
         if not config.PERPLEXITY_API_KEY:
             error_message = "Perplexity API key not configured. Please set the PERPLEXITY_API_KEY environment variable."
@@ -407,7 +436,7 @@ def create_chat_graph():
             
             # Format the search prompt FOR PERPLEXITY (system prompt here is for Perplexity's behavior)
             # The query_to_search is the user's intent, possibly refined.
-            perplexity_system_prompt = f"Current date and time: {current_time_str}. You are a helpful and accurate web search assistant. Provide comprehensive answers based on web search results."
+            perplexity_system_prompt = f"Current date and time: {get_current_datetime_str()}. You are a helpful and accurate web search assistant. Provide comprehensive answers based on web search results."
             perplexity_messages = [
                 {"role": "system", "content": perplexity_system_prompt},
                 {"role": "user", "content": query_to_search} # This is the actual search query
@@ -435,6 +464,10 @@ def create_chat_graph():
             if response.status_code == 200:
                 response_data = response.json()
                 search_result = response_data["choices"][0]["message"]["content"]
+                
+                # Log the search result
+                display_result = search_result[:75] + "..." if len(search_result) > 75 else search_result
+                logger.info(f"🔍 Search: Result received: \"{display_result}\"")
                 
                 logger.debug(f"Received search response from Perplexity: {search_result[:100]}...")
                 
@@ -513,8 +546,8 @@ def create_chat_graph():
     # Define the analyzer module node (placeholder for demonstration)
     def analyzer_node(state: ChatState) -> ChatState:
         """Analyzer module that processes data-related queries, using a refined task if available."""
+        logger.info("🧩 Analyzer: Processing analysis request")
         logger.debug(f"Analyzer node received state: {state}")
-        current_time_str = get_current_datetime_str() # For future LLM call in analyzer
         
         refined_task = state.get("workflow_context", {}).get("refined_analysis_task")
         original_user_query = None
@@ -535,14 +568,22 @@ def create_chat_graph():
             })
             state["module_results"]["analyzer"] = {"success": False, "error": error_message}
             return state
+            
+        # Log the task to analyze
+        display_task = task_to_analyze[:75] + "..." if len(task_to_analyze) > 75 else task_to_analyze
+        logger.info(f"🧩 Analyzer: Analyzing: \"{display_task}\"")
 
-        logger.info(f"Analyzer node processing task (simulated): {task_to_analyze[:200]}...")
+        logger.info(f"🧩 Analyzer node processing task (simulated): {task_to_analyze[:200]}...")
         
         # If this node were making an LLM call for analysis:
-        # analysis_system_prompt = f"Current date and time: {current_time_str}. You are an advanced data analyzer..."
+        # analysis_system_prompt = f"Current date and time: {get_current_datetime_str()}. You are an advanced data analyzer..."
         # ... then use this prompt with the LLM ...
         
         analysis_response = f"Based on the task related to '{task_to_analyze}', I have performed a simulated analysis. [This is a simulated analysis response based on the (refined) task description]"
+        
+        # Log the analysis result
+        display_result = analysis_response[:75] + "..." if len(analysis_response) > 75 else analysis_response
+        logger.info(f"🧩 Analyzer: Analysis result: \"{display_result}\"")
         
         # Create the response message
         assistant_message = {
@@ -574,22 +615,36 @@ def create_chat_graph():
     # Define the router function for conditional branching
     def router(state: ChatState) -> str:
         """Route to the appropriate module based on the current_module state."""
-        # This router now potentially routes to optimizer nodes first
-        # The optimizer nodes themselves don't change current_module, so the next step
-        # (search or analyzer) is determined by the original router decision.
-        # The conditional edges will handle this.
-        logger.debug(f"Router function routing to: {state['current_module']}")
+        logger.info(f"⚡ Flow: Routing to '{state['current_module']}' module")
         return state["current_module"]
     
-    # Define the LLM Agent node (replacing the chat_node)
+    # Define the Integrator node
     def integrator_node(state: ChatState) -> ChatState:
         """Core thinking component that integrates all available context and generates a response."""
+        logger.info("🧠 Integrator: Processing all contextual information")
         logger.debug(f"Integrator node processing state")
         current_time_str = get_current_datetime_str()
         model = state.get("model", config.DEFAULT_MODEL)
         temperature = state.get("temperature", 0.7)
         max_tokens = state.get("max_tokens", 1000)
         personality = state.get("personality", {})
+        
+        # Get last user message for logging
+        last_message = None
+        for msg in reversed(state["messages"]):
+            if msg["role"] == "user":
+                last_message = msg["content"]
+                break
+                
+        if last_message:
+            display_msg = last_message[:75] + "..." if len(last_message) > 75 else last_message
+            logger.info(f"🧠 Integrator: Processing query: \"{display_msg}\"")
+            
+        # Log available context from other modules
+        if state.get("module_results", {}).get("search"):
+            logger.info("🧠 Integrator: Incorporating search results")
+        if state.get("module_results", {}).get("analyzer"):
+            logger.info("🧠 Integrator: Incorporating analysis results")
         
         # Create system message based on personality if available
         system_message_content = f"Current date and time: {current_time_str}. You are a helpful assistant."
@@ -690,6 +745,10 @@ def create_chat_graph():
             response = llm.invoke(langchain_messages)
             logger.debug(f"Received response from Integrator: {response}")
             
+            # Log the response for traceability
+            display_response = response.content[:75] + "..." if len(response.content) > 75 else response.content
+            logger.info(f"🧠 Integrator: Generated response: \"{display_response}\"")
+            
             # Store the Integrator's response in the workflow context for the renderer
             state["workflow_context"]["integrator_response"] = response.content
             
@@ -707,6 +766,7 @@ def create_chat_graph():
     # Define the Response Renderer node
     def response_renderer_node(state: ChatState) -> ChatState:
         """Post-processes the LLM output to enforce style, insert follow-up suggestions, and apply user persona settings."""
+        logger.info("✨ Renderer: Post-processing final response")
         logger.debug("Response Renderer node processing output")
         current_time_str = get_current_datetime_str()
         
@@ -722,6 +782,10 @@ def create_chat_graph():
                 "metadata": {"error": True}
             })
             return state
+        
+        # Log the raw response
+        display_raw = raw_response[:75] + "..." if len(raw_response) > 75 else raw_response
+        logger.info(f"✨ Renderer: Processing raw response: \"{display_raw}\"")
         
         # Get personality settings to apply to the response
         personality = state.get("personality", {})
@@ -792,6 +856,10 @@ def create_chat_graph():
             # Process the response with the renderer LLM
             renderer_response = renderer_llm.invoke(renderer_messages)
             formatted_response = renderer_response.content.strip()
+            
+            # Log the formatted response
+            display_formatted = formatted_response[:75] + "..." if len(formatted_response) > 75 else formatted_response
+            logger.info(f"✨ Renderer: Produced formatted response: \"{display_formatted}\"")
             
             logger.debug(f"Renderer processed response. Original length: {len(raw_response)}, Formatted length: {len(formatted_response)}")
             

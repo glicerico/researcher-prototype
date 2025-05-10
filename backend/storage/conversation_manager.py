@@ -3,14 +3,15 @@ Conversation Manager for handling conversation history.
 """
 
 import time
-import logging
 import uuid
 from typing import Dict, Any, List, Optional
 
+# Import the centralized logging configuration
+from logging_config import get_logger
+logger = get_logger(__name__)
+
 from .storage_manager import StorageManager
 from .user_manager import UserManager
-
-logger = logging.getLogger(__name__)
 
 class ConversationManager:
     """

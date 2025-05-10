@@ -1,11 +1,18 @@
 from fastapi import FastAPI, HTTPException, Depends, Header, Query
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
+
+# Import and configure logging first, before other imports
+from logging_config import configure_logging, get_logger
+
+# Configure application logging
+logger = configure_logging()
+
+# Now import other modules that might use logging
 from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile, ConversationSummary, ConversationDetail
 from graph import chat_graph, user_manager, conversation_manager, router_node
 import config
 import traceback
-import logging
 from typing import List, Dict, Optional, Any
 from pydantic import BaseModel, Field
 
@@ -20,8 +27,8 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-logger = logging.getLogger(__name__)
-
+# Get a module-specific logger
+logger = get_logger(__name__)
 
 # Helper function to get user_id from header with fallback to creating new user
 async def get_user_id(x_user_id: Optional[str] = Header(None)):

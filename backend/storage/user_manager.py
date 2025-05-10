@@ -4,12 +4,13 @@ User Manager for handling user profiles and preferences.
 
 import uuid
 import time
-import logging
-from typing import Dict, Any, Optional, List
+from typing import Dict, Any, List, Optional
+
+# Import the centralized logging configuration
+from logging_config import get_logger
+logger = get_logger(__name__)
 
 from .storage_manager import StorageManager
-
-logger = logging.getLogger(__name__)
 
 class UserManager:
     """

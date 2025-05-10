@@ -4,14 +4,15 @@ Storage Manager for handling file-based storage operations.
 
 import os
 import json
-import logging
 import time
 import shutil
 import fcntl
 from pathlib import Path
 from typing import Dict, Any, Optional, Union, List
 
-logger = logging.getLogger(__name__)
+# Import the centralized logging configuration
+from logging_config import get_logger
+logger = get_logger(__name__)
 
 class StorageManager:
     """

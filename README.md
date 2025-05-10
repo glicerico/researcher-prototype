@@ -132,6 +132,91 @@ The backend is designed to be flexible for future extensions:
 - Add new nodes to the LangGraph in graph.py
 - Add new API endpoints in app.py
 
+### Logging and Debugging
+
+The application uses a centralized logging system to provide consistent log information across all components:
+
+#### Log Levels
+
+- **INFO**: Default log level for development, shows the main flow through the graph with emojis for visual distinction
+- **DEBUG**: More detailed logs for troubleshooting specific issues
+- **WARNING**: Problems that don't stop execution but may need attention
+- **ERROR**: Critical issues that prevent proper functionality
+
+#### Enabling Debug Mode
+
+You can enable more verbose logging in three ways:
+
+1. **At application startup**: Modify the call to `configure_logging()` in `app.py`:
+   ```python
+   # Change from
+   logger = configure_logging()
+   # To
+   logger = configure_logging(level=logging.DEBUG)
+   ```
+
+2. **During runtime**: When you encounter an issue, add this code to a route handler or the Python REPL:
+   ```python
+   from logging_config import enable_debug_logging
+   enable_debug_logging()
+   ```
+
+3. **Using the debug endpoint**: The application provides a `/debug` endpoint that can be used to diagnose routing issues without executing the full graph:
+   ```
+   POST http://localhost:8000/debug
+   ```
+   with the same body format as the `/chat` endpoint.
+
+#### Viewing Log Output
+
+The application logs to the console by default with this format:
+```
+HH:MM:SS | LEVEL | LOGGER_NAME | MESSAGE
+```
+
+Each component of the graph uses emojis in logs for better visual identification:
+- 🔄 Initializer: Initial setup and state preparation
+- 🔀 Router: Message classification and routing
+- 🔍 Search: Web search related operations
+- 🧩 Analyzer: Complex analysis operations
+- 🧠 Integrator: Central reasoning component
+- ✨ Renderer: Response formatting and enhancement
+- ⚡ Flow: Transitions between components
+
+#### Tracing Message Processing
+
+The application includes detailed logging to trace a user's message through the entire processing pipeline:
+
+1. **Input Capture**: User message content is logged when first received
+2. **Router Analysis**: Shows which module was selected to handle the message and why
+3. **Module Processing**: Each module logs its input and output
+4. **Response Generation**: The final response is logged before being sent to the user
+
+Example log sequence for a complete message flow:
+```
+12:34:56 | INFO | backend.graph | 🔀 Router: Processing user message: "What's the weather like today?"
+12:34:57 | INFO | backend.graph | 🔀 Router: Selected module 'search' (complexity: 3) for message: "What's the weather like today?"
+12:34:57 | INFO | backend.graph | ⚡ Flow: Routing to 'search' module
+12:34:57 | INFO | backend.graph | 🔍 Search: Searching for: "What's the weather like today?"
+12:34:59 | INFO | backend.graph | 🔍 Search: Result received: "Currently in your area, it's 72°F and sunny with light winds from the west..."
+12:35:00 | INFO | backend.graph | 🧠 Integrator: Processing all contextual information
+12:35:02 | INFO | backend.graph | 🧠 Integrator: Generated response: "The current weather is 72°F and sunny with light winds from the west..."
+12:35:03 | INFO | backend.graph | ✨ Renderer: Produced formatted response: "It's currently 72°F and sunny with light winds from the west..."
+```
+
+This detailed logging helps you:
+- Track exactly how each message is processed
+- Identify which module handled a particular request
+- Debug issues where messages are routed incorrectly
+- See the transformation from user input to AI response
+
+#### Customizing Logging
+
+The logging system can be further customized in `logging_config.py`:
+- Add file handlers to write logs to a file
+- Customize the log format
+- Set different log levels for different components
+
 ### Visualizing the LangGraph
 
 The project includes a built-in visualization feature for the LangGraph. To generate a PNG diagram:
@@ -219,5 +304,11 @@ GPLv3
    - If `backend/storage_data` is missing, it will be created automatically on first run
    - If you're using a fresh clone of the repository, you'll need to create users again
 
-For more technical issues, check the console logs in both the browser and the terminal running the backend server.
+5. **Diagnosing Processing Issues**
+   - Use the visual emoji indicators in logs to trace message flow (🔀 🔍 🧩 🧠 ✨)
+   - Enable debug logging using `enable_debug_logging()` function
+   - Use the `/debug` endpoint to test message routing without full processing
+   - For LLM API issues, check the error messages in the logs which will indicate rate limits, token limits, or API key problems
+
+For more technical issues, check the console logs in both the browser and the terminal running the backend server. The application's logging system provides detailed information about the internal flow and any errors that occur.
 
