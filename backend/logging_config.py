@@ -1,61 +1,72 @@
 import logging
+import sys
+from typing import Optional
 
-def configure_logging(level=logging.INFO):
-    """Configure global logging settings
+def configure_logging(level: int = logging.INFO) -> logging.Logger:
+    """
+    Configure global logging settings for the application.
     
     Args:
-        level: The base logging level for application loggers
+        level: The logging level to set (default: INFO)
         
     Returns:
-        The configured root logger
+        A logger instance for the application
     """
-    # Configure the basic logging format
-    logging.basicConfig(
-        level=level,
-        format='%(asctime)s | %(levelname)s | %(name)s | %(message)s',
-        datefmt='%H:%M:%S'
-    )
+    # Create a root logger
+    root_logger = logging.getLogger()
+    root_logger.setLevel(level)
     
-    # Set specific third-party loggers to WARNING to reduce noise
-    logging.getLogger("httpcore").setLevel(logging.WARNING)
-    logging.getLogger("httpx").setLevel(logging.WARNING)
-    logging.getLogger("openai").setLevel(logging.WARNING)
-    logging.getLogger("openai._base_client").setLevel(logging.WARNING)
-    logging.getLogger("uvicorn").setLevel(logging.WARNING)
-    logging.getLogger("fastapi").setLevel(logging.WARNING)
+    # Remove any existing handlers to avoid duplicates
+    for handler in root_logger.handlers[:]:
+        root_logger.removeHandler(handler)
     
-    # Get the root logger for the application
-    app_logger = logging.getLogger("backend")
-    app_logger.setLevel(level)
+    # Create a console handler
+    console = logging.StreamHandler(sys.stdout)
+    console.setLevel(level)
     
-    # Return the configured logger
-    return app_logger
+    # Create a formatter
+    formatter = logging.Formatter('%(asctime)s | %(levelname)s | %(name)s | %(message)s', 
+                                  datefmt='%H:%M:%S')
+    console.setFormatter(formatter)
+    
+    # Add the handler to the root logger
+    root_logger.addHandler(console)
+    
+    # Set third-party loggers to WARNING to reduce noise
+    logging.getLogger('httpx').setLevel(logging.WARNING)
+    logging.getLogger('urllib3').setLevel(logging.WARNING)
+    logging.getLogger('asyncio').setLevel(logging.WARNING)
+    logging.getLogger('openai').setLevel(logging.WARNING)
+    logging.getLogger('httpcore').setLevel(logging.WARNING)
+    
+    # Return a logger for the main application
+    return get_logger('backend')
 
-def enable_debug_logging():
-    """Enable debug logging for development troubleshooting
-    
-    This function can be called at runtime to increase log verbosity
-    when needed for troubleshooting.
+def enable_debug_logging() -> None:
     """
-    logging.getLogger("backend").setLevel(logging.DEBUG)
-    logging.getLogger("backend.graph").setLevel(logging.DEBUG)
-    print("Debug logging enabled for application loggers")
+    Enable debug logging for the application.
+    This can be called during runtime to increase log verbosity.
+    """
+    # Set the root logger to DEBUG
+    root_logger = logging.getLogger()
+    root_logger.setLevel(logging.DEBUG)
+    
+    # Also set the console handler to DEBUG
+    for handler in root_logger.handlers:
+        handler.setLevel(logging.DEBUG)
+    
+    # Log that debug mode has been enabled
+    logger = get_logger('backend')
+    logger.info("Debug logging enabled")
 
-def get_logger(name):
-    """Get a logger with the specified name
+def get_logger(name: str) -> logging.Logger:
+    """
+    Get a logger with the specified name.
     
     Args:
-        name: The name for the logger, typically __name__
+        name: The name of the logger
         
     Returns:
-        A configured logger instance
+        A logger instance
     """
-    # For application modules, use a consistent prefix
-    if not name.startswith("backend.") and not name == "backend":
-        if name.startswith("__"):
-            # Handle special case for __main__ etc.
-            name = f"backend.{name}"
-        else:
-            name = f"backend.{name}"
-    
     return logging.getLogger(name) 

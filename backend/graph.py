@@ -47,7 +47,7 @@ def get_current_datetime_str() -> str:
 
 # Define the intelligent router node at module level
 def router_node(state: ChatState) -> ChatState:
-    """Uses a lightweight LLM to analyze the message and determine routing."""
+    """Uses a lightweight LLM to analyze the user's message and determine routing."""
     logger.info("🔀 Router: Analyzing message to determine processing path")
     
     # Get the last user message
@@ -220,12 +220,10 @@ def create_chat_graph():
     def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         """Refines the user's query into an optimized search query using an LLM, considering conversation context."""
         logger.info("🔍 Search Optimizer: Refining user query for search")
-        logger.debug("Search Prompt Optimizer node refining query with context")
         current_time_str = get_current_datetime_str()
         
         # Gather recent conversation history for context (e.g., last 5 messages)
-        # The messages in ChatState are dicts: {"role": ..., "content": ...}
-        history_for_refinement = []
+        # history_for_refinement = []
         raw_messages = state.get("messages", [])
         
         # Get the actual last user message to be refined
@@ -244,23 +242,10 @@ def create_chat_graph():
         display_msg = last_user_message_content[:75] + "..." if len(last_user_message_content) > 75 else last_user_message_content
         logger.info(f"🔍 Search Optimizer: Refining query: \"{display_msg}\"")
         
-        # Construct context: last N messages (ensure not to take too many for the optimizer LLM)
-        # We want the messages leading up to and including the last user message.
+        # Construct context: messages leading up to and including the last user message.
         num_context_messages = 5 # System + up to 4 history messages
         context_messages_for_llm = [] 
         
-        # System prompt for the optimizer LLM
-        system_prompt = f"""
-        Current date and time: {current_time_str}
-        You are an expert at rephrasing user questions into effective search engine queries.
-        Analyze the provided conversation history and the LATEST user question.
-        Based on this context, transform the LATEST user question into a concise and keyword-focused search query
-        that is likely to yield the best results from a web search engine like Perplexity.
-        Focus on the core intent of the LATEST user question and use precise terminology, informed by the preceding conversation.
-        Output ONLY the refined search query for the LATEST user question, with no other text or explanation.
-        """
-        context_messages_for_llm.append(SystemMessage(content=system_prompt))
-
         # Add recent history to context_messages_for_llm (HumanMessage, AIMessage)
         # Convert dict messages from state to LangChain message objects for the optimizer
         start_index = max(0, len(raw_messages) - (num_context_messages -1)) # -1 because system prompt is one
@@ -276,12 +261,18 @@ def create_chat_graph():
             # System messages from history are generally not passed to such an optimizer,
             # as we have a specific one for this node.
 
-        # Ensure there's actually a human message to respond to, otherwise the LLM might be confused.
-        if not any(isinstance(m, HumanMessage) for m in context_messages_for_llm):
-            logger.warning("No human messages in context for search_prompt_optimizer. Using raw last user message.")
-            state["workflow_context"]["refined_search_query"] = last_user_message_content
-            return state
-            
+        # Instruction prompt for the optimizer LLM
+        instruction_prompt = f"""
+        Current date and time: {current_time_str}
+        You are an expert at rephrasing user questions into effective search engine queries.
+        Analyze the provided conversation history and the LATEST user question.
+        Based on this context, transform the LATEST user question into a concise and keyword-focused search query
+        that is likely to yield the best results from a web search engine like Perplexity.
+        Focus on the core intent of the LATEST user question and use precise terminology, informed by the preceding conversation.
+        Output ONLY the refined search query for the LATEST user question, with no other text or explanation.
+        """
+        context_messages_for_llm.append(HumanMessage(content=instruction_prompt))
+
         optimizer_llm = ChatOpenAI(
             model=config.ROUTER_MODEL, 
             temperature=0.0,
@@ -403,11 +394,6 @@ def create_chat_graph():
         if not query_to_search: # If still no query (e.g. no user message at all)
             error_message = "No query found to search for (neither refined nor original)."
             logger.error(error_message)
-            state["messages"].append({
-                "role": "assistant", 
-                "content": error_message,
-                "metadata": {"module": "search", "error": True}
-            })
             state["module_results"]["search"] = {"success": False, "error": error_message}
             return state
         
@@ -419,11 +405,6 @@ def create_chat_graph():
         if not config.PERPLEXITY_API_KEY:
             error_message = "Perplexity API key not configured. Please set the PERPLEXITY_API_KEY environment variable."
             logger.error(error_message)
-            state["messages"].append({
-                "role": "assistant", 
-                "content": error_message,
-                "metadata": {"module": "search", "error": True}
-            })
             state["module_results"]["search"] = {"success": False, "error": error_message}
             return state
         
@@ -436,7 +417,9 @@ def create_chat_graph():
             
             # Format the search prompt FOR PERPLEXITY (system prompt here is for Perplexity's behavior)
             # The query_to_search is the user's intent, possibly refined.
-            perplexity_system_prompt = f"Current date and time: {get_current_datetime_str()}. You are a helpful and accurate web search assistant. Provide comprehensive answers based on web search results."
+            perplexity_system_prompt = f"""Current date and time: {get_current_datetime_str()}. 
+You are a helpful and accurate web search assistant. 
+Provide comprehensive answers based on web search results."""
             perplexity_messages = [
                 {"role": "system", "content": perplexity_system_prompt},
                 {"role": "user", "content": query_to_search} # This is the actual search query
@@ -469,22 +452,6 @@ def create_chat_graph():
                 display_result = search_result[:75] + "..." if len(search_result) > 75 else search_result
                 logger.info(f"🔍 Search: Result received: \"{display_result}\"")
                 
-                logger.debug(f"Received search response from Perplexity: {search_result[:100]}...")
-                
-                # Create the response message
-                assistant_message = {
-                    "role": "assistant", 
-                    "content": search_result,
-                    "metadata": {
-                        "module": "search",
-                        "model": config.PERPLEXITY_MODEL,
-                        "original_query": query_to_search # Storing the query that was actually searched
-                    }
-                }
-                
-                # Add the response to the messages in state
-                state["messages"].append(assistant_message)
-                
                 # Store the result in module_results
                 state["module_results"]["search"] = {
                     "success": True,
@@ -492,34 +459,10 @@ def create_chat_graph():
                     "query_used": query_to_search
                 }
                 
-                # Save the response to conversation history
-                user_id = state.get("user_id")
-                conversation_id = state.get("conversation_id")
-                if user_id and conversation_id:
-                    conversation_manager.add_message(
-                        user_id,
-                        conversation_id,
-                        "assistant",
-                        search_result,
-                        {
-                            "module": "search",
-                            "model": config.PERPLEXITY_MODEL,
-                            "query_used": query_to_search
-                        }
-                    )
             else:
                 # Handle API error
                 error_message = f"Perplexity API request failed with status code {response.status_code}: {response.text}"
                 logger.error(error_message)
-                
-                # Format a user-friendly error message
-                user_error = f"I couldn't complete the search due to an API error. Status code: {response.status_code}"
-                
-                state["messages"].append({
-                    "role": "assistant", 
-                    "content": user_error,
-                    "metadata": {"module": "search", "error": True}
-                })
                 
                 state["module_results"]["search"] = {
                     "success": False, 
@@ -531,13 +474,6 @@ def create_chat_graph():
             # Handle any exceptions
             error_message = f"Error in search_node: {str(e)}"
             logger.error(error_message, exc_info=True)
-            
-            # Add an error message to the state
-            state["messages"].append({
-                "role": "assistant", 
-                "content": f"I encountered an error while trying to search: {str(e)}",
-                "metadata": {"module": "search", "error": True}
-            })
             
             state["module_results"]["search"] = {"success": False, "error": error_message}
         
@@ -561,11 +497,6 @@ def create_chat_graph():
         if not task_to_analyze:
             error_message = "No task found for analyzer (neither refined nor original)."
             logger.error(error_message)
-            state["messages"].append({
-                "role": "assistant", 
-                "content": error_message,
-                "metadata": {"module": "analyzer", "error": True}
-            })
             state["module_results"]["analyzer"] = {"success": False, "error": error_message}
             return state
             
@@ -575,40 +506,14 @@ def create_chat_graph():
 
         logger.info(f"🧩 Analyzer node processing task (simulated): {task_to_analyze[:200]}...")
         
-        # If this node were making an LLM call for analysis:
-        # analysis_system_prompt = f"Current date and time: {get_current_datetime_str()}. You are an advanced data analyzer..."
-        # ... then use this prompt with the LLM ...
-        
         analysis_response = f"Based on the task related to '{task_to_analyze}', I have performed a simulated analysis. [This is a simulated analysis response based on the (refined) task description]"
         
         # Log the analysis result
         display_result = analysis_response[:75] + "..." if len(analysis_response) > 75 else analysis_response
         logger.info(f"🧩 Analyzer: Analysis result: \"{display_result}\"")
         
-        # Create the response message
-        assistant_message = {
-            "role": "assistant", 
-            "content": analysis_response,
-            "metadata": {"module": "analyzer", "task_processed": task_to_analyze}
-        }
-        
-        # Add the response to the messages in state
-        state["messages"].append(assistant_message)
-        
         # Store the result in module_results
         state["module_results"]["analyzer"] = {"success": True, "result": analysis_response, "task_processed": task_to_analyze}
-        
-        # Save the response to conversation history
-        user_id = state.get("user_id")
-        conversation_id = state.get("conversation_id")
-        if user_id and conversation_id:
-            conversation_manager.add_message(
-                user_id,
-                conversation_id,
-                "assistant",
-                analysis_response,
-                {"module": "analyzer", "task_processed": task_to_analyze}
-            )
         
         return state
     
@@ -622,12 +527,10 @@ def create_chat_graph():
     def integrator_node(state: ChatState) -> ChatState:
         """Core thinking component that integrates all available context and generates a response."""
         logger.info("🧠 Integrator: Processing all contextual information")
-        logger.debug(f"Integrator node processing state")
         current_time_str = get_current_datetime_str()
         model = state.get("model", config.DEFAULT_MODEL)
         temperature = state.get("temperature", 0.7)
         max_tokens = state.get("max_tokens", 1000)
-        personality = state.get("personality", {})
         
         # Get last user message for logging
         last_message = None
@@ -640,36 +543,11 @@ def create_chat_graph():
             display_msg = last_message[:75] + "..." if len(last_message) > 75 else last_message
             logger.info(f"🧠 Integrator: Processing query: \"{display_msg}\"")
             
-        # Log available context from other modules
-        if state.get("module_results", {}).get("search"):
-            logger.info("🧠 Integrator: Incorporating search results")
-        if state.get("module_results", {}).get("analyzer"):
-            logger.info("🧠 Integrator: Incorporating analysis results")
-        
         # Create system message based on personality if available
-        system_message_content = f"Current date and time: {current_time_str}. You are a helpful assistant."
-        if personality:
-            style = personality.get("style", "helpful")
-            tone = personality.get("tone", "friendly")
-            system_message_content = f"Current date and time: {current_time_str}. You are a {style} assistant. Please respond in a {tone} tone."
+        system_message_content = f"Current date and time: {current_time_str}."
         
-        # Enhance the system message to include the agent's role as a central reasoning component
+        # Include the agent's role as a central reasoning component
         system_message_content += "\nYou are the central reasoning component of an AI assistant system. Your task is to integrate all available information and generate a coherent, thoughtful response."
-        
-        # Check if search or analysis results are available and integrate them
-        search_results = state.get("module_results", {}).get("search", {})
-        analysis_results = state.get("module_results", {}).get("analyzer", {})
-        
-        # Append contextual information to the system message
-        if search_results and not isinstance(search_results, str):
-            if search_results.get("success", False) and search_results.get("result"):
-                system_message_content += f"\n\nRelevant search results are available related to: {search_results.get('query_used', 'unknown query')}."
-                system_message_content += "\nIncorporate this information into your response when relevant."
-        
-        if analysis_results and not isinstance(analysis_results, str):
-            if analysis_results.get("success", False) and analysis_results.get("result"):
-                system_message_content += f"\n\nRelevant analysis results are available related to: {analysis_results.get('task_processed', 'unknown task')}."
-                system_message_content += "\nIntegrate these analytical insights into your response when relevant."
         
         # Initialize the model
         llm = ChatOpenAI(
@@ -685,10 +563,6 @@ def create_chat_graph():
         # Add system message first
         langchain_messages.append(SystemMessage(content=system_message_content))
         
-        # Keep track of whether we need to add search/analysis results to the message history
-        add_search_result = bool(search_results and not isinstance(search_results, str) and search_results.get("success", False))
-        add_analysis_result = bool(analysis_results and not isinstance(analysis_results, str) and analysis_results.get("success", False))
-        
         # Process the conversation history
         for msg in state["messages"]:
             role = msg["role"]
@@ -702,46 +576,55 @@ def create_chat_graph():
             if isinstance(content, str):
                 content = content.strip()
             
-            # Handle assistant messages with module metadata
-            if role == "assistant" and msg.get("metadata", {}).get("module") in ["search", "analyzer"]:
-                # Skip directly adding these to avoid duplication - we'll add them at appropriate places
-                continue
-            
             if role == "user":
                 langchain_messages.append(HumanMessage(content=content))
                 
-                # Add search/analysis results right after the user's message that triggered them
-                if add_search_result and msg == state["messages"][-1]:
-                    search_result_text = search_results.get("result", "")
-                    if search_result_text:
-                        # Format search results as an assistant message
-                        search_msg = f"[Search Results]: {search_result_text}"
-                        langchain_messages.append(AIMessage(content=search_msg))
-                        add_search_result = False
-                
-                if add_analysis_result and msg == state["messages"][-1]:
-                    analysis_result_text = analysis_results.get("result", "")
-                    if analysis_result_text:
-                        # Format analysis results as an assistant message
-                        analysis_msg = f"[Analysis Results]: {analysis_result_text}"
-                        langchain_messages.append(AIMessage(content=analysis_msg))
-                        add_analysis_result = False
-                    
             elif role == "assistant":
                 langchain_messages.append(AIMessage(content=content))
             else:
                 logger.warning(f"Unknown message role: {role}")
         
+        # Add search/analysis results after the last message, if available
+        search_results = state.get("module_results", {}).get("search", {})
+        if search_results.get("success", False):
+            search_result_text = search_results.get("result", None)
+            if search_result_text:
+                # Add search results directly to the prompt
+                search_msg = f"""
+IMPORTANT FACTUAL INFORMATION FROM SEARCH:
+==================================================
+{search_result_text}
+==================================================
+The above information is from a current web search. Please prioritize this information in your response.
+"""
+                langchain_messages.append(AIMessage(content=search_msg))
+                logger.info("🧠 Integrator: Added search results to prompt")
+            
+        analysis_results = state.get("module_results", {}).get("analyzer", {})
+        if analysis_results.get("success", False):
+            analysis_result_text = analysis_results.get("result", None)
+            if analysis_result_text:
+                # Add analysis results directly to the prompt
+                analysis_msg = f"""
+IMPORTANT ANALYTICAL INSIGHTS:
+==================================================
+{analysis_result_text}
+==================================================
+The above analytical insights are relevant to the user's query. Incorporate these insights into your response.
+"""
+                langchain_messages.append(AIMessage(content=analysis_msg))
+                logger.info("🧠 Integrator: Added analytical insights to prompt")
+                    
+        # Log the full prompt being sent to the LLM for debugging
+        prompt_log = "\n---\n".join([
+            f"ROLE: {msg.type}\nCONTENT: {msg.content}"
+            for msg in langchain_messages
+        ])
+        logger.info(f"🧠 Integrator: Full prompt being sent to LLM:\n{prompt_log}")
+        
         try:
-            logger.debug(f"Sending messages to Integrator: {langchain_messages}")
-            
-            # Ensure we have at least one message
-            if not langchain_messages or len(langchain_messages) <= 1:  # Ensure more than just system message
-                logger.warning("No valid user/assistant messages to send to the model in integrator_node.")
-                if not any(m.type == 'human' for m in langchain_messages):
-                     state["workflow_context"]["integrator_response"] = "I received an empty message. How can I help you?"
-                     return state
-            
+            logger.debug(f"Sending {len(langchain_messages)} messages to Integrator")
+            # Create a chat model with specified parameters
             response = llm.invoke(langchain_messages)
             logger.debug(f"Received response from Integrator: {response}")
             
