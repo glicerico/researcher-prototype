@@ -100,54 +100,43 @@ def router_node(state: ChatState) -> ChatState:
         ]
         
         response = router_llm.invoke(router_messages)
-        
-        # Parse the response - expect JSON format
-        # Extract JSON from the response (it might be wrapped in markdown code blocks)
         content = response.content
-        json_match = re.search(r'```json\s*([\s\S]*?)\s*```', content)
-        if json_match:
-            json_str = json_match.group(1)
-        else:
-            json_str = content
-            
-        # Clean any remaining markdown or non-json text
-        json_str = re.sub(r'[^{]*({.*})[^}]*', r'\1', json_str, flags=re.DOTALL)
         
-        try:
-            routing_data = json.loads(json_str)
+        # Extract JSON
+        json_str = content
+        if '```json' in content:
+            # Extract content from code blocks if present
+            import re
+            json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
+            if json_match:
+                json_str = json_match.group(1)
+        
+        # Parse the routing decision
+        routing_data = json.loads(json_str)
             
-            # Extract routing decision
-            module = routing_data.get("module", "chat").lower()
-            reason = routing_data.get("reason", "Default routing")
-            complexity = int(routing_data.get("complexity", 5))
-            
-            # Validate module name
-            if module not in ["chat", "search", "analyzer"]:
-                module = "chat"  # Default to chat for unrecognized modules
-            
-            # Set the routing decision
-            state["current_module"] = module
-            state["routing_analysis"] = {
-                "decision": module,
-                "reason": reason,
-                "complexity": complexity,
-                "model_used": config.ROUTER_MODEL
-            }
-            
-            logger.info(f"🔀 Router: Selected module '{module}' (complexity: {complexity}) for message: \"{display_msg}\"")
-            logger.debug(f"Routing reason: {reason}")
-            
-        except json.JSONDecodeError:
-            logger.error(f"Failed to parse router response as JSON: {content}")
-            state["current_module"] = "chat"  # Default fallback
-            state["routing_analysis"] = {
-                "decision": "chat", 
-                "reason": "Error parsing router response",
-                "raw_response": content
-            }
-            logger.info("🔀 Router: Error parsing response, defaulting to chat module")
-    
+        # Extract routing decision
+        module = routing_data.get("module", "chat").lower()
+        reason = routing_data.get("reason", "Default routing")
+        complexity = int(routing_data.get("complexity", 5))
+        
+        # Validate module name
+        if module not in ["chat", "search", "analyzer"]:
+            module = "chat"  # Default to chat for unrecognized modules
+        
+        # Set the routing decision
+        state["current_module"] = module
+        state["routing_analysis"] = {
+            "decision": module,
+            "reason": reason,
+            "complexity": complexity,
+            "model_used": config.ROUTER_MODEL
+        }
+        
+        logger.info(f"🔀 Router: Selected module '{module}' (complexity: {complexity}) for message: \"{display_msg}\"")
+        logger.debug(f"Routing reason: {reason}")
+        
     except Exception as e:
+        # Single exception handling for all error cases
         logger.error(f"Error in router_node: {str(e)}")
         state["current_module"] = "chat"  # Default fallback
         state["routing_analysis"] = {"decision": "chat", "reason": f"Error: {str(e)}"}
@@ -163,19 +152,11 @@ def create_chat_graph():
     def initializer_node(state: ChatState) -> ChatState:
         """Handles user, conversation, and initial state setup."""
         logger.info("🔄 Initializer: Setting up user and conversation state")
-        logger.debug(f"Initializer node received state: {state}")
         
-        # Initialize workflow_context if it doesn't exist
-        if "workflow_context" not in state or not state["workflow_context"]:
-            state["workflow_context"] = {}
-        
-        # Initialize module_results if it doesn't exist
-        if "module_results" not in state or not state["module_results"]:
-            state["module_results"] = {}
-            
-        # Initialize personality if it doesn't exist
-        if "personality" not in state or not state["personality"]:
-            state["personality"] = {"style": "helpful", "tone": "friendly"}
+        # Initialize state objects if they don't exist
+        state["workflow_context"] = state.get("workflow_context", {})
+        state["module_results"] = state.get("module_results", {})
+        state["personality"] = state.get("personality", {"style": "helpful", "tone": "friendly"})
         
         # Handle user management - create or get user
         user_id = state.get("user_id")
@@ -191,7 +172,6 @@ def create_chat_graph():
             # Update personality from stored preferences if not explicitly provided
             if not state.get("personality"):
                 state["personality"] = user_manager.get_personality(user_id)
-                logger.debug(f"Loaded personality for user {user_id}: {state['personality']}")
                 
         # Handle conversation management
         conversation_id = state.get("conversation_id")
@@ -202,17 +182,10 @@ def create_chat_graph():
                 "model": state.get("model", config.DEFAULT_MODEL)
             })
             state["conversation_id"] = conversation_id
-            logger.info(f"Created new conversation: {conversation_id} for user: {user_id}")
-            
-            # Add any existing messages to the conversation
-            for message in state.get("messages", []):
-                conversation_manager.add_message(
-                    user_id, 
-                    conversation_id,
-                    message.get("role"),
-                    message.get("content"),
-                    message.get("metadata", {})
-                )
+            logger.info(f"Created new conversation: {conversation_id}")
+        
+        # Store the input messages in the conversation
+        conversation_manager.add_messages(user_id, conversation_id, state["messages"])
         
         return state
     
@@ -375,28 +348,24 @@ def create_chat_graph():
 
     # Define the search module node (using Perplexity API for real web search)
     def search_node(state: ChatState) -> ChatState:
-        """Search module that handles search-related queries using Perplexity API."""
-        logger.info("🔍 Search: Processing query with Perplexity API")
+        """Performs web search for user queries requiring up-to-date information."""
+        logger.info("🔍 Search: Preparing to search for information")
         logger.debug(f"Search node received state: {state}")
         
-        # Use refined search query from workflow_context if available, otherwise fallback to last user message
-        query_to_search = state.get("workflow_context", {}).get("refined_search_query")
+        # Use the refined query if available, otherwise get the last user message
+        refined_query = state.get("workflow_context", {}).get("refined_search_query")
+        original_user_query = None
+        for msg in reversed(state["messages"]):
+            if msg["role"] == "user":
+                original_user_query = msg["content"]
+                break
         
-        if not query_to_search:
-            logger.warning("No refined_search_query found in workflow_context. Falling back to last user message for search.")
-            last_user_message_content = None
-            for msg in reversed(state["messages"]):
-                if msg["role"] == "user":
-                    last_user_message_content = msg["content"]
-                    break
-            query_to_search = last_user_message_content
+        query_to_search = refined_query if refined_query else original_user_query
 
-        if not query_to_search: # If still no query (e.g. no user message at all)
-            error_message = "No query found to search for (neither refined nor original)."
-            logger.error(error_message)
-            state["module_results"]["search"] = {"success": False, "error": error_message}
+        if not query_to_search:
+            state["module_results"]["search"] = {"success": False, "error": "No query found for search (neither refined nor original)."}
             return state
-        
+            
         # Log the search query
         display_msg = query_to_search[:75] + "..." if len(query_to_search) > 75 else query_to_search
         logger.info(f"🔍 Search: Searching for: \"{display_msg}\"")
@@ -415,23 +384,20 @@ def create_chat_graph():
                 "Content-Type": "application/json"
             }
             
-            # Format the search prompt FOR PERPLEXITY (system prompt here is for Perplexity's behavior)
-            # The query_to_search is the user's intent, possibly refined.
+            # Format the search prompt 
             perplexity_system_prompt = f"""Current date and time: {get_current_datetime_str()}. 
 You are a helpful and accurate web search assistant. 
 Provide comprehensive answers based on web search results."""
             perplexity_messages = [
                 {"role": "system", "content": perplexity_system_prompt},
-                {"role": "user", "content": query_to_search} # This is the actual search query
+                {"role": "user", "content": query_to_search}
             ]
             
             # Prepare the API request
             payload = {
                 "model": config.PERPLEXITY_MODEL,
                 "messages": perplexity_messages,
-                "options": { # Perplexity specific options if any, e.g. search depth, focus.
-                    "stream": False 
-                }
+                "options": {"stream": False}
             }
             
             logger.debug(f"Sending search request to Perplexity API with query: {query_to_search}")
@@ -443,7 +409,7 @@ Provide comprehensive answers based on web search results."""
                 json=payload
             )
             
-            # Check if the request was successful
+            # Process the response
             if response.status_code == 200:
                 response_data = response.json()
                 search_result = response_data["choices"][0]["message"]["content"]
@@ -452,18 +418,15 @@ Provide comprehensive answers based on web search results."""
                 display_result = search_result[:75] + "..." if len(search_result) > 75 else search_result
                 logger.info(f"🔍 Search: Result received: \"{display_result}\"")
                 
-                # Store the result in module_results
                 state["module_results"]["search"] = {
                     "success": True,
                     "result": search_result,
                     "query_used": query_to_search
                 }
-                
             else:
                 # Handle API error
                 error_message = f"Perplexity API request failed with status code {response.status_code}: {response.text}"
                 logger.error(error_message)
-                
                 state["module_results"]["search"] = {
                     "success": False, 
                     "error": error_message,
@@ -474,30 +437,24 @@ Provide comprehensive answers based on web search results."""
             # Handle any exceptions
             error_message = f"Error in search_node: {str(e)}"
             logger.error(error_message, exc_info=True)
-            
             state["module_results"]["search"] = {"success": False, "error": error_message}
         
         return state
         
     # Define the analyzer module node (placeholder for demonstration)
     def analyzer_node(state: ChatState) -> ChatState:
-        """Analyzer module that processes data-related queries, using a refined task if available."""
+        """Analyzer module that processes data-related queries."""
         logger.info("🧩 Analyzer: Processing analysis request")
-        logger.debug(f"Analyzer node received state: {state}")
         
+        # Get analysis task (either refined or original)
         refined_task = state.get("workflow_context", {}).get("refined_analysis_task")
-        original_user_query = None
-        for msg in reversed(state["messages"]):
-            if msg["role"] == "user":
-                original_user_query = msg["content"]
-                break
+        original_user_query = next((msg["content"] for msg in reversed(state["messages"]) 
+                                  if msg["role"] == "user"), None)
         
-        task_to_analyze = refined_task if refined_task else original_user_query
+        task_to_analyze = refined_task or original_user_query
 
         if not task_to_analyze:
-            error_message = "No task found for analyzer (neither refined nor original)."
-            logger.error(error_message)
-            state["module_results"]["analyzer"] = {"success": False, "error": error_message}
+            state["module_results"]["analyzer"] = {"success": False, "error": "No task found for analyzer."}
             return state
             
         # Log the task to analyze
@@ -511,9 +468,13 @@ Provide comprehensive answers based on web search results."""
         # Log the analysis result
         display_result = analysis_response[:75] + "..." if len(analysis_response) > 75 else analysis_response
         logger.info(f"🧩 Analyzer: Analysis result: \"{display_result}\"")
-        
-        # Store the result in module_results
-        state["module_results"]["analyzer"] = {"success": True, "result": analysis_response, "task_processed": task_to_analyze}
+
+        # Store the result
+        state["module_results"]["analyzer"] = {
+            "success": True, 
+            "result": analysis_response, 
+            "task_processed": task_to_analyze
+        }
         
         return state
     
@@ -809,10 +770,10 @@ The above analytical insights are relevant to the user's query. Incorporate thes
         
         return state
 
-    # Create the graph
+    # Build and return the graph
     builder = StateGraph(ChatState)
     
-    # Add the nodes
+    # Add all nodes
     builder.add_node("initializer", initializer_node)
     builder.add_node("router", router_node)
     builder.add_node("search_prompt_optimizer", search_prompt_optimizer_node)
@@ -822,43 +783,38 @@ The above analytical insights are relevant to the user's query. Incorporate thes
     builder.add_node("integrator", integrator_node)
     builder.add_node("response_renderer", response_renderer_node)
     
-    # Set the entry point
+    # Define the workflow
     builder.set_entry_point("initializer")
-    
-    # Define the flow: initializer -> router
     builder.add_edge("initializer", "router")
     
-    # Conditional edges from router:
-    # - "chat" now goes directly to Integrator
-    # - "search" goes to optimizer, then to search, then to Integrator
-    # - "analyzer" goes to refiner, then to analyzer, then to Integrator
+    # From router, conditionally go to different modules
     builder.add_conditional_edges(
         "router",
         router,
         {
-            "chat": "integrator",
             "search": "search_prompt_optimizer",
-            "analyzer": "analysis_task_refiner"
+            "analyzer": "analysis_task_refiner",
+            "chat": "integrator" 
         }
     )
-
-    # Edges from optimizer/refiner to their respective processing nodes
+    
+    # Connect the search optimization to search
     builder.add_edge("search_prompt_optimizer", "search")
-    builder.add_edge("analysis_task_refiner", "analyzer")
-
-    # All processing nodes now go to the Integrator
     builder.add_edge("search", "integrator")
+    
+    # Connect the analysis refiner to analyzer
+    builder.add_edge("analysis_task_refiner", "analyzer")
     builder.add_edge("analyzer", "integrator")
-
-    # Integrator always goes to Response Renderer
+    
+    # Connect the integrator to the response renderer
     builder.add_edge("integrator", "response_renderer")
-
-    # Response Renderer is the final node
+    
+    # End the graph after rendering the response
     builder.add_edge("response_renderer", END)
     
     # Compile the graph
     graph = builder.compile()
-    
+
     return graph
 
 

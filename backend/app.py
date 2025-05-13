@@ -97,7 +97,7 @@ async def chat(
             "personality": request.personality.dict() if request.personality else None,
             "current_module": None,
             "module_results": {},
-            "orchestrator_state": {},
+            "workflow_context": {},
             "user_id": user_id,
             "conversation_id": conversation_id
         }
@@ -109,30 +109,19 @@ async def chat(
         # Run the graph
         result = chat_graph.invoke(state)
         
-        # Check if there was an error
+        # Check for errors
         if "error" in result:
-            error_msg = result["error"]
-            logger.error(f"Error from graph: {error_msg}")
-            raise Exception(error_msg)
+            raise Exception(result["error"])
         
         # Extract the assistant's response (the last message)
         assistant_message = result["messages"][-1]
         
-        # Get which module was used
-        module_used = result.get("current_module", "unknown")
-        
-        # Get the conversation ID that was used/created
-        conversation_id = result.get("conversation_id")
-        
-        # Get routing analysis if available
-        routing_analysis = result.get("routing_analysis")
-        
         return ChatResponse(
             response=assistant_message["content"],
             model=request.model,
-            usage={},  # In a real app, you might want to track token usage
-            module_used=module_used,
-            routing_analysis=routing_analysis
+            usage={},
+            module_used=result.get("current_module", "unknown"),
+            routing_analysis=result.get("routing_analysis")
         )
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
@@ -147,9 +136,6 @@ async def debug(
 ):
     """Debug endpoint to check what's happening with the request."""
     try:
-        # Log the request
-        print(f"Debug request: {request}")
-        
         # Prepare the state for the graph (same as in chat endpoint)
         state = {
             "messages": [{"role": m.role, "content": m.content} for m in request.messages],
@@ -159,7 +145,7 @@ async def debug(
             "personality": request.personality.dict() if request.personality else None,
             "current_module": None,
             "module_results": {},
-            "orchestrator_state": {},
+            "workflow_context": {},
             "user_id": user_id,
             "conversation_id": conversation_id
         }
@@ -167,7 +153,6 @@ async def debug(
         # For debug only: process just the routing part
         routing_result = router_node(state.copy())
         
-        # Return the state without full processing
         return {
             "request_received": True,
             "initial_state": state,

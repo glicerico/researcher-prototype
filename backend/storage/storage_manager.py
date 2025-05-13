@@ -61,9 +61,6 @@ class StorageManager:
                 finally:
                     # Release the lock
                     fcntl.flock(f, fcntl.LOCK_UN)
-        except json.JSONDecodeError:
-            logger.error(f"Error decoding JSON from {path}")
-            return {}
         except Exception as e:
             logger.error(f"Error reading file {path}: {str(e)}")
             return {}

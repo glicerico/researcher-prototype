@@ -4,7 +4,7 @@ Conversation Manager for handling conversation history.
 
 import time
 import uuid
-from typing import Dict, Any, List, Optional
+from typing import Dict, Any, List, Optional, Union
 
 # Import the centralized logging configuration
 from logging_config import get_logger
@@ -268,4 +268,36 @@ class ConversationManager:
             if metadata.get("name") == name:
                 return self.get_conversation(user_id, conversation["conversation_id"])
         
-        return {} 
+        return {}
+    
+    def add_messages(self, user_id: str, conversation_id: str, messages: List[Dict[str, Any]]) -> bool:
+        """
+        Add multiple messages to a conversation at once.
+        
+        Args:
+            user_id: The ID of the user who owns the conversation
+            conversation_id: The ID of the conversation
+            messages: List of message objects containing role and content
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not messages:
+            return True
+            
+        conversation = self.get_conversation(user_id, conversation_id)
+        if not conversation:
+            return False
+            
+        success = True
+        for message in messages:
+            result = self.add_message(
+                user_id,
+                conversation_id,
+                message.get("role"),
+                message.get("content"),
+                message.get("metadata", {})
+            )
+            success = success and result
+            
+        return success 
