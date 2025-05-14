@@ -9,3 +9,8 @@ uuid
 pathlib
 pygraphviz
 requests
+
+# Test dependencies
+pytest
+pytest-cov
+httpx  # For TestClient
