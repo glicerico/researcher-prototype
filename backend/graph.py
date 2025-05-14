@@ -20,6 +20,9 @@ from storage.storage_manager import StorageManager
 from storage.user_manager import UserManager
 from storage.conversation_manager import ConversationManager
 
+# Import LLM-specific models
+from llm_models import RoutingAnalysis, SearchQuery, AnalysisTask, FormattedResponse
+
 # Initialize storage components
 storage_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage_data")
 storage_manager = StorageManager(storage_dir)
@@ -67,23 +70,6 @@ def router_node(state: ChatState) -> ChatState:
     display_msg = last_message[:75] + "..." if len(last_message) > 75 else last_message
     logger.info(f"🔀 Router: Processing user message: \"{display_msg}\"")
     
-    # Create a system prompt for the router
-    system_prompt = f"""
-    Current date and time: {get_current_datetime_str()}
-    You are a message router that determines the best module to handle a user's request. 
-    Analyze the message and classify it into one of these categories:
-    
-    1. chat - General conversation, questions, or anything not fitting other categories.
-    2. search - Requests to find current information from the web, search for recent facts, or retrieve up-to-date information.
-       Examples: "What happened in the news today?", "Search for recent AI developments", "Find information about current technology trends"
-    3. analyzer - Requests to analyze, process, summarize data or complex problem-solving.
-    
-    Output ONLY a JSON object with:
-    - module: The chosen module name (chat, search, or analyzer)
-    - reason: A brief explanation of why this module was chosen
-    - complexity: Rate the complexity from 1-10 (1=very simple, 10=very complex)
-    """
-    
     # Initialize the GPT-3.5-Turbo model for routing
     router_llm = ChatOpenAI(
         model=config.ROUTER_MODEL,
@@ -92,32 +78,69 @@ def router_node(state: ChatState) -> ChatState:
         api_key=config.OPENAI_API_KEY
     )
     
+    # Create a structured output model
+    structured_router = router_llm.with_structured_output(RoutingAnalysis)
+    
     try:
-        # Send the message to the router model
-        router_messages = [
-            SystemMessage(content=system_prompt),
-            HumanMessage(content=last_message)
-        ]
+        # Extract conversation history for context (last few messages)
+        history_messages = []
+        max_history = 5  # Number of recent messages to include for context
         
-        response = router_llm.invoke(router_messages)
-        content = response.content
+        # Add recent conversation history as context
+        raw_messages = state.get("messages", [])
+        start_index = max(0, len(raw_messages) - max_history)
         
-        # Extract JSON
-        json_str = content
-        if '```json' in content:
-            # Extract content from code blocks if present
-            import re
-            json_match = re.search(r'```(?:json)?\s*([\s\S]*?)\s*```', content)
-            if json_match:
-                json_str = json_match.group(1)
-        
-        # Parse the routing decision
-        routing_data = json.loads(json_str)
+        for msg_dict in raw_messages[start_index:]:
+            role = msg_dict.get("role")
+            content = msg_dict.get("content", "").strip()
             
-        # Extract routing decision
-        module = routing_data.get("module", "chat").lower()
-        reason = routing_data.get("reason", "Default routing")
-        complexity = int(routing_data.get("complexity", 5))
+            if not content:
+                continue
+                
+            if role == "user":
+                history_messages.append(HumanMessage(content=content))
+            elif role == "assistant":
+                history_messages.append(AIMessage(content=content))
+        
+        # Create system message with router instructions
+        system_message = SystemMessage(content=f"""
+        Current date and time: {get_current_datetime_str()}
+        You are a message router that determines the best module to handle a user's request. 
+        Analyze the conversation history to classify the request into one of these categories:
+        
+        1. chat - General conversation, questions, or anything not fitting other categories.
+        2. search - Requests to find current information from the web, search for recent facts, or retrieve up-to-date information.
+           Examples: "What happened in the news today?", "Search for recent AI developments", "Find information about current technology trends"
+        3. analyzer - Requests to analyze, process, summarize data or complex problem-solving.
+        """)
+        
+        # If we have no context, just use the last message
+        if not history_messages:
+            router_messages = [
+                system_message,
+                HumanMessage(content=last_message)
+            ]
+        else:
+            # Add the system message first
+            router_messages = [system_message]
+            
+            # Add conversation history
+            router_messages.extend(history_messages)
+            
+            # If the last message in history isn't the current user message, add it
+            if (not isinstance(router_messages[-1], HumanMessage) or 
+                router_messages[-1].content != last_message):
+                router_messages.append(HumanMessage(content=last_message))
+        
+        logger.debug(f"Router using {len(router_messages)-1} context messages")
+        
+        # Invoke the structured router
+        routing_result = structured_router.invoke(router_messages)
+        
+        # routing_result is now a validated Pydantic RoutingAnalysis object
+        module = routing_result.decision.lower()
+        reason = routing_result.reason
+        complexity = routing_result.complexity
         
         # Validate module name
         if module not in ["chat", "search", "analyzer"]:
@@ -129,7 +152,8 @@ def router_node(state: ChatState) -> ChatState:
             "decision": module,
             "reason": reason,
             "complexity": complexity,
-            "model_used": config.ROUTER_MODEL
+            "model_used": config.ROUTER_MODEL,
+            "context_messages_used": len(router_messages) - 1  # Excluding system message
         }
         
         logger.info(f"🔀 Router: Selected module '{module}' (complexity: {complexity}) for message: \"{display_msg}\"")
@@ -219,9 +243,22 @@ def create_chat_graph():
         num_context_messages = 5 # System + up to 4 history messages
         context_messages_for_llm = [] 
         
+        # Create system message with optimizer instructions
+        system_message = SystemMessage(content=f"""
+        Current date and time: {current_time_str}
+        You are an expert at rephrasing user questions into effective search engine queries.
+        Analyze the provided conversation history and the LATEST user question.
+        Based on this context, transform the LATEST user question into a concise and keyword-focused search query
+        that is likely to yield the best results from a web search engine.
+        Focus on the core intent of the LATEST user question and use precise terminology, informed by the preceding conversation.
+        """
+        )
+        
+        context_messages_for_llm.append(system_message)
+        
         # Add recent history to context_messages_for_llm (HumanMessage, AIMessage)
         # Convert dict messages from state to LangChain message objects for the optimizer
-        start_index = max(0, len(raw_messages) - (num_context_messages -1)) # -1 because system prompt is one
+        start_index = max(0, len(raw_messages) - (num_context_messages -1))
         for msg_dict in raw_messages[start_index:]:
             role = msg_dict.get("role")
             content = msg_dict.get("content", "").strip()
@@ -231,21 +268,8 @@ def create_chat_graph():
                 context_messages_for_llm.append(HumanMessage(content=content))
             elif role == "assistant":
                 context_messages_for_llm.append(AIMessage(content=content))
-            # System messages from history are generally not passed to such an optimizer,
-            # as we have a specific one for this node.
-
-        # Instruction prompt for the optimizer LLM
-        instruction_prompt = f"""
-        Current date and time: {current_time_str}
-        You are an expert at rephrasing user questions into effective search engine queries.
-        Analyze the provided conversation history and the LATEST user question.
-        Based on this context, transform the LATEST user question into a concise and keyword-focused search query
-        that is likely to yield the best results from a web search engine like Perplexity.
-        Focus on the core intent of the LATEST user question and use precise terminology, informed by the preceding conversation.
-        Output ONLY the refined search query for the LATEST user question, with no other text or explanation.
-        """
-        context_messages_for_llm.append(HumanMessage(content=instruction_prompt))
-
+        
+        # Initialize the optimizer LLM
         optimizer_llm = ChatOpenAI(
             model=config.ROUTER_MODEL, 
             temperature=0.0,
@@ -253,20 +277,30 @@ def create_chat_graph():
             api_key=config.OPENAI_API_KEY
         )
         
+        # Create structured output model
+        structured_optimizer = optimizer_llm.with_structured_output(SearchQuery)
+        
         try:
-            response = optimizer_llm.invoke(context_messages_for_llm)
-            refined_query = response.content.strip()
+            # Invoke the structured optimizer
+            search_result = structured_optimizer.invoke(context_messages_for_llm)
+            
+            # Extract the refined query from the structured result
+            refined_query = search_result.query
+            search_type = search_result.search_type
             
             # Log the refined query
             display_refined = refined_query[:75] + "..." if len(refined_query) > 75 else refined_query
-            logger.info(f"🔍 Search Optimizer: Produced refined query: \"{display_refined}\"")
+            logger.info(f"🔍 Search Optimizer: Produced refined query: \"{display_refined}\" (type: {search_type})")
             
+            # Store both the refined query and search type in the workflow context
             state["workflow_context"]["refined_search_query"] = refined_query
+            state["workflow_context"]["search_type"] = search_type
             logger.info(f"Refined search query with context: {refined_query}")
             
         except Exception as e:
             logger.error(f"Error in search_prompt_optimizer_node (with context): {str(e)}. Using original query as fallback.")
             state["workflow_context"]["refined_search_query"] = last_user_message_content
+            state["workflow_context"]["search_type"] = "unknown"
             
         return state
 
@@ -295,16 +329,17 @@ def create_chat_graph():
         num_context_messages = 5 # System + up to 4 history messages
         context_messages_for_llm = []
 
-        system_prompt = f"""
+        # Create system message with analysis refiner instructions
+        system_message = SystemMessage(content=f"""
         Current date and time: {current_time_str}
         You are an expert at breaking down user requests into clear, structured analytical tasks, considering the full conversation context.
         Analyze the provided conversation history and the LATEST user request.
         Based on this context, transform the LATEST user request into a detailed task description suitable for an advanced analysis engine.
-        Specify the information to be analyzed, the type of analysis required, and the desired output format if implied.
-        Ensure the refined task for the LATEST user question is actionable and self-contained based on the conversation.
-        Output ONLY the refined task description, with no other text or explanation.
-        """
-        context_messages_for_llm.append(SystemMessage(content=system_prompt))
+        Specify the objective, required data, proposed approach, and expected output format.
+        Ensure the refined task is actionable and self-contained based on the conversation.
+        """)
+        
+        context_messages_for_llm.append(system_message)
 
         start_index = max(0, len(raw_messages) - (num_context_messages - 1))
         for msg_dict in raw_messages[start_index:]:
@@ -322,22 +357,43 @@ def create_chat_graph():
             state["workflow_context"]["refined_analysis_task"] = last_user_message_content
             return state
 
+        # Initialize the optimizer LLM
         optimizer_llm = ChatOpenAI(
             model=config.ROUTER_MODEL, 
             temperature=0.0,
             max_tokens=300, 
             api_key=config.OPENAI_API_KEY
         )
+        
+        # Create structured output model
+        structured_refiner = optimizer_llm.with_structured_output(AnalysisTask)
 
         try:
-            response = optimizer_llm.invoke(context_messages_for_llm)
-            refined_task = response.content.strip()
+            # Invoke the structured refiner
+            analysis_task = structured_refiner.invoke(context_messages_for_llm)
+            
+            # Combine the structured fields into a comprehensive task description
+            refined_task = f"""ANALYSIS OBJECTIVE: {analysis_task.objective}
+            
+REQUIRED DATA: {analysis_task.required_data}
+
+PROPOSED APPROACH: {analysis_task.proposed_approach}
+
+EXPECTED OUTPUT: {analysis_task.expected_output}
+            """
             
             # Log the refined task
             display_refined = refined_task[:75] + "..." if len(refined_task) > 75 else refined_task
             logger.info(f"🧩 Analysis Refiner: Produced refined task: \"{display_refined}\"")
 
+            # Store both the formatted task and the structured object
             state["workflow_context"]["refined_analysis_task"] = refined_task
+            state["workflow_context"]["analysis_task_structure"] = {
+                "objective": analysis_task.objective,
+                "required_data": analysis_task.required_data,
+                "proposed_approach": analysis_task.proposed_approach,
+                "expected_output": analysis_task.expected_output
+            }
             logger.info(f"Refined analysis task with context: {refined_task}")
 
         except Exception as e:
@@ -650,29 +706,26 @@ The above analytical insights are relevant to the user's query. Incorporate thes
             api_key=config.OPENAI_API_KEY
         )
         
+        # Create structured output model
+        structured_renderer = renderer_llm.with_structured_output(FormattedResponse)
+        
         # Create a system prompt for the renderer
-        system_prompt = f"""
+        system_message = SystemMessage(content=f"""
         Current date and time: {current_time_str}
         You are the response formatting component of an AI assistant system. 
         
-        Your task is to:
-        1. Format and style the provided raw response according to the user's preferences.
-        2. Maintain the response's original information, insights and core content.
-        3. Adapt the response to a {style} style with a {tone} tone.
-        4. ONLY IF the conversation context and response content warrant it, add 1-2 relevant follow-up questions.
-           * Follow-up questions should ONLY be added if they naturally extend from the response content.
-           * Do NOT add generic follow-up questions like "Is there anything else you'd like to know?".
-           * Do NOT add follow-up questions for simple exchanges, greetings, or when the response is fully comprehensive.
-        5. Include source citations or attributions from the raw response if present.
+        Format and style the provided raw response according to the user's preferences.
+        Maintain the response's original information, insights and core content.
+        Adapt the response to a {style} style with a {tone} tone.
+        Include source citations or attributions from the raw response if present.
+        If appropriate, include 1-2 relevant follow-up questions that naturally extend from the content.
         
         The raw response was generated by the {module_used} module of the assistant.
         Preserve all factual information exactly as presented in the raw response.
-        """
+        """)
         
         # Prepare the messages for the renderer LLM
-        renderer_messages = [
-            SystemMessage(content=system_prompt),
-        ]
+        renderer_messages = [system_message]
         
         # Add the last few messages for context (if any)
         context_size = 3  # Number of recent messages to include for context
@@ -688,18 +741,25 @@ The above analytical insights are relevant to the user's query. Incorporate thes
         
         # Add specific message for the raw response to be formatted
         renderer_messages.append(HumanMessage(content=f"""
-        Below is the raw response from the {module_used} module to be formatted according to the specified guidelines.
+        Below is the raw response to be formatted according to the specified guidelines.
         
         [Raw Response]:
         {raw_response}
-        
-        Please format this response in a {style} style with a {tone} tone, and add relevant follow-up questions ONLY if appropriate.
         """))
         
         try:
-            # Process the response with the renderer LLM
-            renderer_response = renderer_llm.invoke(renderer_messages)
-            formatted_response = renderer_response.content.strip()
+            # Process the response with the structured renderer
+            formatted_result = structured_renderer.invoke(renderer_messages)
+            
+            # Extract the formatted response and any follow-up questions
+            formatted_response = formatted_result.main_response
+            follow_up_questions = formatted_result.follow_up_questions
+            
+            # If there are follow-up questions, append them to the formatted response
+            if follow_up_questions and len(follow_up_questions) > 0:
+                formatted_response += "\n\n"
+                for i, question in enumerate(follow_up_questions, 1):
+                    formatted_response += f"{i}. {question}\n"
             
             # Log the formatted response
             display_formatted = formatted_response[:75] + "..." if len(formatted_response) > 75 else formatted_response
@@ -715,7 +775,9 @@ The above analytical insights are relevant to the user's query. Incorporate thes
                     "rendered": True,
                     "style": style,
                     "tone": tone,
-                    "module_used": module_used
+                    "module_used": module_used,
+                    "has_follow_up_questions": follow_up_questions is not None and len(follow_up_questions) > 0,
+                    "follow_up_questions": follow_up_questions
                 }
             }
             
@@ -735,7 +797,9 @@ The above analytical insights are relevant to the user's query. Incorporate thes
                         "rendered": True,
                         "style": style,
                         "tone": tone,
-                        "module_used": module_used
+                        "module_used": module_used,
+                        "has_follow_up_questions": follow_up_questions is not None and len(follow_up_questions) > 0,
+                        "follow_up_questions": follow_up_questions
                     }
                 )
                 
