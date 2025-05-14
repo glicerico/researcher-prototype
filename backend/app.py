@@ -10,7 +10,7 @@ logger = configure_logging()
 
 # Now import other modules that might use logging
 from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile, ConversationSummary, ConversationDetail
-from graph_builder import chat_graph
+from graph_builder import chat_graph, get_langsmith_client
 from nodes.base import user_manager, conversation_manager
 from nodes.router_node import router_node
 import config
@@ -353,7 +353,54 @@ async def delete_conversation(
     if not success:
         raise HTTPException(status_code=404, detail="Conversation not found or couldn't be deleted")
     
-    return {"success": True}
+    return {"success": True, "message": f"Conversation {conversation_id} deleted"}
+
+
+@app.get("/traces")
+async def get_traces(limit: int = Query(10, ge=1, le=100)):
+    """Get recent LangSmith traces if tracing is enabled."""
+    langsmith_client = get_langsmith_client()
+    if not langsmith_client:
+        return {
+            "error": "LangSmith tracing is not enabled",
+            "enabled": False,
+            "setup_instructions": "Set LANGCHAIN_TRACING_V2=true and LANGCHAIN_API_KEY in your .env file"
+        }
+    
+    try:
+        # Get traces from LangSmith
+        trace_project = config.LANGCHAIN_PROJECT
+        traces = langsmith_client.list_runs(
+            project_name=trace_project,
+            limit=limit
+        )
+        
+        # Format for API response
+        trace_data = []
+        for trace in traces:
+            trace_data.append({
+                "id": trace.id,
+                "name": trace.name,
+                "start_time": trace.start_time.isoformat() if trace.start_time else None,
+                "end_time": trace.end_time.isoformat() if trace.end_time else None,
+                "status": trace.status,
+                "error": trace.error,
+                "url": f"{config.LANGCHAIN_ENDPOINT}/projects/{trace_project}/r/{trace.id}"
+            })
+        
+        return {
+            "enabled": True,
+            "project": trace_project,
+            "traces": trace_data,
+            "langsmith_url": f"{config.LANGCHAIN_ENDPOINT}/projects/{trace_project}"
+        }
+    except Exception as e:
+        logger.error(f"Error fetching LangSmith traces: {str(e)}", exc_info=True)
+        return {
+            "enabled": True,
+            "error": str(e),
+            "message": "Failed to fetch traces from LangSmith"
+        }
 
 
 if __name__ == "__main__":

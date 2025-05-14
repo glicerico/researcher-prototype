@@ -19,6 +19,12 @@ ROUTER_MODEL = os.getenv("ROUTER_MODEL", "gpt-4o-mini")
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar")
 
+# LangSmith tracing configuration
+LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
+LANGCHAIN_ENDPOINT = os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
+LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY", "")
+LANGCHAIN_PROJECT = os.getenv("LANGCHAIN_PROJECT", "researcher-prototype")
+
 # Other models that can be supported
 SUPPORTED_MODELS = {
     "gpt-4o-mini": "OpenAI GPT-4o-mini",

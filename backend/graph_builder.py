@@ -1,8 +1,17 @@
 """
 Graph builder module that constructs the LangGraph for the conversation flow.
 """
+import os
 from langgraph.graph import StateGraph, END
+from langsmith import Client
+from langchain_core.tracers.context import context
 from nodes.base import ChatState, logger
+from config import (
+    LANGCHAIN_TRACING_V2,
+    LANGCHAIN_API_KEY,
+    LANGCHAIN_ENDPOINT,
+    LANGCHAIN_PROJECT
+)
 
 # Import all node functions
 from nodes.initializer_node import initializer_node
@@ -15,8 +24,25 @@ from nodes.integrator_node import integrator_node
 from nodes.response_renderer_node import response_renderer_node
 
 
+def setup_tracing():
+    """Configure LangSmith tracing based on environment variables."""
+    if LANGCHAIN_TRACING_V2 and LANGCHAIN_API_KEY:
+        # Set up environment variables for LangSmith tracing
+        os.environ["LANGCHAIN_TRACING_V2"] = "true"
+        os.environ["LANGCHAIN_ENDPOINT"] = LANGCHAIN_ENDPOINT
+        os.environ["LANGCHAIN_API_KEY"] = LANGCHAIN_API_KEY
+        os.environ["LANGCHAIN_PROJECT"] = LANGCHAIN_PROJECT
+        
+        logger.info(f"🔍 LangSmith tracing enabled for project: {LANGCHAIN_PROJECT}")
+        return True
+    return False
+
+
 def create_chat_graph():
     """Create a LangGraph graph for orchestrating the flow of the interaction."""
+    
+    # Configure LangSmith tracing if enabled
+    tracing_enabled = setup_tracing()
     
     # Define the router function for conditional branching
     def router(state: ChatState) -> str:
@@ -66,8 +92,13 @@ def create_chat_graph():
     # End the graph after rendering the response
     builder.add_edge("response_renderer", END)
     
+    # Configure tracing for the graph if enabled
+    graph_kwargs = {}
+    if tracing_enabled:
+        graph_kwargs["with_tracing"] = True
+    
     # Compile the graph
-    graph = builder.compile()
+    graph = builder.compile(**graph_kwargs)
 
     return graph
 
@@ -158,6 +189,16 @@ def visualize_graph(output_file="graph.png"):
         print(f"Error generating visualization: {str(e)}")
     
     return False
+
+
+def get_langsmith_client():
+    """Get a LangSmith client if tracing is enabled."""
+    if LANGCHAIN_TRACING_V2 and LANGCHAIN_API_KEY:
+        return Client(
+            api_key=LANGCHAIN_API_KEY,
+            api_url=LANGCHAIN_ENDPOINT
+        )
+    return None
 
 
 # Automatically generate visualization whenever this module is run directly
