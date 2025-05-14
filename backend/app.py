@@ -10,7 +10,9 @@ logger = configure_logging()
 
 # Now import other modules that might use logging
 from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile, ConversationSummary, ConversationDetail
-from graph import chat_graph, user_manager, conversation_manager, router_node
+from graph_builder import chat_graph
+from nodes.base import user_manager, conversation_manager
+from nodes.router_node import router_node
 import config
 import traceback
 from typing import List, Dict, Optional, Any
