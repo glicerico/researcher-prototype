@@ -177,6 +177,7 @@ HH:MM:SS | LEVEL | LOGGER_NAME | MESSAGE
 Each component of the graph uses emojis in logs for better visual identification:
 - 🔄 Initializer: Initial setup and state preparation
 - 🔀 Router: Message classification and routing
+- 🔬 Search Optimizer: Refines user queries for search
 - 🔍 Search: Web search related operations
 - 🧩 Analyzer: Complex analysis operations
 - 🧠 Integrator: Central reasoning component
@@ -305,7 +306,7 @@ GPLv3
    - If you're using a fresh clone of the repository, you'll need to create users again
 
 5. **Diagnosing Processing Issues**
-   - Use the visual emoji indicators in logs to trace message flow (🔀 🔍 🧩 🧠 ✨)
+   - Use the visual emoji indicators in logs to trace message flow (🔀 🔬 🔍 🧩 🧠 ✨)
    - Enable debug logging using `enable_debug_logging()` function
    - Use the `/debug` endpoint to test message routing without full processing
    - For LLM API issues, check the error messages in the logs which will indicate rate limits, token limits, or API key problems

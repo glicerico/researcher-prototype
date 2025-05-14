@@ -23,6 +23,18 @@ from storage.conversation_manager import ConversationManager
 # Import LLM-specific models
 from llm_models import RoutingAnalysis, SearchQuery, AnalysisTask, FormattedResponse
 
+# Import centralized prompts
+from prompts import (
+    ROUTER_SYSTEM_PROMPT,
+    SEARCH_OPTIMIZER_SYSTEM_PROMPT,
+    ANALYSIS_REFINER_SYSTEM_PROMPT,
+    PERPLEXITY_SYSTEM_PROMPT,
+    INTEGRATOR_SYSTEM_PROMPT,
+    SEARCH_RESULTS_TEMPLATE,
+    ANALYSIS_RESULTS_TEMPLATE,
+    RESPONSE_RENDERER_SYSTEM_PROMPT
+)
+
 # Initialize storage components
 storage_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage_data")
 storage_manager = StorageManager(storage_dir)
@@ -103,16 +115,9 @@ def router_node(state: ChatState) -> ChatState:
                 history_messages.append(AIMessage(content=content))
         
         # Create system message with router instructions
-        system_message = SystemMessage(content=f"""
-        Current date and time: {get_current_datetime_str()}
-        You are a message router that determines the best module to handle a user's request. 
-        Analyze the conversation history to classify the request into one of these categories:
-        
-        1. chat - General conversation, questions, or anything not fitting other categories.
-        2. search - Requests to find current information from the web, search for recent facts, or retrieve up-to-date information.
-           Examples: "What happened in the news today?", "Search for recent AI developments", "Find information about current technology trends"
-        3. analyzer - Requests to analyze, process, summarize data or complex problem-solving.
-        """)
+        system_message = SystemMessage(content=ROUTER_SYSTEM_PROMPT.format(
+            current_time=get_current_datetime_str()
+        ))
         
         # If we have no context, just use the last message
         if not history_messages:
@@ -216,7 +221,7 @@ def create_chat_graph():
     # Define the search prompt optimizer node
     def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         """Refines the user's query into an optimized search query using an LLM, considering conversation context."""
-        logger.info("🔍 Search Optimizer: Refining user query for search")
+        logger.info("🔬 Search Optimizer: Refining user query for search")
         current_time_str = get_current_datetime_str()
         
         # Gather recent conversation history for context (e.g., last 5 messages)
@@ -237,22 +242,16 @@ def create_chat_graph():
 
         # Log the user message being refined
         display_msg = last_user_message_content[:75] + "..." if len(last_user_message_content) > 75 else last_user_message_content
-        logger.info(f"🔍 Search Optimizer: Refining query: \"{display_msg}\"")
+        logger.info(f"🔬 Search Optimizer: Refining query: \"{display_msg}\"")
         
         # Construct context: messages leading up to and including the last user message.
         num_context_messages = 5 # System + up to 4 history messages
         context_messages_for_llm = [] 
         
         # Create system message with optimizer instructions
-        system_message = SystemMessage(content=f"""
-        Current date and time: {current_time_str}
-        You are an expert at rephrasing user questions into effective search engine queries.
-        Analyze the provided conversation history and the LATEST user question.
-        Based on this context, transform the LATEST user question into a concise and keyword-focused search query
-        that is likely to yield the best results from a web search engine.
-        Focus on the core intent of the LATEST user question and use precise terminology, informed by the preceding conversation.
-        """
-        )
+        system_message = SystemMessage(content=SEARCH_OPTIMIZER_SYSTEM_PROMPT.format(
+            current_time=current_time_str
+        ))
         
         context_messages_for_llm.append(system_message)
         
@@ -290,7 +289,7 @@ def create_chat_graph():
             
             # Log the refined query
             display_refined = refined_query[:75] + "..." if len(refined_query) > 75 else refined_query
-            logger.info(f"🔍 Search Optimizer: Produced refined query: \"{display_refined}\" (type: {search_type})")
+            logger.info(f"🔬 Search Optimizer: Produced refined query: \"{display_refined}\" (type: {search_type})")
             
             # Store both the refined query and search type in the workflow context
             state["workflow_context"]["refined_search_query"] = refined_query
@@ -330,14 +329,9 @@ def create_chat_graph():
         context_messages_for_llm = []
 
         # Create system message with analysis refiner instructions
-        system_message = SystemMessage(content=f"""
-        Current date and time: {current_time_str}
-        You are an expert at breaking down user requests into clear, structured analytical tasks, considering the full conversation context.
-        Analyze the provided conversation history and the LATEST user request.
-        Based on this context, transform the LATEST user request into a detailed task description suitable for an advanced analysis engine.
-        Specify the objective, required data, proposed approach, and expected output format.
-        Ensure the refined task is actionable and self-contained based on the conversation.
-        """)
+        system_message = SystemMessage(content=ANALYSIS_REFINER_SYSTEM_PROMPT.format(
+            current_time=current_time_str
+        ))
         
         context_messages_for_llm.append(system_message)
 
@@ -441,9 +435,9 @@ EXPECTED OUTPUT: {analysis_task.expected_output}
             }
             
             # Format the search prompt 
-            perplexity_system_prompt = f"""Current date and time: {get_current_datetime_str()}. 
-You are a helpful and accurate web search assistant. 
-Provide comprehensive answers based on web search results."""
+            perplexity_system_prompt = PERPLEXITY_SYSTEM_PROMPT.format(
+                current_time=get_current_datetime_str()
+            )
             perplexity_messages = [
                 {"role": "system", "content": perplexity_system_prompt},
                 {"role": "user", "content": query_to_search}
@@ -561,10 +555,9 @@ Provide comprehensive answers based on web search results."""
             logger.info(f"🧠 Integrator: Processing query: \"{display_msg}\"")
             
         # Create system message based on personality if available
-        system_message_content = f"Current date and time: {current_time_str}."
-        
-        # Include the agent's role as a central reasoning component
-        system_message_content += "\nYou are the central reasoning component of an AI assistant system. Your task is to integrate all available information and generate a coherent, thoughtful response."
+        system_message_content = INTEGRATOR_SYSTEM_PROMPT.format(
+            current_time=current_time_str
+        )
         
         # Initialize the model
         llm = ChatOpenAI(
@@ -607,13 +600,9 @@ Provide comprehensive answers based on web search results."""
             search_result_text = search_results.get("result", None)
             if search_result_text:
                 # Add search results directly to the prompt
-                search_msg = f"""
-IMPORTANT FACTUAL INFORMATION FROM SEARCH:
-==================================================
-{search_result_text}
-==================================================
-The above information is from a current web search. Please prioritize this information in your response.
-"""
+                search_msg = SEARCH_RESULTS_TEMPLATE.format(
+                    search_result_text=search_result_text
+                )
                 langchain_messages.append(AIMessage(content=search_msg))
                 logger.info("🧠 Integrator: Added search results to prompt")
             
@@ -622,13 +611,9 @@ The above information is from a current web search. Please prioritize this infor
             analysis_result_text = analysis_results.get("result", None)
             if analysis_result_text:
                 # Add analysis results directly to the prompt
-                analysis_msg = f"""
-IMPORTANT ANALYTICAL INSIGHTS:
-==================================================
-{analysis_result_text}
-==================================================
-The above analytical insights are relevant to the user's query. Incorporate these insights into your response.
-"""
+                analysis_msg = ANALYSIS_RESULTS_TEMPLATE.format(
+                    analysis_result_text=analysis_result_text
+                )
                 langchain_messages.append(AIMessage(content=analysis_msg))
                 logger.info("🧠 Integrator: Added analytical insights to prompt")
                     
@@ -710,19 +695,12 @@ The above analytical insights are relevant to the user's query. Incorporate thes
         structured_renderer = renderer_llm.with_structured_output(FormattedResponse)
         
         # Create a system prompt for the renderer
-        system_message = SystemMessage(content=f"""
-        Current date and time: {current_time_str}
-        You are the response formatting component of an AI assistant system. 
-        
-        Format and style the provided raw response according to the user's preferences.
-        Maintain the response's original information, insights and core content.
-        Adapt the response to a {style} style with a {tone} tone.
-        Include source citations or attributions from the raw response if present.
-        If appropriate, include 1-2 relevant follow-up questions that naturally extend from the content.
-        
-        The raw response was generated by the {module_used} module of the assistant.
-        Preserve all factual information exactly as presented in the raw response.
-        """)
+        system_message = SystemMessage(content=RESPONSE_RENDERER_SYSTEM_PROMPT.format(
+            current_time=current_time_str,
+            style=style,
+            tone=tone,
+            module_used=module_used
+        ))
         
         # Prepare the messages for the renderer LLM
         renderer_messages = [system_message]
