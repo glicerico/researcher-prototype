@@ -10,7 +10,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from app import app
 from models import Message, ChatRequest, ChatResponse
-from graph import create_chat_graph, ChatState
+from graph_builder import create_chat_graph
+from nodes.base import ChatState
 
 
 class TestChatbotApp(unittest.TestCase):
@@ -31,13 +32,21 @@ class TestChatbotApp(unittest.TestCase):
         models = response.json()["models"]
         self.assertIn("gpt-4o-mini", models)
         
-    @patch('graph.ChatOpenAI')
-    def test_chat_endpoint(self, mock_chat_openai):
+    @patch('nodes.integrator_node.ChatOpenAI')
+    @patch('nodes.response_renderer_node.ChatOpenAI')
+    def test_chat_endpoint(self, mock_renderer_openai, mock_integrator_openai):
         """Test the chat endpoint with a mocked LLM response."""
-        # Mock the LLM response
-        mock_instance = MagicMock()
-        mock_instance.invoke.return_value = MagicMock(content="This is a test response")
-        mock_chat_openai.return_value = mock_instance
+        # Mock the integrator LLM response
+        mock_integrator_instance = MagicMock()
+        mock_integrator_instance.invoke.return_value.content = "This is a test response"
+        mock_integrator_openai.return_value = mock_integrator_instance
+        
+        # Mock the renderer LLM response
+        mock_renderer_instance = MagicMock()
+        mock_renderer_instance.with_structured_output.return_value = mock_renderer_instance
+        mock_renderer_instance.invoke.return_value.main_response = "This is a test response"
+        mock_renderer_instance.invoke.return_value.follow_up_questions = None
+        mock_renderer_openai.return_value = mock_renderer_instance
         
         # Create a test request
         request_data = {
@@ -78,13 +87,21 @@ class TestChatbotApp(unittest.TestCase):
 
 
 class TestChatGraph(unittest.TestCase):
-    @patch('graph.ChatOpenAI')
-    def test_chat_node(self, mock_chat_openai):
+    @patch('nodes.integrator_node.ChatOpenAI')
+    @patch('nodes.response_renderer_node.ChatOpenAI')
+    def test_chat_node(self, mock_renderer_openai, mock_integrator_openai):
         """Test the chat node in the graph."""
-        # Mock the LLM response
-        mock_instance = MagicMock()
-        mock_instance.invoke.return_value = MagicMock(content="This is a test response")
-        mock_chat_openai.return_value = mock_instance
+        # Mock the integrator LLM response
+        mock_integrator_instance = MagicMock()
+        mock_integrator_instance.invoke.return_value.content = "This is a test response"
+        mock_integrator_openai.return_value = mock_integrator_instance
+        
+        # Mock the renderer LLM response
+        mock_renderer_instance = MagicMock()
+        mock_renderer_instance.with_structured_output.return_value = mock_renderer_instance
+        mock_renderer_instance.invoke.return_value.main_response = "This is a test response"
+        mock_renderer_instance.invoke.return_value.follow_up_questions = None
+        mock_renderer_openai.return_value = mock_renderer_instance
         
         # Create a test state
         state = {

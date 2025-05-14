@@ -1,0 +1,180 @@
+"""
+Response renderer node that formats and enhances the raw response.
+"""
+from nodes.base import (
+    ChatState, 
+    logger,
+    HumanMessage, 
+    AIMessage, 
+    SystemMessage,
+    ChatOpenAI,
+    FormattedResponse,
+    RESPONSE_RENDERER_SYSTEM_PROMPT,
+    config,
+    get_current_datetime_str,
+    conversation_manager
+)
+
+
+def response_renderer_node(state: ChatState) -> ChatState:
+    """Post-processes the LLM output to enforce style, insert follow-up suggestions, and apply user persona settings."""
+    logger.info("✨ Renderer: Post-processing final response")
+    logger.debug("Response Renderer node processing output")
+    current_time_str = get_current_datetime_str()
+    
+    # Get the raw response from the Integrator
+    raw_response = state.get("workflow_context", {}).get("integrator_response", "")
+    
+    if not raw_response:
+        error = state.get("workflow_context", {}).get("integrator_error", "Unknown error")
+        logger.error(f"No response from Integrator to render. Error: {error}")
+        state["messages"].append({
+            "role": "assistant", 
+            "content": f"I apologize, but I encountered an error generating a response: {error}",
+            "metadata": {"error": True}
+        })
+        return state
+    
+    # Log the raw response
+    display_raw = raw_response[:75] + "..." if len(raw_response) > 75 else raw_response
+    logger.info(f"✨ Renderer: Processing raw response: \"{display_raw}\"")
+    
+    # Get personality settings to apply to the response
+    personality = state.get("personality", {})
+    style = personality.get("style", "helpful")
+    tone = personality.get("tone", "friendly")
+    
+    # Get the active module that was used to handle the query
+    module_used = state.get("current_module", "chat")
+    
+    # Get recent conversation history for context
+    raw_messages = state.get("messages", [])
+    
+    # Initialize LLM for response rendering
+    renderer_llm = ChatOpenAI(
+        model=config.DEFAULT_MODEL,
+        temperature=0.3,  # Low temperature for more consistent formatting
+        max_tokens=1500,  # Allow for extra tokens for formatting and follow-ups 
+        api_key=config.OPENAI_API_KEY
+    )
+    
+    # Create structured output model
+    structured_renderer = renderer_llm.with_structured_output(FormattedResponse)
+    
+    # Create a system prompt for the renderer
+    system_message = SystemMessage(content=RESPONSE_RENDERER_SYSTEM_PROMPT.format(
+        current_time=current_time_str,
+        style=style,
+        tone=tone,
+        module_used=module_used
+    ))
+    
+    # Prepare the messages for the renderer LLM
+    renderer_messages = [system_message]
+    
+    # Add the last few messages for context (if any)
+    context_size = 3  # Number of recent messages to include for context
+    if len(raw_messages) > 0:
+        context_start = max(0, len(raw_messages) - context_size)
+        for msg in raw_messages[context_start:]:
+            role = msg.get("role")
+            content = msg.get("content", "").strip()
+            if role == "user":
+                renderer_messages.append(HumanMessage(content=f"[User Message]: {content}"))
+            elif role == "assistant":
+                renderer_messages.append(AIMessage(content=f"[Assistant Response]: {content}"))
+    
+    # Add specific message for the raw response to be formatted
+    renderer_messages.append(HumanMessage(content=f"""
+    Below is the raw response to be formatted according to the specified guidelines.
+    
+    [Raw Response]:
+    {raw_response}
+    """))
+    
+    try:
+        # Process the response with the structured renderer
+        formatted_result = structured_renderer.invoke(renderer_messages)
+        
+        # Extract the formatted response and any follow-up questions
+        formatted_response = formatted_result.main_response
+        follow_up_questions = formatted_result.follow_up_questions
+        
+        # If there are follow-up questions, append them to the formatted response
+        if follow_up_questions and len(follow_up_questions) > 0:
+            formatted_response += "\n\n"
+            for i, question in enumerate(follow_up_questions, 1):
+                formatted_response += f"{i}. {question}\n"
+        
+        # Log the formatted response
+        display_formatted = formatted_response[:75] + "..." if len(formatted_response) > 75 else formatted_response
+        logger.info(f"✨ Renderer: Produced formatted response: \"{display_formatted}\"")
+        
+        logger.debug(f"Renderer processed response. Original length: {len(raw_response)}, Formatted length: {len(formatted_response)}")
+        
+        # Create the final assistant message
+        assistant_message = {
+            "role": "assistant", 
+            "content": formatted_response,
+            "metadata": {
+                "rendered": True,
+                "style": style,
+                "tone": tone,
+                "module_used": module_used,
+                "has_follow_up_questions": follow_up_questions is not None and len(follow_up_questions) > 0,
+                "follow_up_questions": follow_up_questions
+            }
+        }
+        
+        # Add the rendered response to the messages in state
+        state["messages"].append(assistant_message)
+        
+        # Save the response to conversation history
+        user_id = state.get("user_id")
+        conversation_id = state.get("conversation_id")
+        if user_id and conversation_id:
+            conversation_manager.add_message(
+                user_id,
+                conversation_id,
+                "assistant",
+                formatted_response,
+                {
+                    "rendered": True,
+                    "style": style,
+                    "tone": tone,
+                    "module_used": module_used,
+                    "has_follow_up_questions": follow_up_questions is not None and len(follow_up_questions) > 0,
+                    "follow_up_questions": follow_up_questions
+                }
+            )
+            
+    except Exception as e:
+        logger.error(f"Error in response_renderer_node: {str(e)}", exc_info=True)
+        # If rendering fails, use the raw response as a fallback
+        state["messages"].append({
+            "role": "assistant", 
+            "content": raw_response,
+            "metadata": {
+                "rendered": False,
+                "render_error": str(e),
+                "module_used": module_used
+            }
+        })
+        
+        # Save the raw response to conversation history as fallback
+        user_id = state.get("user_id")
+        conversation_id = state.get("conversation_id")
+        if user_id and conversation_id:
+            conversation_manager.add_message(
+                user_id,
+                conversation_id,
+                "assistant",
+                raw_response,
+                {
+                    "rendered": False,
+                    "render_error": str(e),
+                    "module_used": module_used
+                }
+            )
+    
+    return state 

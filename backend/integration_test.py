@@ -1,7 +1,7 @@
 # integration_test.py
 import os
 import unittest
-from graph import create_chat_graph
+from graph_builder import create_chat_graph
 
 class IntegrationTest(unittest.TestCase):
     def test_openai_integration(self):
