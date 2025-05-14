@@ -108,8 +108,13 @@ Data is stored in the `backend/storage_data` directory in JSON format. If you wa
 
 - `backend/`: Contains the FastAPI application and LangGraph implementation
   - `app.py`: Main FastAPI application
-  - `graph.py`: LangGraph implementation
+  - `graph_builder.py`: LangGraph builder that creates the processing graph
+  - `nodes/`: Modular node components used to build the graph
+  - `tests/`: Unit and integration tests
+    - `unit/`: Unit tests for individual components
+    - `integration/`: Integration tests requiring external services
   - `models.py`: Pydantic models for request/response
+  - `prompts.py`: Centralized prompts used throughout the system
   - `config.py`: Configuration settings
   - `requirements.txt`: Python dependencies
 - `chatbot-react/`: Contains the React frontend
@@ -129,8 +134,27 @@ To add new models, update the SUPPORTED_MODELS dictionary in backend/config.py.
 
 The backend is designed to be flexible for future extensions:
 
-- Add new nodes to the LangGraph in graph.py
-- Add new API endpoints in app.py
+- Add new nodes to the `nodes/` directory
+- Modify graph structure in `graph_builder.py`
+- Customize system prompts in `prompts.py`
+- Add new API endpoints in `app.py`
+
+### Testing
+
+The backend includes a structured testing framework using pytest:
+
+- Unit tests in `backend/tests/unit/`
+- Integration tests in `backend/tests/integration/`
+- Run tests with the provided script:
+  ```
+  cd backend
+  source venv/bin/activate
+  ./run_tests.sh         # Run unit tests only
+  ./run_tests.sh --all   # Run unit and integration tests
+  ./run_tests.sh --coverage  # Run tests with coverage report
+  ```
+
+Integration tests that require API keys will be skipped automatically if the keys are not available.
 
 ### Logging and Debugging
 
@@ -229,8 +253,8 @@ cd backend
 # Activate the virtual environment
 source venv/bin/activate  # On Linux/Mac
 
-# Run the graph.py module directly
-python graph.py
+# Run the graph_builder.py module directly
+python graph_builder.py
 ```
 
 This will create a `graph.png` file in the current directory that shows the LangGraph structure. The visualization is generated using LangGraph's built-in visualization capabilities with Graphviz.
@@ -239,7 +263,7 @@ Requirements:
 - Graphviz must be installed on your system: `sudo apt-get install graphviz`
 - Make sure you've installed all Python dependencies from `requirements.txt` which includes the necessary packages for visualization
 
-> **Note**: Always run `graph.py` from within the activated virtual environment to ensure all dependencies are available.
+> **Note**: Always run `graph_builder.py` from within the activated virtual environment to ensure all dependencies are available.
 
 The visualization is useful for:
 - Understanding the flow of the application
@@ -247,7 +271,7 @@ The visualization is useful for:
 - Documenting the architecture
 - Seeing how different nodes connect
 
-Simply run `python graph.py` whenever you make changes to the graph structure to generate an updated visualization.
+Simply run `python graph_builder.py` whenever you make changes to the graph structure to generate an updated visualization.
 
 ### Extending the Frontend
 
