@@ -40,7 +40,7 @@ def create_chat_graph():
     """Create a LangGraph graph for orchestrating the flow of the interaction."""
     
     # Configure LangSmith tracing if enabled
-    tracing_enabled = setup_tracing()
+    setup_tracing()
     
     # Define the router function for conditional branching
     def router(state: ChatState) -> str:
