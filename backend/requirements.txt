@@ -5,6 +5,7 @@ python-dotenv
 langchain
 langchain-openai
 langgraph
+langsmith
 uuid
 pathlib
 pygraphviz

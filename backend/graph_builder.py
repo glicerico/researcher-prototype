@@ -4,7 +4,6 @@ Graph builder module that constructs the LangGraph for the conversation flow.
 import os
 from langgraph.graph import StateGraph, END
 from langsmith import Client
-from langchain_core.tracers.context import context
 from nodes.base import ChatState, logger
 from config import (
     LANGCHAIN_TRACING_V2,

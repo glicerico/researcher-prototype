@@ -167,6 +167,15 @@ The application uses a centralized logging system to provide consistent log info
 - **WARNING**: Problems that don't stop execution but may need attention
 - **ERROR**: Critical issues that prevent proper functionality
 
+#### LangSmith Tracing
+
+The application supports LangSmith tracing for detailed monitoring and debugging of the LangGraph flow:
+
+- **Enable Tracing**: Set `LANGCHAIN_TRACING_V2=true` and add your LangSmith API key in the `.env` file
+- **View Traces**: Access the `/traces` endpoint to see recent traces and get links to the LangSmith UI
+- **Trace Details**: Each trace includes timing, status, and links to detailed visualizations
+- **Project Organization**: Traces are organized by project name (default: "researcher-prototype")
+
 #### Enabling Debug Mode
 
 You can enable more verbose logging in three ways:
