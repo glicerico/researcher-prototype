@@ -31,7 +31,6 @@ def setup_tracing():
         os.environ["LANGCHAIN_ENDPOINT"] = LANGCHAIN_ENDPOINT
         os.environ["LANGCHAIN_API_KEY"] = LANGCHAIN_API_KEY
         os.environ["LANGCHAIN_PROJECT"] = LANGCHAIN_PROJECT
-        
         logger.info(f"🔍 LangSmith tracing enabled for project: {LANGCHAIN_PROJECT}")
         return True
     return False
@@ -91,13 +90,8 @@ def create_chat_graph():
     # End the graph after rendering the response
     builder.add_edge("response_renderer", END)
     
-    # Configure tracing for the graph if enabled
-    graph_kwargs = {}
-    if tracing_enabled:
-        graph_kwargs["with_tracing"] = True
-    
     # Compile the graph
-    graph = builder.compile(**graph_kwargs)
+    graph = builder.compile()
 
     return graph
 
