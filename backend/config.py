@@ -19,6 +19,14 @@ ROUTER_MODEL = os.getenv("ROUTER_MODEL", "gpt-4o-mini")
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar")
 
+# Pinecone configuration for vector storage
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_INDEX_NAME = os.getenv("PINECONE_INDEX_NAME", "llama-text-embed-v2-index")
+PINECONE_HOST = os.getenv("PINECONE_HOST", "https://llama-text-embed-v2-index-ljurpfd.svc.aped-4627-b74a.pinecone.io")
+
+# Memory configuration
+STM_CAPACITY = int(os.getenv("STM_CAPACITY", "10"))  # Number of messages to keep in short-term memory
+
 # LangSmith tracing configuration
 LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
 LANGCHAIN_ENDPOINT = os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")

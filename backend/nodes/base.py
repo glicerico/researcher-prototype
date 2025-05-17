@@ -17,12 +17,45 @@ from utils import get_current_datetime_str
 from storage.storage_manager import StorageManager
 from storage.user_manager import UserManager
 from storage.conversation_manager import ConversationManager
+from storage.memory_manager import MemoryManager
+
+# Import models
+from llm_models import RoutingAnalysis, FormattedResponse, SearchQuery, AnalysisTask
+
+# Import prompts
+from prompts import (
+    ROUTER_SYSTEM_PROMPT,
+    SEARCH_OPTIMIZER_SYSTEM_PROMPT,
+    ANALYSIS_REFINER_SYSTEM_PROMPT,
+    PERPLEXITY_SYSTEM_PROMPT,
+    INTEGRATOR_SYSTEM_PROMPT,
+    SEARCH_RESULTS_TEMPLATE,
+    ANALYSIS_RESULTS_TEMPLATE,
+    RESPONSE_RENDERER_SYSTEM_PROMPT
+)
+
+import config
 
 # Initialize storage components
 storage_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage_data")
 storage_manager = StorageManager(storage_dir)
 user_manager = UserManager(storage_manager)
 conversation_manager = ConversationManager(storage_manager, user_manager)
+
+# Initialize memory manager if Pinecone API key is available
+memory_manager = None
+if config.PINECONE_API_KEY:
+    try:
+        memory_manager = MemoryManager(
+            storage_manager=storage_manager,
+            user_manager=user_manager,
+            conversation_manager=conversation_manager
+        )
+        logger.info("Memory manager initialized successfully with Pinecone integration")
+    except Exception as e:
+        logger.error(f"Failed to initialize memory manager: {str(e)}")
+else:
+    logger.warning("PINECONE_API_KEY not set. Long-term memory features will be disabled.")
 
 class ChatState(TypedDict):
     """Type definition for the chat state that flows through the graph."""
@@ -36,4 +69,5 @@ class ChatState(TypedDict):
     workflow_context: Annotated[Dict[str, Any], "Contextual data for the current workflow execution."]
     user_id: Annotated[Optional[str], "The ID of the current user"]
     conversation_id: Annotated[Optional[str], "The ID of the current conversation"]
-    routing_analysis: Annotated[Optional[Dict[str, Any]], "Analysis from the router"] 
+    routing_analysis: Annotated[Optional[Dict[str, Any]], "Analysis from the router"]
+    memory_context: Annotated[Optional[Dict[str, Any]], "Relevant memories from long-term memory"] 

@@ -23,14 +23,24 @@ def response_renderer_node(state: ChatState) -> ChatState:
     current_time_str = get_current_datetime_str()
     
     # Get the raw response from the Integrator
-    raw_response = state.get("workflow_context", {}).get("integrator_response", "")
+    integrator_result = state.get("module_results", {}).get("integrator", {})
     
-    if not raw_response:
-        error = state.get("workflow_context", {}).get("integrator_error", "Unknown error")
-        logger.error(f"No response from Integrator to render. Error: {error}")
+    if not integrator_result.get("success", False):
+        error_message = integrator_result.get("error", "Unknown error")
+        logger.error(f"No valid response from Integrator to render. Error: {error_message}")
         state["messages"].append({
             "role": "assistant", 
-            "content": f"I apologize, but I encountered an error generating a response: {error}",
+            "content": f"I apologize, but I encountered an error generating a response: {error_message}",
+            "metadata": {"error": True}
+        })
+        return state
+    
+    raw_response = integrator_result.get("response", "")
+    if not raw_response:
+        logger.error("Empty response from Integrator to render")
+        state["messages"].append({
+            "role": "assistant", 
+            "content": "I apologize, but I encountered an error generating a response.",
             "metadata": {"error": True}
         })
         return state
@@ -134,11 +144,11 @@ def response_renderer_node(state: ChatState) -> ChatState:
         conversation_id = state.get("conversation_id")
         if user_id and conversation_id:
             conversation_manager.add_message(
-                user_id,
-                conversation_id,
-                "assistant",
-                formatted_response,
-                {
+                user_id=user_id,
+                conversation_id=conversation_id,
+                role="assistant",
+                content=formatted_response,
+                metadata={
                     "rendered": True,
                     "style": style,
                     "tone": tone,
@@ -147,9 +157,10 @@ def response_renderer_node(state: ChatState) -> ChatState:
                     "follow_up_questions": follow_up_questions
                 }
             )
+            logger.info(f"✨ Renderer: Saved formatted response to conversation {conversation_id}")
             
     except Exception as e:
-        logger.error(f"Error in response_renderer_node: {str(e)}", exc_info=True)
+        logger.error(f"Error in response_renderer_node: {str(e)}")
         # If rendering fails, use the raw response as a fallback
         state["messages"].append({
             "role": "assistant", 
@@ -166,15 +177,16 @@ def response_renderer_node(state: ChatState) -> ChatState:
         conversation_id = state.get("conversation_id")
         if user_id and conversation_id:
             conversation_manager.add_message(
-                user_id,
-                conversation_id,
-                "assistant",
-                raw_response,
-                {
+                user_id=user_id,
+                conversation_id=conversation_id,
+                role="assistant",
+                content=raw_response,
+                metadata={
                     "rendered": False,
                     "render_error": str(e),
                     "module_used": module_used
                 }
             )
-    
+            logger.warning(f"✨ Renderer: Saved raw response as fallback to conversation {conversation_id}")
+        
     return state 

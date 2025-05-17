@@ -2,7 +2,7 @@
 Graph builder module that constructs the LangGraph for the conversation flow.
 """
 import os
-from langgraph.graph import StateGraph, END
+from langgraph.graph import StateGraph, END, START
 from langsmith import Client
 from nodes.base import ChatState, logger
 from config import (
@@ -19,6 +19,7 @@ from nodes.search_optimizer_node import search_prompt_optimizer_node
 from nodes.analysis_refiner_node import analysis_task_refiner_node
 from nodes.search_node import search_node
 from nodes.analyzer_node import analyzer_node
+from nodes.memory_node import memory_retrieval_node, memory_storage_node
 from nodes.integrator_node import integrator_node
 from nodes.response_renderer_node import response_renderer_node
 
@@ -36,68 +37,71 @@ def setup_tracing():
     return False
 
 
-def create_chat_graph():
-    """Create a LangGraph graph for orchestrating the flow of the interaction."""
+def build_graph():
+    """Build the LangGraph workflow for the conversation."""
+    # Set up LangSmith tracing if configured
+    tracing_enabled = setup_tracing()
     
-    # Configure LangSmith tracing if enabled
-    setup_tracing()
+    # Create a new graph
+    graph = StateGraph(ChatState)
+    
+    # Add all nodes to the graph
+    graph.add_node("initialize", initializer_node)
+    graph.add_node("router", router_node)
+    graph.add_node("memory_retrieval", memory_retrieval_node)
+    graph.add_node("search_optimizer", search_prompt_optimizer_node)
+    graph.add_node("analysis_refiner", analysis_task_refiner_node)
+    graph.add_node("search", search_node)
+    graph.add_node("analyzer", analyzer_node)
+    graph.add_node("integrator", integrator_node)
+    graph.add_node("memory_storage", memory_storage_node)
+    graph.add_node("renderer", response_renderer_node)
     
     # Define the router function for conditional branching
     def router(state: ChatState) -> str:
         """Route to the appropriate module based on the current_module state."""
         logger.info(f"⚡ Flow: Routing to '{state['current_module']}' module")
         return state["current_module"]
-    
-    # Build and return the graph
-    builder = StateGraph(ChatState)
-    
-    # Add all nodes
-    builder.add_node("initializer", initializer_node)
-    builder.add_node("router", router_node)
-    builder.add_node("search_prompt_optimizer", search_prompt_optimizer_node)
-    builder.add_node("analysis_task_refiner", analysis_task_refiner_node)
-    builder.add_node("search", search_node)
-    builder.add_node("analyzer", analyzer_node)
-    builder.add_node("integrator", integrator_node)
-    builder.add_node("response_renderer", response_renderer_node)
-    
-    # Define the workflow
-    builder.set_entry_point("initializer")
-    builder.add_edge("initializer", "router")
-    
-    # From router, conditionally go to different modules
-    builder.add_conditional_edges(
+
+    # Add the entry point from START to router
+    graph.add_edge(START, "initialize")
+    graph.add_edge("initialize", "memory_retrieval")
+    graph.add_edge("memory_retrieval", "router")
+
+    # Define the conditional edges
+    graph.add_conditional_edges(
         "router",
-        router,
-        {
-            "search": "search_prompt_optimizer",
-            "analyzer": "analysis_task_refiner",
+        router, {
+            "search": "search_optimizer",
+            "analyzer": "analysis_refiner",
             "chat": "integrator" 
         }
     )
     
-    # Connect the search optimization to search
-    builder.add_edge("search_prompt_optimizer", "search")
-    builder.add_edge("search", "integrator")
+    # Search path
+    graph.add_edge("search_optimizer", "search")
+    graph.add_edge("search", "integrator")
     
-    # Connect the analysis refiner to analyzer
-    builder.add_edge("analysis_task_refiner", "analyzer")
-    builder.add_edge("analyzer", "integrator")
+    # Analysis path
+    graph.add_edge("analysis_refiner", "analyzer")
+    graph.add_edge("analyzer", "integrator")
     
-    # Connect the integrator to the response renderer
-    builder.add_edge("integrator", "response_renderer")
-    
-    # End the graph after rendering the response
-    builder.add_edge("response_renderer", END)
+    # Final steps
+    graph.add_edge("integrator", "memory_storage")
+    graph.add_edge("memory_storage", "renderer")
+    graph.add_edge("renderer", END)
     
     # Compile the graph
-    graph = builder.compile()
-
-    return graph
+    workflow = graph.compile()
+    
+    if tracing_enabled:
+        logger.info("LangSmith tracing enabled for workflow")
+    
+    return workflow
 
 
 # Create a singleton instance of the graph
-chat_graph = create_chat_graph()
+chat_graph = build_graph()
 
 
 def visualize_graph(output_file="graph.png"):

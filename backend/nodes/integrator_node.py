@@ -15,6 +15,15 @@ from nodes.base import (
     get_current_datetime_str
 )
 
+# Define the template for memory context
+MEMORY_CONTEXT_TEMPLATE = """
+--- MEMORY CONTEXT ---
+The following information is retrieved from long-term memory and might be relevant to the current conversation:
+
+{memory_context_text}
+
+Remember to consider this historical context when responding.
+"""
 
 def integrator_node(state: ChatState) -> ChatState:
     """Core thinking component that integrates all available context and generates a response."""
@@ -75,6 +84,40 @@ def integrator_node(state: ChatState) -> ChatState:
         else:
             logger.warning(f"Unknown message role: {role}")
     
+    # Add memory context if available
+    memory_context = state.get("memory_context", {})
+    if memory_context.get("success", False) and memory_context.get("memories"):
+        memories = memory_context.get("memories", [])
+        if memories:
+            # Format the memories
+            memory_texts = []
+            for memory in memories:
+                # Skip if content is empty
+                if not memory.get("content"):
+                    continue
+                    
+                # Format the memory
+                memory_type = memory.get("metadata", {}).get("memory_type", "unknown")
+                memory_role = memory.get("metadata", {}).get("role", "unknown")
+                
+                if memory_type == "search":
+                    query = memory.get("metadata", {}).get("query", "")
+                    memory_texts.append(f"Search for '{query}':\n{memory.get('content')}")
+                elif memory_type == "analysis":
+                    analysis_type = memory.get("metadata", {}).get("analysis_type", "")
+                    memory_texts.append(f"Analysis ({analysis_type}):\n{memory.get('content')}")
+                else:
+                    memory_texts.append(f"{memory_role.capitalize()}: {memory.get('content')}")
+            
+            # Add memories to the context
+            if memory_texts:
+                memory_context_text = "\n---\n".join(memory_texts)
+                memory_msg = MEMORY_CONTEXT_TEMPLATE.format(
+                    memory_context_text=memory_context_text
+                )
+                langchain_messages.append(AIMessage(content=memory_msg))
+                logger.info("🧠 Integrator: Added memory context to prompt")
+    
     # Add search/analysis results after the last message, if available
     search_results = state.get("module_results", {}).get("search", {})
     if search_results.get("success", False):
@@ -105,26 +148,26 @@ def integrator_node(state: ChatState) -> ChatState:
     ])
     logger.info(f"🧠 Integrator: Full prompt being sent to LLM:\n{prompt_log}")
     
+    # Generate the response
     try:
-        logger.debug(f"Sending {len(langchain_messages)} messages to Integrator")
-        # Create a chat model with specified parameters
         response = llm.invoke(langchain_messages)
-        logger.debug(f"Received response from Integrator: {response}")
+        response_text = response.content
         
-        # Log the response for traceability
-        display_response = response.content[:75] + "..." if len(response.content) > 75 else response.content
+        # Truncate for logging
+        display_response = response_text[:75] + "..." if len(response_text) > 75 else response_text
         logger.info(f"🧠 Integrator: Generated response: \"{display_response}\"")
         
-        # Store the Integrator's response in the workflow context for the renderer
-        state["workflow_context"]["integrator_response"] = response.content
-        
-        # Also store in module_results for consistency
-        state["module_results"]["integrator"] = response.content
+        # Add the response to the state
+        state["module_results"]["integrator"] = {
+            "success": True,
+            "response": response_text
+        }
         
     except Exception as e:
-        logger.error(f"Error in integrator_node: {str(e)}", exc_info=True)
-        # Store the error in workflow context
-        state["workflow_context"]["integrator_error"] = str(e)
-        state["workflow_context"]["integrator_response"] = f"I encountered an error processing your request: {str(e)}"
+        logger.error(f"Error generating response: {str(e)}")
+        state["module_results"]["integrator"] = {
+            "success": False,
+            "error": str(e)
+        }
     
     return state 
