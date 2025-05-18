@@ -1,6 +1,5 @@
 import logging
 import sys
-from typing import Optional
 
 def configure_logging(level: int = logging.INFO) -> logging.Logger:
     """

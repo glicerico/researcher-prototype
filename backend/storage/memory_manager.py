@@ -43,7 +43,7 @@ class MemoryManager:
         self.stm_capacity = config.STM_CAPACITY
         self.pinecone_index_name = config.PINECONE_INDEX_NAME
         
-        # Initialize Pinecone with new API
+        # Initialize Pinecone
         self.pc = Pinecone(api_key=config.PINECONE_API_KEY)
         
         # Connect to the index
@@ -62,7 +62,7 @@ class MemoryManager:
         memory_type: str = "message",  # "message", "search", "analysis"
         metadata: Optional[Dict[str, Any]] = None
     ) -> bool:
-        """Add content to memory (both STM and possibly LTM).
+        """Add content to memory (STM if it has room, otherwise LTM).
         
         Args:
             user_id: The user ID
