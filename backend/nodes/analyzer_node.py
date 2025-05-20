@@ -2,8 +2,9 @@
 Analyzer node for processing complex analytical tasks.
 """
 from nodes.base import (
-    ChatState, 
-    logger
+    ChatState,
+    logger,
+    vector_memory
 )
 
 
@@ -36,9 +37,16 @@ def analyzer_node(state: ChatState) -> ChatState:
 
     # Store the result
     state["module_results"]["analyzer"] = {
-        "success": True, 
-        "result": analysis_response, 
+        "success": True,
+        "result": analysis_response,
         "task_processed": task_to_analyze
     }
+
+    # Store analysis result in long-term memory
+    vector_memory.store_analysis_result(
+        state.get("user_id", ""),
+        state.get("conversation_id", ""),
+        analysis_response,
+    )
     
     return state 

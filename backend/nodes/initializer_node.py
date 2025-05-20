@@ -6,7 +6,9 @@ from nodes.base import (
     logger, 
     config,
     user_manager,
-    conversation_manager
+    conversation_manager,
+    vector_memory,
+    STM_HUMAN_MESSAGE_LIMIT
 )
 
 
@@ -47,5 +49,26 @@ def initializer_node(state: ChatState) -> ChatState:
     
     # Store the input messages in the conversation
     conversation_manager.add_messages(user_id, conversation_id, state["messages"])
-    
-    return state 
+
+    # Trim short-term memory to the configured number of human messages
+    def trim_messages(messages, limit):
+        human_count = 0
+        cut_index = len(messages)
+        for i in range(len(messages) - 1, -1, -1):
+            if messages[i].get("role") == "user":
+                human_count += 1
+                if human_count > limit:
+                    cut_index = i + 1
+                    break
+        return messages[cut_index:], messages[:cut_index]
+
+    trimmed, overflow = trim_messages(state["messages"], STM_HUMAN_MESSAGE_LIMIT)
+
+    # Store overflow messages in long-term memory
+    for msg in overflow:
+        vector_memory.store_message(user_id, conversation_id, msg)
+
+    state["messages"] = trimmed
+
+    return state
+

@@ -30,4 +30,15 @@ SUPPORTED_MODELS = {
     "gpt-4o-mini": "OpenAI GPT-4o-mini",
     "gpt-4o": "OpenAI GPT-4o",
     # Add more models as needed
-} 
+}
+
+# Pinecone vector memory configuration
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY")
+PINECONE_HOST = os.getenv(
+    "PINECONE_HOST",
+    "https://llama-text-embed-v2-index-ljurpfd.svc.aped-4627-b74a.pinecone.io",
+)
+PINECONE_TOP_K = int(os.getenv("PINECONE_TOP_K", "5"))
+
+# Short-term memory limit (counting only human messages)
+STM_HUMAN_MESSAGE_LIMIT = int(os.getenv("STM_HUMAN_MESSAGE_LIMIT", "5"))

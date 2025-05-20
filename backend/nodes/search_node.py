@@ -8,6 +8,7 @@ from nodes.base import (
     config,
     get_current_datetime_str
 )
+from nodes.base import vector_memory
 import requests
 
 
@@ -87,6 +88,13 @@ def search_node(state: ChatState) -> ChatState:
                 "result": search_result,
                 "query_used": query_to_search
             }
+
+            # Store search result in long-term memory
+            vector_memory.store_search_result(
+                state.get("user_id", ""),
+                state.get("conversation_id", ""),
+                search_result,
+            )
         else:
             # Handle API error
             error_message = f"Perplexity API request failed with status code {response.status_code}: {response.text}"

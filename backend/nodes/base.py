@@ -17,12 +17,14 @@ from utils import get_current_datetime_str
 from storage.storage_manager import StorageManager
 from storage.user_manager import UserManager
 from storage.conversation_manager import ConversationManager
+from vector_memory import VectorMemory
 
 # Initialize storage components
 storage_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage_data")
 storage_manager = StorageManager(storage_dir)
 user_manager = UserManager(storage_manager)
 conversation_manager = ConversationManager(storage_manager, user_manager)
+vector_memory = VectorMemory()
 
 class ChatState(TypedDict):
     """Type definition for the chat state that flows through the graph."""
