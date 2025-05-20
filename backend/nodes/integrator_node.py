@@ -14,6 +14,7 @@ from nodes.base import (
     config,
     get_current_datetime_str
 )
+from nodes.base import vector_memory
 
 
 def integrator_node(state: ChatState) -> ChatState:
@@ -75,6 +76,20 @@ def integrator_node(state: ChatState) -> ChatState:
         else:
             logger.warning(f"Unknown message role: {role}")
     
+    # Retrieve relevant long-term memory based on the latest user query
+    if last_message:
+        ltm_hits = vector_memory.search(state.get("user_id", ""), last_message)
+        for hit in ltm_hits:
+            fields = hit.get("fields", {})
+            ltm_text = fields.get("chunk_text", "")
+            category = fields.get("category", "memory")
+            if ltm_text:
+                langchain_messages.append(
+                    AIMessage(content=f"[LTM:{category}] {ltm_text}")
+                )
+        if ltm_hits:
+            logger.info("🧠 Integrator: Added long-term memory context")
+
     # Add search/analysis results after the last message, if available
     search_results = state.get("module_results", {}).get("search", {})
     if search_results.get("success", False):
