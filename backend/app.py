@@ -8,17 +8,17 @@ from logging_config import configure_logging, get_logger
 # Configure application logging
 logger = configure_logging()
 
-# Now import other modules that might use logging
-from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile, ConversationSummary, ConversationDetail
+# Import the rest of the modules that might use logging
+from models import ChatRequest, ChatResponse, PersonalityConfig, UserSummary, UserProfile, ConversationSummary, ConversationDetail
 from graph_builder import chat_graph, get_langsmith_client
 from nodes.base import user_manager, conversation_manager
 from nodes.router_node import router_node
 import config
 import traceback
 from typing import List, Dict, Optional, Any
-from pydantic import BaseModel, Field
+from pydantic import BaseModel
 
-app = FastAPI(title="Chatbot API")
+app = FastAPI(title="Researcher API")
 
 # Add CORS middleware
 app.add_middleware(
