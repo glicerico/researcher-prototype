@@ -18,6 +18,38 @@ from storage.storage_manager import StorageManager
 from storage.user_manager import UserManager
 from storage.conversation_manager import ConversationManager
 
+# Import configuration
+import config
+
+# Import all prompt templates from prompts.py
+from prompts import (
+    # Router prompts
+    ROUTER_SYSTEM_PROMPT,
+    
+    # Search prompts
+    SEARCH_OPTIMIZER_SYSTEM_PROMPT,
+    PERPLEXITY_SYSTEM_PROMPT,
+    SEARCH_RESULTS_TEMPLATE,
+    
+    # Analysis prompts
+    ANALYSIS_REFINER_SYSTEM_PROMPT,
+    ANALYSIS_RESULTS_TEMPLATE,
+    
+    # Integrator prompts
+    INTEGRATOR_SYSTEM_PROMPT,
+    
+    # Renderer prompts
+    RESPONSE_RENDERER_SYSTEM_PROMPT
+)
+
+# Import all model classes from llm_models.py and models.py
+from llm_models import (
+    RoutingAnalysis,
+    SearchQuery,
+    AnalysisTask,
+    FormattedResponse
+)
+
 # Initialize storage components
 storage_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage_data")
 storage_manager = StorageManager(storage_dir)

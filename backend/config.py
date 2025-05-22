@@ -25,6 +25,11 @@ LANGCHAIN_ENDPOINT = os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchai
 LANGCHAIN_API_KEY = os.getenv("LANGCHAIN_API_KEY", "")
 LANGCHAIN_PROJECT = os.getenv("LANGCHAIN_PROJECT", "researcher-prototype")
 
+# Pinecone configuration for long-term memory
+PINECONE_API_KEY = os.getenv("PINECONE_API_KEY", "")
+PINECONE_INDEX_HOST = os.getenv("PINECONE_INDEX_HOST", "")
+STM_LIMIT = int(os.getenv("STM_LIMIT", "4"))
+
 # Other models that can be supported
 SUPPORTED_MODELS = {
     "gpt-4o-mini": "OpenAI GPT-4o-mini",
