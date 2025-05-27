@@ -25,22 +25,19 @@ from nodes.response_renderer_node import response_renderer_node
 
 def setup_tracing():
     """Configure LangSmith tracing based on environment variables."""
-    if LANGCHAIN_TRACING_V2 and LANGCHAIN_API_KEY:
-        # Set up environment variables for LangSmith tracing
-        os.environ["LANGCHAIN_TRACING_V2"] = "true"
-        os.environ["LANGCHAIN_ENDPOINT"] = LANGCHAIN_ENDPOINT
-        os.environ["LANGCHAIN_API_KEY"] = LANGCHAIN_API_KEY
-        os.environ["LANGCHAIN_PROJECT"] = LANGCHAIN_PROJECT
-        logger.info(f"🔍 LangSmith tracing enabled for project: {LANGCHAIN_PROJECT}")
-        return True
-    return False
+    os.environ["LANGCHAIN_TRACING_V2"] = "true"
+    os.environ["LANGCHAIN_ENDPOINT"] = LANGCHAIN_ENDPOINT
+    os.environ["LANGCHAIN_API_KEY"] = LANGCHAIN_API_KEY
+    os.environ["LANGCHAIN_PROJECT"] = LANGCHAIN_PROJECT
+    logger.info(f"🔍 LangSmith tracing enabled for project: {LANGCHAIN_PROJECT}")
 
 
 def create_chat_graph():
     """Create a LangGraph graph for orchestrating the flow of the interaction."""
     
     # Configure LangSmith tracing if enabled
-    setup_tracing()
+    if LANGCHAIN_TRACING_V2 and LANGCHAIN_API_KEY:
+        setup_tracing()
     
     # Define the router function for conditional branching
     def router(state: ChatState) -> str:
