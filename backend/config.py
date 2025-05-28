@@ -30,4 +30,7 @@ SUPPORTED_MODELS = {
     "gpt-4o-mini": "OpenAI GPT-4o-mini",
     "gpt-4o": "OpenAI GPT-4o",
     # Add more models as needed
-} 
+}
+
+# Message management configuration
+MAX_MESSAGES_IN_STATE = int(os.getenv("MAX_MESSAGES_IN_STATE", "4")) 
