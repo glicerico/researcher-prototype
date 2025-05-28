@@ -1,10 +1,12 @@
 """
 Base definitions and imports for all node modules.
 """
+import config
+import os
+
 from typing import Dict, List, Annotated, TypedDict, Optional, Any
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 from langchain_openai import ChatOpenAI
-import os
 
 # Use the centralized logging configuration
 from logging_config import get_logger
@@ -17,6 +19,33 @@ from utils import get_current_datetime_str
 from storage.storage_manager import StorageManager
 from storage.user_manager import UserManager
 from storage.conversation_manager import ConversationManager
+
+# Import all prompt templates from prompts.py
+from prompts import (
+    # Router prompts
+    ROUTER_SYSTEM_PROMPT,
+
+    # Search prompts
+    SEARCH_OPTIMIZER_SYSTEM_PROMPT,
+    PERPLEXITY_SYSTEM_PROMPT,
+
+    # Analysis prompts
+    ANALYSIS_REFINER_SYSTEM_PROMPT,
+
+    # Integrator prompts
+    INTEGRATOR_SYSTEM_PROMPT,
+
+    # Renderer prompts
+    RESPONSE_RENDERER_SYSTEM_PROMPT
+)
+
+# Import all model classes from llm_models.py and models.py
+from llm_models import (
+    RoutingAnalysis,
+    SearchQuery,
+    AnalysisTask,
+    FormattedResponse
+)
 
 # Initialize storage components
 storage_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage_data")

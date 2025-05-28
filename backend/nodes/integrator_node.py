@@ -9,11 +9,12 @@ from nodes.base import (
     SystemMessage,
     ChatOpenAI,
     INTEGRATOR_SYSTEM_PROMPT,
-    SEARCH_RESULTS_TEMPLATE,
-    ANALYSIS_RESULTS_TEMPLATE,
     config,
     get_current_datetime_str
 )
+
+# Import the context templates
+from prompts import SEARCH_CONTEXT_TEMPLATE, ANALYSIS_CONTEXT_TEMPLATE
 
 
 def integrator_node(state: ChatState) -> ChatState:
@@ -34,10 +35,39 @@ def integrator_node(state: ChatState) -> ChatState:
     if last_message:
         display_msg = last_message[:75] + "..." if len(last_message) > 75 else last_message
         logger.info(f"🧠 Integrator: Processing query: \"{display_msg}\"")
-        
-    # Create system message based on personality if available
+    
+    # Build context section for system prompt
+    context_sections = []
+    
+    # Add search results to context if available
+    search_results = state.get("module_results", {}).get("search", {})
+    if search_results.get("success", False):
+        search_result_text = search_results.get("result", "")
+        if search_result_text:
+            search_context = SEARCH_CONTEXT_TEMPLATE.format(
+                search_result_text=search_result_text
+            )
+            context_sections.append(search_context)
+            logger.info("🧠 Integrator: Added search results to system context")
+    
+    # Add analysis results to context if available
+    analysis_results = state.get("module_results", {}).get("analyzer", {})
+    if analysis_results.get("success", False):
+        analysis_result_text = analysis_results.get("result", "")
+        if analysis_result_text:
+            analysis_context = ANALYSIS_CONTEXT_TEMPLATE.format(
+                analysis_result_text=analysis_result_text
+            )
+            context_sections.append(analysis_context)
+            logger.info("🧠 Integrator: Added analysis results to system context")
+    
+    # Combine all context sections
+    context_section = "\n\n".join(context_sections) if context_sections else ""
+    
+    # Create enhanced system message with context
     system_message_content = INTEGRATOR_SYSTEM_PROMPT.format(
-        current_time=current_time_str
+        current_time=current_time_str,
+        context_section=context_section
     )
     
     # Initialize the model
@@ -54,7 +84,7 @@ def integrator_node(state: ChatState) -> ChatState:
     # Add system message first
     langchain_messages.append(SystemMessage(content=system_message_content))
     
-    # Process the conversation history
+    # Process the conversation history (only real user-assistant exchanges)
     for msg in state["messages"]:
         role = msg["role"]
         content = msg["content"]
@@ -69,41 +99,14 @@ def integrator_node(state: ChatState) -> ChatState:
         
         if role == "user":
             langchain_messages.append(HumanMessage(content=content))
-            
         elif role == "assistant":
             langchain_messages.append(AIMessage(content=content))
         else:
             logger.warning(f"Unknown message role: {role}")
     
-    # Add search/analysis results after the last message, if available
-    search_results = state.get("module_results", {}).get("search", {})
-    if search_results.get("success", False):
-        search_result_text = search_results.get("result", None)
-        if search_result_text:
-            # Add search results directly to the prompt
-            search_msg = SEARCH_RESULTS_TEMPLATE.format(
-                search_result_text=search_result_text
-            )
-            langchain_messages.append(AIMessage(content=search_msg))
-            logger.info("🧠 Integrator: Added search results to prompt")
-        
-    analysis_results = state.get("module_results", {}).get("analyzer", {})
-    if analysis_results.get("success", False):
-        analysis_result_text = analysis_results.get("result", None)
-        if analysis_result_text:
-            # Add analysis results directly to the prompt
-            analysis_msg = ANALYSIS_RESULTS_TEMPLATE.format(
-                analysis_result_text=analysis_result_text
-            )
-            langchain_messages.append(AIMessage(content=analysis_msg))
-            logger.info("🧠 Integrator: Added analytical insights to prompt")
-                
-    # Log the full prompt being sent to the LLM for debugging
-    prompt_log = "\n---\n".join([
-        f"ROLE: {msg.type}\nCONTENT: {msg.content}"
-        for msg in langchain_messages
-    ])
-    logger.info(f"🧠 Integrator: Full prompt being sent to LLM:\n{prompt_log}")
+    # Log the system prompt for debugging (truncated)
+    system_prompt_preview = system_message_content[:200] + "..." if len(system_message_content) > 200 else system_message_content
+    logger.info(f"🧠 Integrator: System prompt preview: {system_prompt_preview}")
     
     try:
         logger.debug(f"Sending {len(langchain_messages)} messages to Integrator")

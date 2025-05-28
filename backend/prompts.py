@@ -42,24 +42,29 @@ Provide comprehensive answers based on web search results."""
 
 # Integrator prompts
 INTEGRATOR_SYSTEM_PROMPT = """Current date and time: {current_time}.
-You are the central reasoning component of an AI assistant system. Your task is to integrate all available information and generate a coherent, thoughtful response."""
+You are the central reasoning component of an AI assistant system. Your task is to integrate all available information and generate a coherent, thoughtful response.
 
-# Search results integration template
-SEARCH_RESULTS_TEMPLATE = """
-IMPORTANT FACTUAL INFORMATION FROM SEARCH:
-==================================================
+{context_section}
+
+Respond naturally to the user's query, incorporating any relevant context provided above. Maintain a conversational tone and cite sources when appropriate."""
+
+# Context templates for system prompt integration
+SEARCH_CONTEXT_TEMPLATE = """
+CURRENT INFORMATION FROM WEB SEARCH:
+The following information was retrieved from a recent web search related to the user's query:
+
 {search_result_text}
-==================================================
-The above information is from a current web search. Please prioritize this information in your response.
+
+Use this information to provide accurate, up-to-date responses. When referencing this information, you may mention that it comes from recent web sources.
 """
 
-# Analysis results integration template
-ANALYSIS_RESULTS_TEMPLATE = """
-IMPORTANT ANALYTICAL INSIGHTS:
-==================================================
+ANALYSIS_CONTEXT_TEMPLATE = """
+ANALYTICAL INSIGHTS:
+The following analysis was performed related to the user's query:
+
 {analysis_result_text}
-==================================================
-The above analytical insights are relevant to the user's query. Incorporate these insights into your response.
+
+Incorporate these insights naturally into your response where relevant.
 """
 
 # Response renderer prompts
