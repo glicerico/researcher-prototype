@@ -7,6 +7,7 @@ import UserSelector from './components/UserSelector';
 import UserProfile from './components/UserProfile';
 import UserDropdown from './components/UserDropdown';
 import { getModels, sendChatMessage, getCurrentUser } from './services/api';
+import { generateDisplayName } from './utils/userUtils';
 import './styles/App.css';
 
 function App() {
@@ -25,6 +26,35 @@ function App() {
   const [profileUpdateTime, setProfileUpdateTime] = useState(0);
   
   const messagesEndRef = useRef(null);
+
+  // Validate stored user ID on app startup
+  useEffect(() => {
+    const validateStoredUserId = async () => {
+      const storedUserId = localStorage.getItem('user_id');
+      if (!storedUserId) return;
+      
+      try {
+        // Try to fetch the user data to see if it exists
+        const response = await fetch('http://localhost:8000/user', {
+          headers: {
+            'user-id': storedUserId
+          }
+        });
+        
+        if (response.status === 404) {
+          console.log('Stored user ID is invalid, clearing localStorage');
+          localStorage.removeItem('user_id');
+          setUserId('');
+          setUserDisplayName('');
+        }
+      } catch (error) {
+        console.error('Error validating stored user ID:', error);
+        // If there's a network error, don't clear the user ID
+      }
+    };
+    
+    validateStoredUserId();
+  }, []); // Run only once on mount
 
   // Load available models on component mount
   useEffect(() => {
@@ -68,20 +98,31 @@ function App() {
           console.log('Setting display name:', userData.display_name);
           setUserDisplayName(userData.display_name);
         } else {
-          const shortId = userId.substring(userId.length - 6);
-          console.log('No display name found, using ID fragment:', shortId);
-          setUserDisplayName(`User ${shortId}`);
+          const fallbackDisplayName = generateDisplayName(userId);
+          console.log('No display name found, using generated name:', fallbackDisplayName);
+          setUserDisplayName(fallbackDisplayName);
         }
       } catch (error) {
         console.error('Error loading user data:', error);
-        // Set default values on error
+        
+        // If we get a 404, it means the user no longer exists
+        if (error.response && error.response.status === 404) {
+          console.log('User no longer exists, clearing localStorage and resetting state');
+          localStorage.removeItem('user_id');
+          setUserId('');
+          setUserDisplayName('');
+          setPersonality(null);
+          return;
+        }
+        
+        // For other errors, set default values
         setPersonality({
           style: 'helpful',
           tone: 'friendly'
         });
         
-        const shortId = userId.substring(userId.length - 6);
-        setUserDisplayName(`User ${shortId}`);
+        const fallbackDisplayName = generateDisplayName(userId);
+        setUserDisplayName(fallbackDisplayName);
       } finally {
         setIsLoading(false);
       }
@@ -186,7 +227,7 @@ function App() {
     localStorage.setItem('user_id', newUserId);
     
     // Set initial display name (may be updated when user data loads)
-    setUserDisplayName(displayName || `User ${newUserId.substring(newUserId.length - 6)}`);
+    setUserDisplayName(displayName || generateDisplayName(newUserId));
     
     // Reset conversation
     setMessages([

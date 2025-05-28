@@ -43,19 +43,54 @@ zep_manager = ZepManager()
 # Build the chat graph
 chat_graph = create_chat_graph()
 
-def get_user_id(user_id: Optional[str] = Header(None)) -> str:
+def generate_display_name_from_user_id(user_id: str) -> str:
+    """Generate a display name from a user ID."""
+    if not user_id:
+        return "User"
+    
+    # Check if it's a friendly ID format (user-adjective-noun-number)
+    if user_id.startswith('user-') and len(user_id.split('-')) == 4:
+        parts = user_id.split('-')
+        adjective = parts[1]
+        noun = parts[2]
+        number = parts[3]
+        
+        # Capitalize first letters and create a nice display name
+        capitalized_adjective = adjective.capitalize()
+        capitalized_noun = noun.capitalize()
+        
+        return f"{capitalized_adjective} {capitalized_noun} {number}"
+    
+    # Fallback for UUID format - use last 6 characters
+    if len(user_id) >= 6:
+        return f"User {user_id[-6:]}"
+    
+    # Ultimate fallback
+    return f"User {user_id}"
+
+
+def get_existing_user_id(user_id: Optional[str] = Header(None)) -> Optional[str]:
+    """Extract user ID from headers if it exists and is valid."""
+    if user_id and user_manager.user_exists(user_id):
+        return user_id
+    return None
+
+
+def get_or_create_user_id(user_id: Optional[str] = Header(None)) -> str:
     """Extract user ID from headers or create a new user."""
-    if not user_id or not user_manager.user_exists(user_id):
-        # Create a new user
-        user_id = user_manager.create_user()
-        logger.info(f"Created new user: {user_id}")
-    return user_id
+    if user_id and user_manager.user_exists(user_id):
+        return user_id
+    
+    # Create a new user
+    new_user_id = user_manager.create_user()
+    logger.info(f"Created new user: {new_user_id}")
+    return new_user_id
 
 
 @app.post("/chat", response_model=ChatResponse)
 async def chat(
     request: ChatRequest,
-    user_id: str = Depends(get_user_id)
+    user_id: str = Depends(get_or_create_user_id)
 ):
     try:
         # Log the incoming request
@@ -155,8 +190,11 @@ async def get_personality_presets():
 
 
 @app.get("/user", response_model=UserProfile)
-async def get_current_user(user_id: str = Depends(get_user_id)):
+async def get_current_user(user_id: Optional[str] = Depends(get_existing_user_id)):
     """Get the current user's profile."""
+    if not user_id:
+        raise HTTPException(status_code=404, detail="No user ID provided or user not found")
+    
     user_data = user_manager.get_user(user_id)
     if not user_data:
         raise HTTPException(status_code=404, detail="User not found")
@@ -172,7 +210,7 @@ async def get_current_user(user_id: str = Depends(get_user_id)):
 @app.put("/user/personality")
 async def update_user_personality(
     personality: PersonalityConfig,
-    user_id: str = Depends(get_user_id)
+    user_id: str = Depends(get_or_create_user_id)
 ):
     """Update the user's personality settings."""
     success = user_manager.update_personality(user_id, personality.dict())
@@ -185,7 +223,7 @@ async def update_user_personality(
 @app.put("/user/display-name")
 async def update_user_display_name(
     display_name: str,
-    user_id: str = Depends(get_user_id)
+    user_id: str = Depends(get_or_create_user_id)
 ):
     """Update the user's display name."""
     success = user_manager.update_user(user_id, {"metadata": {"display_name": display_name}})
@@ -212,9 +250,9 @@ async def list_users():
                 additional_traits=personality.get("additional_traits", {})
             )
             
-            # Get a display name (use metadata or fallback to part of UUID)
+            # Get a display name (use metadata or fallback to generated name)
             metadata = user_data.get("metadata", {})
-            display_name = metadata.get("display_name", f"User {user_id[-6:]}")
+            display_name = metadata.get("display_name", generate_display_name_from_user_id(user_id))
             
             user_summaries.append(UserSummary(
                 user_id=user_id,
@@ -243,7 +281,7 @@ async def create_user(display_name: Optional[str] = None):
     return {
         "success": True,
         "user_id": user_id,
-        "display_name": display_name or f"User {user_id[-6:]}"
+        "display_name": display_name or generate_display_name_from_user_id(user_id)
     }
 
 
