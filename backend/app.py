@@ -112,7 +112,7 @@ async def chat(
             "model": request.model,
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
-            "personality": request.personality.dict() if request.personality else None,
+            "personality": request.personality.model_dump() if request.personality else None,
             "current_module": None,
             "module_results": {},
             "workflow_context": {},
@@ -121,7 +121,7 @@ async def chat(
         
         # Save user's personality if provided
         if request.personality:
-            user_manager.update_personality(user_id, request.personality.dict())
+            user_manager.update_personality(user_id, request.personality.model_dump())
         
         # Run the graph
         result = chat_graph.invoke(state)
@@ -214,7 +214,7 @@ async def update_user_personality(
     user_id: str = Depends(get_or_create_user_id)
 ):
     """Update the user's personality settings."""
-    success = user_manager.update_personality(user_id, personality.dict())
+    success = user_manager.update_personality(user_id, personality.model_dump())
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update personality")
     
