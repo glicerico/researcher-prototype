@@ -14,7 +14,7 @@ logger = configure_logging()
 
 # Now import other modules that might use logging
 from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile
-from storage import StorageManager, UserManager
+from storage import StorageManager, UserManager, ZepManager
 from graph_builder import create_chat_graph
 import config
 
@@ -36,6 +36,9 @@ logger = get_logger(__name__)
 storage_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage_data")
 storage_manager = StorageManager(storage_dir)
 user_manager = UserManager(storage_manager)
+
+# Initialize Zep manager
+zep_manager = ZepManager()
 
 # Build the chat graph
 chat_graph = create_chat_graph()
@@ -94,6 +97,23 @@ async def chat(
         
         # Extract the assistant's response (the last message)
         assistant_message = result["messages"][-1]
+        
+        # Store conversation in Zep (async, don't wait for completion)
+        if len(request.messages) > 0:
+            user_message = request.messages[-1].content  # Get the latest user message
+            try:
+                # Store in background - we don't want to slow down the response
+                import asyncio
+                asyncio.create_task(
+                    zep_manager.store_conversation_turn(
+                        user_id=user_id,
+                        user_message=user_message,
+                        ai_response=assistant_message.content
+                    )
+                )
+            except Exception as e:
+                # Log error but don't fail the request
+                logger.warning(f"Failed to store conversation in Zep: {str(e)}")
         
         return ChatResponse(
             response=assistant_message.content,
@@ -231,6 +251,16 @@ async def create_user(display_name: Optional[str] = None):
 async def health_check():
     """Health check endpoint."""
     return {"status": "healthy", "message": "AI Chatbot API is running"}
+
+
+@app.get("/zep/status")
+async def zep_status():
+    """Check Zep integration status."""
+    return {
+        "enabled": zep_manager.is_enabled(),
+        "configured": config.ZEP_ENABLED,
+        "api_key_set": bool(config.ZEP_API_KEY)
+    }
 
 
 if __name__ == "__main__":

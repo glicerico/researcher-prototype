@@ -46,6 +46,12 @@ All user data and conversations are stored locally and persist between sessions,
 
 Data is stored in the `backend/storage_data` directory in JSON format. If you want to back up your data, you can copy this directory. Note that this directory is not tracked by version control.
 
+### Zep Memory (Optional)
+
+Enables advanced memory with temporal knowledge graphs that automatically extract and store facts from conversations. 
+To enable, add `ZEP_API_KEY` and set `ZEP_ENABLED=true` in your `.env` file. 
+Get an API key at [getzep.com](https://www.getzep.com/).
+
 ## Setup
 
 ### Prerequisites

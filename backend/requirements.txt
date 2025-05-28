@@ -6,6 +6,7 @@ langchain
 langchain-openai
 langgraph
 langsmith
+zep-cloud
 uuid
 pathlib
 pygraphviz
