@@ -78,32 +78,10 @@ def integrator_node(state: ChatState) -> ChatState:
         api_key=config.OPENAI_API_KEY
     )
     
-    # Convert dict messages to LangChain message objects
-    langchain_messages = []
-    
-    # Add system message first
-    langchain_messages.append(SystemMessage(content=system_message_content))
-    
-    # Process the conversation history (only real user-assistant exchanges)
-    for msg in state["messages"]:
-        role = msg["role"]
-        content = msg["content"]
-        
-        # Skip system messages as we've already added our own
-        if role == "system":
-            continue
-        
-        # Trim whitespace from content
-        if isinstance(content, str):
-            content = content.strip()
-        
-        if role == "user":
-            langchain_messages.append(HumanMessage(content=content))
-        elif role == "assistant":
-            langchain_messages.append(AIMessage(content=content))
-        else:
-            logger.warning(f"Unknown message role: {role}")
-    
+    # Get the cached LangChain messages and add system message
+    langchain_messages = [SystemMessage(content=system_message_content)]
+    langchain_messages.extend(state.get("langchain_messages", []))
+
     # Log the system prompt for debugging (truncated)
     system_prompt_preview = system_message_content[:200] + "..." if len(system_message_content) > 200 else system_message_content
     logger.info(f"🧠 Integrator: System prompt preview: {system_prompt_preview}")

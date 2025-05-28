@@ -48,48 +48,20 @@ def router_node(state: ChatState) -> ChatState:
     structured_router = router_llm.with_structured_output(RoutingAnalysis)
     
     try:
-        # Extract conversation history for context (last few messages)
-        history_messages = []
-        max_history = 5  # Number of recent messages to include for context
-        
-        # Add recent conversation history as context
-        raw_messages = state.get("messages", [])
-        start_index = max(0, len(raw_messages) - max_history)
-        
-        for msg_dict in raw_messages[start_index:]:
-            role = msg_dict.get("role")
-            content = msg_dict.get("content", "").strip()
-            
-            if not content:
-                continue
-                
-            if role == "user":
-                history_messages.append(HumanMessage(content=content))
-            elif role == "assistant":
-                history_messages.append(AIMessage(content=content))
+        # Use the cached LangChain messages
+        history_messages = state.get("langchain_messages", [])
         
         # Create system message with router instructions
         system_message = SystemMessage(content=ROUTER_SYSTEM_PROMPT.format(
             current_time=get_current_datetime_str()
         ))
         
-        # If we have no context, just use the last message
-        if not history_messages:
-            router_messages = [
-                system_message,
-                HumanMessage(content=last_message)
-            ]
-        else:
-            # Add the system message first
-            router_messages = [system_message]
-            
-            # Add conversation history
-            router_messages.extend(history_messages)
-            
-            # If the last message in history isn't the current user message, add it
-            if (not isinstance(router_messages[-1], HumanMessage) or 
-                router_messages[-1].content != last_message):
-                router_messages.append(HumanMessage(content=last_message))
+        # Build the complete message list for the router
+        router_messages = [system_message] + history_messages
+        
+        # If no conversation history exists, add the current user message
+        if not history_messages and last_message:
+            router_messages.append(HumanMessage(content=last_message))
         
         logger.debug(f"Router using {len(router_messages)-1} context messages")
         

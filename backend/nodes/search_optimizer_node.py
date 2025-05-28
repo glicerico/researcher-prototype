@@ -39,29 +39,16 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
     display_msg = last_user_message_content[:75] + "..." if len(last_user_message_content) > 75 else last_user_message_content
     logger.info(f"🔬 Search Optimizer: Refining query: \"{display_msg}\"")
     
-    # Construct context: messages leading up to and including the last user message.
-    num_context_messages = 5 # System + up to 4 history messages
-    context_messages_for_llm = [] 
-    
     # Create system message with optimizer instructions
     system_message = SystemMessage(content=SEARCH_OPTIMIZER_SYSTEM_PROMPT.format(
         current_time=current_time_str
     ))
     
-    context_messages_for_llm.append(system_message)
+    # Use the cached LangChain messages
+    history_messages = state.get("langchain_messages", [])
     
-    # Add recent history to context_messages_for_llm (HumanMessage, AIMessage)
-    # Convert dict messages from state to LangChain message objects for the optimizer
-    start_index = max(0, len(raw_messages) - (num_context_messages -1))
-    for msg_dict in raw_messages[start_index:]:
-        role = msg_dict.get("role")
-        content = msg_dict.get("content", "").strip()
-        if not content: # Skip empty messages
-            continue
-        if role == "user":
-            context_messages_for_llm.append(HumanMessage(content=content))
-        elif role == "assistant":
-            context_messages_for_llm.append(AIMessage(content=content))
+    # Build the complete message list for the optimizer
+    context_messages_for_llm = [system_message] + history_messages
     
     # Initialize the optimizer LLM
     optimizer_llm = ChatOpenAI(

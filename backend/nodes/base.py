@@ -53,9 +53,41 @@ storage_manager = StorageManager(storage_dir)
 user_manager = UserManager(storage_manager)
 conversation_manager = ConversationManager(storage_manager, user_manager)
 
+def convert_state_messages_to_langchain(state_messages: List[Dict[str, str]], include_system: bool = False) -> List:
+    """
+    Convert state messages to LangChain message objects consistently across all nodes.
+    
+    Args:
+        state_messages: List of message dictionaries from state["messages"]
+        include_system: Whether to include system messages in the conversion
+        
+    Returns:
+        List of LangChain message objects (HumanMessage, AIMessage, SystemMessage)
+    """
+    langchain_messages = []
+    
+    for msg in state_messages:
+        role = msg.get("role")
+        content = msg.get("content", "").strip()
+        
+        # Skip empty messages
+        if not content:
+            continue
+            
+        if role == "user":
+            langchain_messages.append(HumanMessage(content=content))
+        elif role == "assistant":
+            langchain_messages.append(AIMessage(content=content))
+        elif role == "system" and include_system:
+            langchain_messages.append(SystemMessage(content=content))
+        # Skip system messages if include_system is False
+    
+    return langchain_messages
+
 class ChatState(TypedDict):
     """Type definition for the chat state that flows through the graph."""
     messages: Annotated[List[Dict[str, str]], "The messages in the conversation"]
+    langchain_messages: Annotated[Optional[List], "Converted LangChain message objects for LLM calls"]
     model: Annotated[str, "The model to use for the conversation"]
     temperature: Annotated[float, "The temperature to use for generation"]
     max_tokens: Annotated[int, "The maximum number of tokens to generate"]

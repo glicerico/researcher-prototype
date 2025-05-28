@@ -6,7 +6,8 @@ from nodes.base import (
     logger, 
     config,
     user_manager,
-    conversation_manager
+    conversation_manager,
+    convert_state_messages_to_langchain
 )
 
 
@@ -47,5 +48,11 @@ def initializer_node(state: ChatState) -> ChatState:
     
     # Store the input messages in the conversation
     conversation_manager.add_messages(user_id, conversation_id, state["messages"])
+    
+    # Convert messages to LangChain format once for the entire workflow
+    state["langchain_messages"] = convert_state_messages_to_langchain(
+        state["messages"], include_system=False
+    )
+    logger.info(f"🔄 Initializer: Converted {len(state.get('langchain_messages', []))} messages to LangChain format")
     
     return state 

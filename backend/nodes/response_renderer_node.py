@@ -12,7 +12,8 @@ from nodes.base import (
     RESPONSE_RENDERER_SYSTEM_PROMPT,
     config,
     get_current_datetime_str,
-    conversation_manager
+    conversation_manager,
+    convert_state_messages_to_langchain
 )
 
 
@@ -47,9 +48,6 @@ def response_renderer_node(state: ChatState) -> ChatState:
     # Get the active module that was used to handle the query
     module_used = state.get("current_module", "chat")
     
-    # Get recent conversation history for context
-    raw_messages = state.get("messages", [])
-    
     # Initialize LLM for response rendering
     renderer_llm = ChatOpenAI(
         model=config.DEFAULT_MODEL,
@@ -72,17 +70,17 @@ def response_renderer_node(state: ChatState) -> ChatState:
     # Prepare the messages for the renderer LLM
     renderer_messages = [system_message]
     
-    # Add the last few messages for context (if any)
-    context_size = 3  # Number of recent messages to include for context
-    if len(raw_messages) > 0:
-        context_start = max(0, len(raw_messages) - context_size)
-        for msg in raw_messages[context_start:]:
-            role = msg.get("role")
-            content = msg.get("content", "").strip()
-            if role == "user":
-                renderer_messages.append(HumanMessage(content=f"[User Message]: {content}"))
-            elif role == "assistant":
-                renderer_messages.append(AIMessage(content=f"[Assistant Response]: {content}"))
+    # Get the cached LangChain messages and add them for context
+    raw_messages = state.get("messages", [])
+    if raw_messages:
+        history_messages = state.get("langchain_messages", [])
+        
+        # Add conversation history with proper formatting for the renderer
+        for msg in history_messages:
+            if isinstance(msg, HumanMessage):
+                renderer_messages.append(HumanMessage(content=f"[User Message]: {msg.content}"))
+            elif isinstance(msg, AIMessage):
+                renderer_messages.append(AIMessage(content=f"[Assistant Response]: {msg.content}"))
     
     # Add specific message for the raw response to be formatted
     renderer_messages.append(HumanMessage(content=f"""
@@ -129,6 +127,11 @@ def response_renderer_node(state: ChatState) -> ChatState:
         # Add the rendered response to the messages in state
         state["messages"].append(assistant_message)
         
+        # Update the cached LangChain messages since we added a new message
+        state["langchain_messages"] = convert_state_messages_to_langchain(
+            state["messages"], include_system=False
+        )
+        
         # Save the response to conversation history
         user_id = state.get("user_id")
         conversation_id = state.get("conversation_id")
@@ -160,6 +163,11 @@ def response_renderer_node(state: ChatState) -> ChatState:
                 "module_used": module_used
             }
         })
+        
+        # Update the cached LangChain messages since we added a new message
+        state["langchain_messages"] = convert_state_messages_to_langchain(
+            state["messages"], include_system=False
+        )
         
         # Save the raw response to conversation history as fallback
         user_id = state.get("user_id")
