@@ -12,7 +12,6 @@ from nodes.base import (
     RESPONSE_RENDERER_SYSTEM_PROMPT,
     config,
     get_current_datetime_str,
-    conversation_manager,
     convert_state_messages_to_langchain
 )
 
@@ -131,25 +130,6 @@ def response_renderer_node(state: ChatState) -> ChatState:
         state["langchain_messages"] = convert_state_messages_to_langchain(
             state["messages"], include_system=False
         )
-        
-        # Save the response to conversation history
-        user_id = state.get("user_id")
-        conversation_id = state.get("conversation_id")
-        if user_id and conversation_id:
-            conversation_manager.add_message(
-                user_id,
-                conversation_id,
-                "assistant",
-                formatted_response,
-                {
-                    "rendered": True,
-                    "style": style,
-                    "tone": tone,
-                    "module_used": module_used,
-                    "has_follow_up_questions": follow_up_questions is not None and len(follow_up_questions) > 0,
-                    "follow_up_questions": follow_up_questions
-                }
-            )
             
     except Exception as e:
         logger.error(f"Error in response_renderer_node: {str(e)}", exc_info=True)
@@ -168,21 +148,5 @@ def response_renderer_node(state: ChatState) -> ChatState:
         state["langchain_messages"] = convert_state_messages_to_langchain(
             state["messages"], include_system=False
         )
-        
-        # Save the raw response to conversation history as fallback
-        user_id = state.get("user_id")
-        conversation_id = state.get("conversation_id")
-        if user_id and conversation_id:
-            conversation_manager.add_message(
-                user_id,
-                conversation_id,
-                "assistant",
-                raw_response,
-                {
-                    "rendered": False,
-                    "render_error": str(e),
-                    "module_used": module_used
-                }
-            )
     
     return state 

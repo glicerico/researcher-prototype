@@ -57,11 +57,6 @@ class UserManager:
         
         # Save the profile
         if self.storage.write(self._get_profile_path(user_id), profile):
-            # Create conversations directory
-            user_path = self._get_user_path(user_id)
-            conversations_path = f"{user_path}/conversations"
-            self.storage._get_file_path(conversations_path).mkdir(parents=True, exist_ok=True)
-            
             return user_id
         else:
             logger.error(f"Failed to create user {user_id}")

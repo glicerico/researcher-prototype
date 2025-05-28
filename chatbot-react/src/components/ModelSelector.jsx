@@ -11,12 +11,12 @@ const ModelSelector = ({ models, selectedModel, onSelectModel }) => {
         onChange={(e) => onSelectModel(e.target.value)}
       >
         <option value="gpt-4o-mini">GPT-4o-mini</option>
-        {Object.entries(models).map(([id, name]) => {
+        {Object.entries(models).map(([id, modelInfo]) => {
           // Skip the default model which is already added
           if (id !== 'gpt-4o-mini') {
             return (
               <option key={id} value={id}>
-                {name}
+                {modelInfo.name || id}
               </option>
             );
           }

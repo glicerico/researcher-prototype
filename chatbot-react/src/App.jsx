@@ -3,7 +3,6 @@ import ChatMessage from './components/ChatMessage';
 import ChatInput from './components/ChatInput';
 import ModelSelector from './components/ModelSelector';
 import TypingIndicator from './components/TypingIndicator';
-import DebugButton from './components/DebugButton';
 import UserSelector from './components/UserSelector';
 import UserProfile from './components/UserProfile';
 import UserDropdown from './components/UserDropdown';
@@ -147,7 +146,6 @@ function App() {
         selectedModel,
         0.7,  // temperature
         1000,  // max tokens
-        null,  // conversation ID
         personality // Include personality in the request
       );
       
@@ -172,37 +170,6 @@ function App() {
       setIsTyping(false);
       setIsLoading(false);
     }
-  };
-
-  const handleDebugInfo = (debugData) => {
-    // Create formatted debug info
-    const routingInfo = debugData.routing_result ? 
-      `Routing Decision: ${debugData.routing_result.decision}
-       Routing Analysis: ${JSON.stringify(debugData.routing_result.full_analysis, null, 2)}` : 
-      'No routing information available';
-      
-    const debugContent = `
-      Debug Info:
-      API Key Set: ${debugData.api_key_set}
-      Model: ${debugData.model}
-      Router Model: ${debugData.router_model || 'Not specified'}
-      Messages: ${debugData.initial_state.messages.length}
-      
-      Routing Information:
-      ${routingInfo}
-      
-      Full Debug Data:
-      ${JSON.stringify(debugData, null, 2)}
-    `;
-    
-    // Add debug info to messages
-    setMessages([
-      ...messages,
-      { 
-        role: 'system', 
-        content: debugContent
-      }
-    ]);
   };
 
   // Use useCallback to avoid unnecessary re-creation of this function
@@ -359,7 +326,9 @@ function App() {
     if (!userScrolling && messagesEndRef.current) {
       // Brief delay to ensure content has rendered
       setTimeout(() => {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
       }, 100);
     }
   }, [messages, userScrolling]);
@@ -387,11 +356,6 @@ function App() {
             currentUserId={userId} 
             currentDisplayName={userDisplayName || 'Anonymous User'}
             profileUpdateTime={profileUpdateTime}
-          />
-          <DebugButton 
-            messages={messages}
-            selectedModel={selectedModel}
-            onDebugInfo={handleDebugInfo}
           />
           {userId && (
             <button 
