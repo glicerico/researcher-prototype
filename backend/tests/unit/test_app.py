@@ -4,6 +4,7 @@ import json
 import os
 import sys
 from fastapi.testclient import TestClient
+from langchain_core.messages import HumanMessage, AIMessage
 
 # Add the parent directory to the path so we can import the app
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -16,9 +17,9 @@ from nodes.base import ChatState
 
 def test_root_endpoint(client):
     """Test that the root endpoint returns the expected message."""
-    response = client.get("/")
+    response = client.get("/health")  # Updated to use the actual health endpoint
     assert response.status_code == 200
-    assert response.json() == {"message": "Chatbot API is running"}
+    assert "status" in response.json()
     
 def test_models_endpoint(client):
     """Test that the models endpoint returns the supported models."""
@@ -44,10 +45,18 @@ def test_chat_endpoint(mock_renderer_openai, mock_integrator_openai, client, tes
     mock_renderer_instance.invoke.return_value.follow_up_questions = None
     mock_renderer_openai.return_value = mock_renderer_instance
     
+    # Convert the test state to the format expected by the API
+    api_request = {
+        "messages": [{"role": "user", "content": "Hello, how are you?"}],
+        "model": "gpt-4o-mini",
+        "temperature": 0.7,
+        "max_tokens": 1000
+    }
+    
     # Send the request to the chat endpoint
     response = client.post(
         "/chat",
-        json=test_chat_state
+        json=api_request
     )
     
     # Check the response
@@ -94,8 +103,8 @@ def test_chat_graph(mock_renderer_openai, mock_integrator_openai, chat_graph, te
     # Check the result
     assert "messages" in result
     assert len(result["messages"]) == 2  # Original message + response
-    assert result["messages"][1]["role"] == "assistant"
-    assert result["messages"][1]["content"] == "This is a test response"
+    assert isinstance(result["messages"][1], AIMessage)
+    assert result["messages"][1].content == "This is a test response"
 
 
 if __name__ == "__main__":

@@ -28,8 +28,8 @@ def integrator_node(state: ChatState) -> ChatState:
     # Get last user message for logging
     last_message = None
     for msg in reversed(state["messages"]):
-        if msg["role"] == "user":
-            last_message = msg["content"]
+        if isinstance(msg, HumanMessage):
+            last_message = msg.content
             break
             
     if last_message:
@@ -78,18 +78,18 @@ def integrator_node(state: ChatState) -> ChatState:
         api_key=config.OPENAI_API_KEY
     )
     
-    # Get the cached LangChain messages and add system message
-    langchain_messages = [SystemMessage(content=system_message_content)]
-    langchain_messages.extend(state.get("langchain_messages", []))
+    # Get the messages and add system message
+    messages_for_llm = [SystemMessage(content=system_message_content)]
+    messages_for_llm.extend(state.get("messages", []))
 
     # Log the system prompt for debugging (truncated)
     system_prompt_preview = system_message_content[:200] + "..." if len(system_message_content) > 200 else system_message_content
     logger.info(f"🧠 Integrator: System prompt preview: {system_prompt_preview}")
     
     try:
-        logger.debug(f"Sending {len(langchain_messages)} messages to Integrator")
+        logger.debug(f"Sending {len(messages_for_llm)} messages to Integrator")
         # Create a chat model with specified parameters
-        response = llm.invoke(langchain_messages)
+        response = llm.invoke(messages_for_llm)
         logger.debug(f"Received response from Integrator: {response}")
         
         # Log the response for traceability

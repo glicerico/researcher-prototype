@@ -23,8 +23,8 @@ def analysis_task_refiner_node(state: ChatState) -> ChatState:
     raw_messages = state.get("messages", [])
     last_user_message_content = None
     for msg in reversed(raw_messages):
-        if msg.get("role") == "user":
-            last_user_message_content = msg.get("content")
+        if isinstance(msg, HumanMessage):
+            last_user_message_content = msg.content
             break
     
     if not last_user_message_content:
@@ -41,8 +41,8 @@ def analysis_task_refiner_node(state: ChatState) -> ChatState:
         current_time=current_time_str
     ))
     
-    # Use the cached LangChain messages
-    history_messages = state.get("langchain_messages", [])
+    # Use the messages directly (they are already langchain core message types)
+    history_messages = state.get("messages", [])
     
     # Build the complete message list for the refiner
     context_messages_for_llm = [system_message] + history_messages

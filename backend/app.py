@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from typing import Optional, List
 import os
 import traceback
+from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 # Import and configure logging first, before other imports
 from logging_config import configure_logging, get_logger
@@ -57,9 +58,19 @@ async def chat(
         # Log the incoming request
         logger.debug(f"Chat request: {request}")
         
+        # Convert messages to langchain core message types
+        messages_for_state = []
+        for m in request.messages:
+            if m.role == "user":
+                messages_for_state.append(HumanMessage(content=m.content))
+            elif m.role == "assistant":
+                messages_for_state.append(AIMessage(content=m.content))
+            elif m.role == "system":
+                messages_for_state.append(SystemMessage(content=m.content))
+        
         # Prepare the state for the graph
         state = {
-            "messages": [{"role": m.role, "content": m.content} for m in request.messages],
+            "messages": messages_for_state,
             "model": request.model,
             "temperature": request.temperature,
             "max_tokens": request.max_tokens,
@@ -85,7 +96,7 @@ async def chat(
         assistant_message = result["messages"][-1]
         
         return ChatResponse(
-            response=assistant_message["content"],
+            response=assistant_message.content,
             model=request.model,
             usage={},
             module_used=result.get("current_module", "unknown"),

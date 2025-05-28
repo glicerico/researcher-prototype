@@ -26,8 +26,8 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
     # Get the actual last user message to be refined
     last_user_message_content = None
     for msg in reversed(raw_messages):
-        if msg.get("role") == "user":
-            last_user_message_content = msg.get("content")
+        if isinstance(msg, HumanMessage):
+            last_user_message_content = msg.content
             break
     
     if not last_user_message_content:
@@ -44,8 +44,7 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         current_time=current_time_str
     ))
     
-    # Use the cached LangChain messages
-    history_messages = state.get("langchain_messages", [])
+    history_messages = state.get("messages", [])
     
     # Build the complete message list for the optimizer
     context_messages_for_llm = [system_message] + history_messages

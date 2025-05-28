@@ -22,8 +22,8 @@ def router_node(state: ChatState) -> ChatState:
     # Get the last user message
     last_message = None
     for msg in reversed(state["messages"]):
-        if msg["role"] == "user":
-            last_message = msg["content"]
+        if isinstance(msg, HumanMessage):
+            last_message = msg.content
             break
             
     if not last_message:
@@ -48,8 +48,7 @@ def router_node(state: ChatState) -> ChatState:
     structured_router = router_llm.with_structured_output(RoutingAnalysis)
     
     try:
-        # Use the cached LangChain messages
-        history_messages = state.get("langchain_messages", [])
+        history_messages = state.get("messages", [])
         
         # Create system message with router instructions
         system_message = SystemMessage(content=ROUTER_SYSTEM_PROMPT.format(

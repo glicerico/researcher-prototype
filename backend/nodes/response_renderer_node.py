@@ -11,8 +11,7 @@ from nodes.base import (
     FormattedResponse,
     RESPONSE_RENDERER_SYSTEM_PROMPT,
     config,
-    get_current_datetime_str,
-    convert_state_messages_to_langchain
+    get_current_datetime_str
 )
 
 
@@ -28,11 +27,9 @@ def response_renderer_node(state: ChatState) -> ChatState:
     if not raw_response:
         error = state.get("workflow_context", {}).get("integrator_error", "Unknown error")
         logger.error(f"No response from Integrator to render. Error: {error}")
-        state["messages"].append({
-            "role": "assistant", 
-            "content": f"I apologize, but I encountered an error generating a response: {error}",
-            "metadata": {"error": True}
-        })
+        state["messages"].append(AIMessage(
+            content=f"I apologize, but I encountered an error generating a response: {error}"
+        ))
         return state
     
     # Log the raw response
@@ -69,13 +66,11 @@ def response_renderer_node(state: ChatState) -> ChatState:
     # Prepare the messages for the renderer LLM
     renderer_messages = [system_message]
     
-    # Get the cached LangChain messages and add them for context
+    # Get the messages and add them for context
     raw_messages = state.get("messages", [])
     if raw_messages:
-        history_messages = state.get("langchain_messages", [])
-        
         # Add conversation history with proper formatting for the renderer
-        for msg in history_messages:
+        for msg in raw_messages:
             if isinstance(msg, HumanMessage):
                 renderer_messages.append(HumanMessage(content=f"[User Message]: {msg.content}"))
             elif isinstance(msg, AIMessage):
@@ -110,43 +105,14 @@ def response_renderer_node(state: ChatState) -> ChatState:
         logger.debug(f"Renderer processed response. Original length: {len(raw_response)}, Formatted length: {len(formatted_response)}")
         
         # Create the final assistant message
-        assistant_message = {
-            "role": "assistant", 
-            "content": formatted_response,
-            "metadata": {
-                "rendered": True,
-                "style": style,
-                "tone": tone,
-                "module_used": module_used,
-                "has_follow_up_questions": follow_up_questions is not None and len(follow_up_questions) > 0,
-                "follow_up_questions": follow_up_questions
-            }
-        }
+        assistant_message = AIMessage(content=formatted_response)
         
         # Add the rendered response to the messages in state
         state["messages"].append(assistant_message)
-        
-        # Update the cached LangChain messages since we added a new message
-        state["langchain_messages"] = convert_state_messages_to_langchain(
-            state["messages"], include_system=False
-        )
             
     except Exception as e:
         logger.error(f"Error in response_renderer_node: {str(e)}", exc_info=True)
         # If rendering fails, use the raw response as a fallback
-        state["messages"].append({
-            "role": "assistant", 
-            "content": raw_response,
-            "metadata": {
-                "rendered": False,
-                "render_error": str(e),
-                "module_used": module_used
-            }
-        })
-        
-        # Update the cached LangChain messages since we added a new message
-        state["langchain_messages"] = convert_state_messages_to_langchain(
-            state["messages"], include_system=False
-        )
+        state["messages"].append(AIMessage(content=raw_response))
     
     return state 
