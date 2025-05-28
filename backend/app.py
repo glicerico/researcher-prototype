@@ -155,7 +155,8 @@ async def chat(
             model=request.model,
             usage={},
             module_used=result.get("current_module", "unknown"),
-            routing_analysis=result.get("routing_analysis")
+            routing_analysis=result.get("routing_analysis"),
+            user_id=user_id
         )
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)

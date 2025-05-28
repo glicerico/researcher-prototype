@@ -192,6 +192,17 @@ function App() {
       
       console.log('Chat response:', response);
       
+      // Check if a user was created or if we need to update the current user
+      if (response.user_id && response.user_id !== userId) {
+        console.log('New user created during chat:', response.user_id);
+        setUserId(response.user_id);
+        localStorage.setItem('user_id', response.user_id);
+        
+        // Generate a display name for the new user
+        const newDisplayName = generateDisplayName(response.user_id);
+        setUserDisplayName(newDisplayName);
+      }
+      
       // Add assistant response with routing info
       setMessages([
         ...updatedMessages, 

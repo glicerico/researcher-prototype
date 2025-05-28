@@ -31,6 +31,7 @@ class ChatResponse(BaseModel):
     usage: Dict[str, Any] = {}
     module_used: Optional[str] = None
     routing_analysis: Optional[Dict[str, Any]] = None
+    user_id: Optional[str] = None
 
 
 class UserSummary(BaseModel):
