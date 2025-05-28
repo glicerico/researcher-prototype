@@ -3,7 +3,8 @@ Analyzer node for processing complex analytical tasks.
 """
 from nodes.base import (
     ChatState, 
-    logger
+    logger,
+    HumanMessage
 )
 
 
@@ -13,8 +14,8 @@ def analyzer_node(state: ChatState) -> ChatState:
     
     # Get analysis task (either refined or original)
     refined_task = state.get("workflow_context", {}).get("refined_analysis_task")
-    original_user_query = next((msg["content"] for msg in reversed(state["messages"]) 
-                              if msg["role"] == "user"), None)
+    original_user_query = next((msg.content for msg in reversed(state["messages"]) 
+                              if isinstance(msg, HumanMessage)), None)
     
     task_to_analyze = refined_task or original_user_query
 

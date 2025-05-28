@@ -15,7 +15,7 @@ api.interceptors.request.use(
   (config) => {
     const userId = localStorage.getItem('user_id');
     if (userId) {
-      config.headers['X-User-ID'] = userId;
+      config.headers['user-id'] = userId;
     }
     return config;
   },
@@ -36,13 +36,8 @@ export const getModels = async () => {
 };
 
 // Send a chat message
-export const sendChatMessage = async (messages, model, temperature = 0.7, maxTokens = 1000, conversationId = null, personality = null) => {
+export const sendChatMessage = async (messages, model, temperature = 0.7, maxTokens = 1000, personality = null) => {
   try {
-    const headers = {};
-    if (conversationId) {
-      headers['conversation_id'] = conversationId;
-    }
-    
     const payload = {
       messages,
       model,
@@ -55,27 +50,11 @@ export const sendChatMessage = async (messages, model, temperature = 0.7, maxTok
       payload.personality = personality;
     }
     
-    const response = await api.post('/chat', payload, { headers });
+    const response = await api.post('/chat', payload);
     
     return response.data;
   } catch (error) {
     console.error('Error sending chat message:', error);
-    throw error;
-  }
-};
-
-// Debug endpoint
-export const sendDebugRequest = async (messages, model) => {
-  try {
-    const response = await api.post('/debug', {
-      messages,
-      model,
-      temperature: 0.7,
-      max_tokens: 1000,
-    });
-    return response.data;
-  } catch (error) {
-    console.error('Error sending debug request:', error);
     throw error;
   }
 };
@@ -118,7 +97,7 @@ export const getCurrentUser = async () => {
     const userId = localStorage.getItem('user_id');
     console.log('Current user ID from localStorage:', userId);
     
-    const response = await api.get('/users/me');
+    const response = await api.get('/user');
     console.log('Current user response:', response.data);
     return response.data;
   } catch (error) {
@@ -133,9 +112,9 @@ export const getCurrentUser = async () => {
   }
 };
 
-export const updateUserDisplayName = async (userId, displayName) => {
+export const updateUserDisplayName = async (displayName) => {
   try {
-    const response = await api.patch(`/users/${userId}/display-name`, null, {
+    const response = await api.put('/user/display-name', null, {
       params: { display_name: displayName }
     });
     return response.data;
@@ -147,7 +126,7 @@ export const updateUserDisplayName = async (userId, displayName) => {
 
 export const updateUserPersonality = async (personality) => {
   try {
-    const response = await api.patch('/users/me/personality', personality);
+    const response = await api.put('/user/personality', personality);
     return response.data;
   } catch (error) {
     console.error('Error updating user personality:', error);

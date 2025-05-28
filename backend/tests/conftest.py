@@ -2,6 +2,7 @@ import os
 import sys
 import pytest
 from fastapi.testclient import TestClient
+from langchain_core.messages import HumanMessage, AIMessage
 
 # Add the parent directory to the path so we can import from backend
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -33,7 +34,7 @@ def test_chat_state():
     """Fixture for a standard chat state for testing"""
     return {
         "messages": [
-            {"role": "user", "content": "Hello, how are you?"}
+            HumanMessage(content="Hello, how are you?")
         ],
         "model": "gpt-4o-mini",
         "temperature": 0.7,

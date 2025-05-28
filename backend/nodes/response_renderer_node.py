@@ -11,8 +11,7 @@ from nodes.base import (
     FormattedResponse,
     RESPONSE_RENDERER_SYSTEM_PROMPT,
     config,
-    get_current_datetime_str,
-    conversation_manager
+    get_current_datetime_str
 )
 
 
@@ -28,11 +27,9 @@ def response_renderer_node(state: ChatState) -> ChatState:
     if not raw_response:
         error = state.get("workflow_context", {}).get("integrator_error", "Unknown error")
         logger.error(f"No response from Integrator to render. Error: {error}")
-        state["messages"].append({
-            "role": "assistant", 
-            "content": f"I apologize, but I encountered an error generating a response: {error}",
-            "metadata": {"error": True}
-        })
+        state["messages"].append(AIMessage(
+            content=f"I apologize, but I encountered an error generating a response: {error}"
+        ))
         return state
     
     # Log the raw response
@@ -46,9 +43,6 @@ def response_renderer_node(state: ChatState) -> ChatState:
     
     # Get the active module that was used to handle the query
     module_used = state.get("current_module", "chat")
-    
-    # Get recent conversation history for context
-    raw_messages = state.get("messages", [])
     
     # Initialize LLM for response rendering
     renderer_llm = ChatOpenAI(
@@ -72,17 +66,15 @@ def response_renderer_node(state: ChatState) -> ChatState:
     # Prepare the messages for the renderer LLM
     renderer_messages = [system_message]
     
-    # Add the last few messages for context (if any)
-    context_size = 3  # Number of recent messages to include for context
-    if len(raw_messages) > 0:
-        context_start = max(0, len(raw_messages) - context_size)
-        for msg in raw_messages[context_start:]:
-            role = msg.get("role")
-            content = msg.get("content", "").strip()
-            if role == "user":
-                renderer_messages.append(HumanMessage(content=f"[User Message]: {content}"))
-            elif role == "assistant":
-                renderer_messages.append(AIMessage(content=f"[Assistant Response]: {content}"))
+    # Get the messages and add them for context
+    raw_messages = state.get("messages", [])
+    if raw_messages:
+        # Add conversation history with proper formatting for the renderer
+        for msg in raw_messages:
+            if isinstance(msg, HumanMessage):
+                renderer_messages.append(HumanMessage(content=f"[User Message]: {msg.content}"))
+            elif isinstance(msg, AIMessage):
+                renderer_messages.append(AIMessage(content=f"[Assistant Response]: {msg.content}"))
     
     # Add specific message for the raw response to be formatted
     renderer_messages.append(HumanMessage(content=f"""
@@ -113,68 +105,14 @@ def response_renderer_node(state: ChatState) -> ChatState:
         logger.debug(f"Renderer processed response. Original length: {len(raw_response)}, Formatted length: {len(formatted_response)}")
         
         # Create the final assistant message
-        assistant_message = {
-            "role": "assistant", 
-            "content": formatted_response,
-            "metadata": {
-                "rendered": True,
-                "style": style,
-                "tone": tone,
-                "module_used": module_used,
-                "has_follow_up_questions": follow_up_questions is not None and len(follow_up_questions) > 0,
-                "follow_up_questions": follow_up_questions
-            }
-        }
+        assistant_message = AIMessage(content=formatted_response)
         
         # Add the rendered response to the messages in state
         state["messages"].append(assistant_message)
-        
-        # Save the response to conversation history
-        user_id = state.get("user_id")
-        conversation_id = state.get("conversation_id")
-        if user_id and conversation_id:
-            conversation_manager.add_message(
-                user_id,
-                conversation_id,
-                "assistant",
-                formatted_response,
-                {
-                    "rendered": True,
-                    "style": style,
-                    "tone": tone,
-                    "module_used": module_used,
-                    "has_follow_up_questions": follow_up_questions is not None and len(follow_up_questions) > 0,
-                    "follow_up_questions": follow_up_questions
-                }
-            )
             
     except Exception as e:
         logger.error(f"Error in response_renderer_node: {str(e)}", exc_info=True)
         # If rendering fails, use the raw response as a fallback
-        state["messages"].append({
-            "role": "assistant", 
-            "content": raw_response,
-            "metadata": {
-                "rendered": False,
-                "render_error": str(e),
-                "module_used": module_used
-            }
-        })
-        
-        # Save the raw response to conversation history as fallback
-        user_id = state.get("user_id")
-        conversation_id = state.get("conversation_id")
-        if user_id and conversation_id:
-            conversation_manager.add_message(
-                user_id,
-                conversation_id,
-                "assistant",
-                raw_response,
-                {
-                    "rendered": False,
-                    "render_error": str(e),
-                    "module_used": module_used
-                }
-            )
+        state["messages"].append(AIMessage(content=raw_response))
     
     return state 

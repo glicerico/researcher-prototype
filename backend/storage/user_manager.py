@@ -4,6 +4,7 @@ User Manager for handling user profiles and preferences.
 
 import uuid
 import time
+import random
 from typing import Dict, Any, List, Optional
 
 # Import the centralized logging configuration
@@ -21,6 +22,49 @@ class UserManager:
         """Initialize the user manager with a storage manager."""
         self.storage = storage_manager
         self.users_path = "users"
+    
+    def _generate_friendly_user_id(self) -> str:
+        """
+        Generate a friendly, human-readable user ID.
+        Format: user-{adjective}-{noun}-{number}
+        Example: user-happy-cat-42
+        """
+        adjectives = [
+            "happy", "clever", "bright", "swift", "calm", "bold", "wise", "kind",
+            "cool", "smart", "quick", "brave", "gentle", "sharp", "witty", "keen",
+            "neat", "fresh", "warm", "clear", "pure", "fine", "good", "nice"
+        ]
+        
+        nouns = [
+            "cat", "dog", "fox", "owl", "bee", "ant", "elk", "bat", "cod", "eel",
+            "jay", "ram", "yak", "pig", "cow", "hen", "rat", "bug", "fly", "cub",
+            "pup", "kit", "calf", "lamb", "foal", "joey", "chick", "fawn", "kid", "colt"
+        ]
+        
+        # Generate a random number between 10-99
+        number = random.randint(10, 99)
+        
+        # Pick random adjective and noun
+        adjective = random.choice(adjectives)
+        noun = random.choice(nouns)
+        
+        # Create the friendly ID
+        friendly_id = f"user-{adjective}-{noun}-{number}"
+        
+        # Check if this ID already exists, if so, try again with a different number
+        max_attempts = 10
+        attempt = 0
+        while self.user_exists(friendly_id) and attempt < max_attempts:
+            number = random.randint(10, 99)
+            friendly_id = f"user-{adjective}-{noun}-{number}"
+            attempt += 1
+        
+        # If we still have a collision after max attempts, fall back to UUID
+        if self.user_exists(friendly_id):
+            logger.warning(f"Could not generate unique friendly ID after {max_attempts} attempts, falling back to UUID")
+            return str(uuid.uuid4())
+        
+        return friendly_id
     
     def _get_user_path(self, user_id: str) -> str:
         """Get the path to a user's directory."""
@@ -40,8 +84,8 @@ class UserManager:
         Returns:
             The newly created user ID
         """
-        # Generate a unique user ID
-        user_id = str(uuid.uuid4())
+        # Generate a friendly user ID
+        user_id = self._generate_friendly_user_id()
         
         # Create user profile
         profile = {
@@ -57,11 +101,6 @@ class UserManager:
         
         # Save the profile
         if self.storage.write(self._get_profile_path(user_id), profile):
-            # Create conversations directory
-            user_path = self._get_user_path(user_id)
-            conversations_path = f"{user_path}/conversations"
-            self.storage._get_file_path(conversations_path).mkdir(parents=True, exist_ok=True)
-            
             return user_id
         else:
             logger.error(f"Failed to create user {user_id}")

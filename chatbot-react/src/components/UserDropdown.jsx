@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { getUsers, createUser, getCurrentUser } from '../services/api';
+import { generateDisplayName } from '../utils/userUtils';
 import '../styles/UserDropdown.css';
 
 const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName, profileUpdateTime = 0 }) => {
@@ -30,6 +31,17 @@ const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName, profi
         // Set users data
         setUsers(Array.isArray(usersData) ? usersData : []);
         console.log('Users loaded:', usersData);
+        
+        // Check if the current user ID actually exists in the users list
+        if (currentUserId && Array.isArray(usersData)) {
+          const userExists = usersData.some(user => user.user_id === currentUserId);
+          if (!userExists) {
+            console.log('Current user ID not found in users list, clearing selection');
+            localStorage.removeItem('user_id');
+            onUserSelected('', ''); // Clear the current user selection
+            return;
+          }
+        }
         
         // Update current user display name if needed
         if (currentUserData && currentUserData.display_name) {
@@ -177,8 +189,8 @@ const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName, profi
             {error && <div className="user-dropdown-error">{error}</div>}
             
             {!isLoading && !error && users.length > 0 && users.map((user) => {
-              // Get the display name directly from user object, no longer need to check multiple places
-              const displayName = user.display_name || `User ${user.user_id.substring(user.user_id.length - 6)}`;
+              // Get the display name using the utility function
+              const displayName = user.display_name || generateDisplayName(user.user_id);
               
               return (
                 <div 

@@ -4,6 +4,7 @@ Search node for performing web searches and retrieving information.
 from nodes.base import (
     ChatState, 
     logger, 
+    HumanMessage,
     PERPLEXITY_SYSTEM_PROMPT,
     config,
     get_current_datetime_str
@@ -20,8 +21,8 @@ def search_node(state: ChatState) -> ChatState:
     refined_query = state.get("workflow_context", {}).get("refined_search_query")
     original_user_query = None
     for msg in reversed(state["messages"]):
-        if msg["role"] == "user":
-            original_user_query = msg["content"]
+        if isinstance(msg, HumanMessage):
+            original_user_query = msg.content
             break
     
     query_to_search = refined_query if refined_query else original_user_query

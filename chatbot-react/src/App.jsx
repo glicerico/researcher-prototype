@@ -3,11 +3,11 @@ import ChatMessage from './components/ChatMessage';
 import ChatInput from './components/ChatInput';
 import ModelSelector from './components/ModelSelector';
 import TypingIndicator from './components/TypingIndicator';
-import DebugButton from './components/DebugButton';
 import UserSelector from './components/UserSelector';
 import UserProfile from './components/UserProfile';
 import UserDropdown from './components/UserDropdown';
 import { getModels, sendChatMessage, getCurrentUser } from './services/api';
+import { generateDisplayName } from './utils/userUtils';
 import './styles/App.css';
 
 function App() {
@@ -26,6 +26,35 @@ function App() {
   const [profileUpdateTime, setProfileUpdateTime] = useState(0);
   
   const messagesEndRef = useRef(null);
+
+  // Validate stored user ID on app startup
+  useEffect(() => {
+    const validateStoredUserId = async () => {
+      const storedUserId = localStorage.getItem('user_id');
+      if (!storedUserId) return;
+      
+      try {
+        // Try to fetch the user data to see if it exists
+        const response = await fetch('http://localhost:8000/user', {
+          headers: {
+            'user-id': storedUserId
+          }
+        });
+        
+        if (response.status === 404) {
+          console.log('Stored user ID is invalid, clearing localStorage');
+          localStorage.removeItem('user_id');
+          setUserId('');
+          setUserDisplayName('');
+        }
+      } catch (error) {
+        console.error('Error validating stored user ID:', error);
+        // If there's a network error, don't clear the user ID
+      }
+    };
+    
+    validateStoredUserId();
+  }, []); // Run only once on mount
 
   // Load available models on component mount
   useEffect(() => {
@@ -69,20 +98,31 @@ function App() {
           console.log('Setting display name:', userData.display_name);
           setUserDisplayName(userData.display_name);
         } else {
-          const shortId = userId.substring(userId.length - 6);
-          console.log('No display name found, using ID fragment:', shortId);
-          setUserDisplayName(`User ${shortId}`);
+          const fallbackDisplayName = generateDisplayName(userId);
+          console.log('No display name found, using generated name:', fallbackDisplayName);
+          setUserDisplayName(fallbackDisplayName);
         }
       } catch (error) {
         console.error('Error loading user data:', error);
-        // Set default values on error
+        
+        // If we get a 404, it means the user no longer exists
+        if (error.response && error.response.status === 404) {
+          console.log('User no longer exists, clearing localStorage and resetting state');
+          localStorage.removeItem('user_id');
+          setUserId('');
+          setUserDisplayName('');
+          setPersonality(null);
+          return;
+        }
+        
+        // For other errors, set default values
         setPersonality({
           style: 'helpful',
           tone: 'friendly'
         });
         
-        const shortId = userId.substring(userId.length - 6);
-        setUserDisplayName(`User ${shortId}`);
+        const fallbackDisplayName = generateDisplayName(userId);
+        setUserDisplayName(fallbackDisplayName);
       } finally {
         setIsLoading(false);
       }
@@ -147,11 +187,21 @@ function App() {
         selectedModel,
         0.7,  // temperature
         1000,  // max tokens
-        null,  // conversation ID
         personality // Include personality in the request
       );
       
       console.log('Chat response:', response);
+      
+      // Check if a user was created or if we need to update the current user
+      if (response.user_id && response.user_id !== userId) {
+        console.log('New user created during chat:', response.user_id);
+        setUserId(response.user_id);
+        localStorage.setItem('user_id', response.user_id);
+        
+        // Generate a display name for the new user
+        const newDisplayName = generateDisplayName(response.user_id);
+        setUserDisplayName(newDisplayName);
+      }
       
       // Add assistant response with routing info
       setMessages([
@@ -174,37 +224,6 @@ function App() {
     }
   };
 
-  const handleDebugInfo = (debugData) => {
-    // Create formatted debug info
-    const routingInfo = debugData.routing_result ? 
-      `Routing Decision: ${debugData.routing_result.decision}
-       Routing Analysis: ${JSON.stringify(debugData.routing_result.full_analysis, null, 2)}` : 
-      'No routing information available';
-      
-    const debugContent = `
-      Debug Info:
-      API Key Set: ${debugData.api_key_set}
-      Model: ${debugData.model}
-      Router Model: ${debugData.router_model || 'Not specified'}
-      Messages: ${debugData.initial_state.messages.length}
-      
-      Routing Information:
-      ${routingInfo}
-      
-      Full Debug Data:
-      ${JSON.stringify(debugData, null, 2)}
-    `;
-    
-    // Add debug info to messages
-    setMessages([
-      ...messages,
-      { 
-        role: 'system', 
-        content: debugContent
-      }
-    ]);
-  };
-
   // Use useCallback to avoid unnecessary re-creation of this function
   const handleUserSelected = useCallback((newUserId, displayName) => {
     console.log('User selected:', newUserId, 'Display name:', displayName);
@@ -219,7 +238,7 @@ function App() {
     localStorage.setItem('user_id', newUserId);
     
     // Set initial display name (may be updated when user data loads)
-    setUserDisplayName(displayName || `User ${newUserId.substring(newUserId.length - 6)}`);
+    setUserDisplayName(displayName || generateDisplayName(newUserId));
     
     // Reset conversation
     setMessages([
@@ -359,7 +378,9 @@ function App() {
     if (!userScrolling && messagesEndRef.current) {
       // Brief delay to ensure content has rendered
       setTimeout(() => {
-        messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        if (messagesEndRef.current) {
+          messagesEndRef.current.scrollIntoView({ behavior: 'smooth' });
+        }
       }, 100);
     }
   }, [messages, userScrolling]);
@@ -387,11 +408,6 @@ function App() {
             currentUserId={userId} 
             currentDisplayName={userDisplayName || 'Anonymous User'}
             profileUpdateTime={profileUpdateTime}
-          />
-          <DebugButton 
-            messages={messages}
-            selectedModel={selectedModel}
-            onDebugInfo={handleDebugInfo}
           />
           {userId && (
             <button 

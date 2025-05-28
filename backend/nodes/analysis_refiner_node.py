@@ -23,8 +23,8 @@ def analysis_task_refiner_node(state: ChatState) -> ChatState:
     raw_messages = state.get("messages", [])
     last_user_message_content = None
     for msg in reversed(raw_messages):
-        if msg.get("role") == "user":
-            last_user_message_content = msg.get("content")
+        if isinstance(msg, HumanMessage):
+            last_user_message_content = msg.content
             break
     
     if not last_user_message_content:
@@ -36,29 +36,19 @@ def analysis_task_refiner_node(state: ChatState) -> ChatState:
     display_msg = last_user_message_content[:75] + "..." if len(last_user_message_content) > 75 else last_user_message_content
     logger.info(f"🧩 Analysis Refiner: Refining task: \"{display_msg}\"")
 
-    num_context_messages = 5 # System + up to 4 history messages
-    context_messages_for_llm = []
-
     # Create system message with analysis refiner instructions
     system_message = SystemMessage(content=ANALYSIS_REFINER_SYSTEM_PROMPT.format(
         current_time=current_time_str
     ))
     
-    context_messages_for_llm.append(system_message)
+    # Use the messages directly (they are already langchain core message types)
+    history_messages = state.get("messages", [])
+    
+    # Build the complete message list for the refiner
+    context_messages_for_llm = [system_message] + history_messages
 
-    start_index = max(0, len(raw_messages) - (num_context_messages - 1))
-    for msg_dict in raw_messages[start_index:]:
-        role = msg_dict.get("role")
-        content = msg_dict.get("content", "").strip()
-        if not content:
-            continue
-        if role == "user":
-            context_messages_for_llm.append(HumanMessage(content=content))
-        elif role == "assistant":
-            context_messages_for_llm.append(AIMessage(content=content))
-
-    if not any(isinstance(m, HumanMessage) for m in context_messages_for_llm):
-        logger.warning("No human messages in context for analysis_task_refiner. Using raw last user message.")
+    if not history_messages:
+        logger.warning("No messages in context for analysis_task_refiner. Using raw last user message.")
         state["workflow_context"]["refined_analysis_task"] = last_user_message_content
         return state
 

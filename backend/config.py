@@ -19,6 +19,10 @@ ROUTER_MODEL = os.getenv("ROUTER_MODEL", "gpt-4o-mini")
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar")
 
+# Zep configuration
+ZEP_API_KEY = os.getenv("ZEP_API_KEY")
+ZEP_ENABLED = os.getenv("ZEP_ENABLED", "false").lower() == "true"
+
 # LangSmith tracing configuration
 LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
 LANGCHAIN_ENDPOINT = os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
@@ -30,4 +34,7 @@ SUPPORTED_MODELS = {
     "gpt-4o-mini": "OpenAI GPT-4o-mini",
     "gpt-4o": "OpenAI GPT-4o",
     # Add more models as needed
-} 
+}
+
+# Message management configuration
+MAX_MESSAGES_IN_STATE = int(os.getenv("MAX_MESSAGES_IN_STATE", "4")) 

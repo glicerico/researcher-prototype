@@ -78,9 +78,10 @@ const UserSelector = ({ onUserSelected }) => {
       setUsers(prevUsers => [...prevUsers, {
         user_id: newUser.user_id,
         created_at: newUser.created_at,
-        personality_style: newUser.personality.style,
-        personality_tone: newUser.personality.tone,
-        conversation_count: 0,
+        personality: {
+          style: 'helpful',
+          tone: 'friendly'
+        },
         display_name: newUserName
       }]);
       
@@ -103,12 +104,12 @@ const UserSelector = ({ onUserSelected }) => {
 
     try {
       setIsLoading(true);
-      await updateUserDisplayName(userId, editingName);
+      await updateUserDisplayName(editingName.trim());
       
       // Update local users list using functional update to avoid stale state
       setUsers(prevUsers => prevUsers.map(user => 
         user.user_id === userId 
-          ? { ...user, display_name: editingName } 
+          ? { ...user, display_name: editingName.trim() } 
           : user
       ));
       
@@ -221,9 +222,8 @@ const UserSelector = ({ onUserSelected }) => {
                   </div>
                 )}
                 <div className="user-details">
-                  <span>Style: {user.personality_style}</span>
-                  <span>Tone: {user.personality_tone}</span>
-                  <span>Conversations: {user.conversation_count}</span>
+                  <span>Style: {user.personality?.style || 'helpful'}</span>
+                  <span>Tone: {user.personality?.tone || 'friendly'}</span>
                 </div>
               </div>
             </div>
