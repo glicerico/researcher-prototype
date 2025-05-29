@@ -14,7 +14,7 @@ from nodes.base import (
 )
 
 # Import the context templates
-from prompts import SEARCH_CONTEXT_TEMPLATE, ANALYSIS_CONTEXT_TEMPLATE
+from prompts import SEARCH_CONTEXT_TEMPLATE, ANALYSIS_CONTEXT_TEMPLATE, MEMORY_CONTEXT_TEMPLATE
 
 
 def integrator_node(state: ChatState) -> ChatState:
@@ -38,6 +38,15 @@ def integrator_node(state: ChatState) -> ChatState:
     
     # Build context section for system prompt
     context_sections = []
+    
+    # Add memory context first if available
+    memory_context = state.get("memory_context")
+    memory_context_section = ""
+    if memory_context:
+        memory_context_section = MEMORY_CONTEXT_TEMPLATE.format(memory_context=memory_context)
+        logger.info("🧠 Integrator: Including memory context from previous conversations")
+    else:
+        logger.debug("🧠 Integrator: No memory context available")
     
     # Add search results to context if available
     search_results = state.get("module_results", {}).get("search", {})
@@ -67,6 +76,7 @@ def integrator_node(state: ChatState) -> ChatState:
     # Create enhanced system message with context
     system_message_content = INTEGRATOR_SYSTEM_PROMPT.format(
         current_time=current_time_str,
+        memory_context_section=memory_context_section,
         context_section=context_section
     )
     

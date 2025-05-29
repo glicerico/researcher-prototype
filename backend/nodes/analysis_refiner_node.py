@@ -14,6 +14,9 @@ from nodes.base import (
     get_current_datetime_str
 )
 
+# Import the memory context template
+from prompts import MEMORY_CONTEXT_TEMPLATE
+
 
 def analysis_task_refiner_node(state: ChatState) -> ChatState:
     """Refines the user's request into a detailed task for the analysis engine, considering conversation context."""
@@ -37,8 +40,17 @@ def analysis_task_refiner_node(state: ChatState) -> ChatState:
     logger.info(f"🧩 Analysis Refiner: Refining task: \"{display_msg}\"")
 
     # Create system message with analysis refiner instructions
+    memory_context = state.get("memory_context")
+    memory_context_section = ""
+    if memory_context:
+        memory_context_section = MEMORY_CONTEXT_TEMPLATE.format(memory_context=memory_context)
+        logger.debug("🧩 Analysis Refiner: Including memory context in task refinement")
+    else:
+        logger.debug("🧩 Analysis Refiner: No memory context available")
+    
     system_message = SystemMessage(content=ANALYSIS_REFINER_SYSTEM_PROMPT.format(
-        current_time=current_time_str
+        current_time=current_time_str,
+        memory_context_section=memory_context_section
     ))
     
     # Use the messages directly (they are already langchain core message types)

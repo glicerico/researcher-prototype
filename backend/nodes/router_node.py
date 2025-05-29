@@ -14,6 +14,9 @@ from nodes.base import (
     get_current_datetime_str
 )
 
+# Import the memory context template
+from prompts import MEMORY_CONTEXT_TEMPLATE
+
 
 def router_node(state: ChatState) -> ChatState:
     """Uses a lightweight LLM to analyze the user's message and determine routing."""
@@ -51,9 +54,19 @@ def router_node(state: ChatState) -> ChatState:
     try:
         history_messages = state.get("messages", [])
         
-        # Create system message with router instructions
+        # Create the system prompt for routing - include memory context if available
+        memory_context = state.get("memory_context")
+        memory_context_section = ""
+        if memory_context:
+            memory_context_section = MEMORY_CONTEXT_TEMPLATE.format(memory_context=memory_context)
+            logger.debug("🔀 Router: Including memory context in routing decision")
+        else:
+            logger.debug("🔀 Router: No memory context available")
+        
+        # Create system message with routing instructions
         system_message = SystemMessage(content=ROUTER_SYSTEM_PROMPT.format(
-            current_time=get_current_datetime_str()
+            current_time=get_current_datetime_str(),
+            memory_context_section=memory_context_section
         ))
         
         # Build the complete message list for the router

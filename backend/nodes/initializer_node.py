@@ -54,7 +54,7 @@ async def initializer_node(state: ChatState) -> ChatState:
             memory_context = await zep_manager.get_memory_context(session_id)
             
             if memory_context:
-                logger.info(f"🧠 Initializer: Retrieved memory context from ZEP.)")
+                logger.info(f"🧠 Initializer: Retrieved memory context from ZEP.")
                 # Store in workflow context for debugging/inspection
                 state["workflow_context"]["memory_context_retrieved"] = True
             else:

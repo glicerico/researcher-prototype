@@ -48,9 +48,17 @@ Data is stored in the `backend/storage_data` directory in JSON format. If you wa
 
 ### Zep Memory (Optional)
 
-Enables advanced memory with temporal knowledge graphs that automatically extract and store facts from conversations. 
+Enables advanced memory with knowledge graphs that automatically extract and store facts from conversations. 
+
+When enabled, ZEP provides conversational context to key nodes in the processing pipeline:
+- **Router**: Better routing decisions based on conversation history
+- **Search Optimizer**: More contextually relevant search queries  
+- **Analysis Refiner**: Enhanced analysis tasks informed by prior discussions
+- **Integrator**: Maintains conversational continuity and references previous topics
+
 To enable, add `ZEP_API_KEY` and set `ZEP_ENABLED=true` in your `.env` file. 
 Get an API key at [getzep.com](https://www.getzep.com/).
+The system gracefully degrades when ZEP is unavailable, ensuring uninterrupted operation.
 
 ## Setup
 
