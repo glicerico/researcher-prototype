@@ -116,7 +116,8 @@ async def chat(
             "current_module": None,
             "module_results": {},
             "workflow_context": {},
-            "user_id": user_id
+            "user_id": user_id,
+            "session_id": request.session_id  # Use session_id from request, can be None
         }
         
         # Save user's personality if provided
@@ -124,7 +125,7 @@ async def chat(
             user_manager.update_personality(user_id, request.personality.model_dump())
         
         # Run the graph
-        result = chat_graph.invoke(state)
+        result = await chat_graph.ainvoke(state)
         
         # Check for errors
         if "error" in result:
@@ -143,7 +144,8 @@ async def chat(
                     zep_manager.store_conversation_turn(
                         user_id=user_id,
                         user_message=user_message,
-                        ai_response=assistant_message.content
+                        ai_response=assistant_message.content,
+                        session_id=result.get("session_id")  # Use the session_id from the workflow
                     )
                 )
             except Exception as e:
@@ -156,7 +158,8 @@ async def chat(
             usage={},
             module_used=result.get("current_module", "unknown"),
             routing_analysis=result.get("routing_analysis"),
-            user_id=user_id
+            user_id=user_id,
+            session_id=result.get("session_id")  # Return the session_id to frontend
         )
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)

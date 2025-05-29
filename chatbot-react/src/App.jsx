@@ -24,6 +24,7 @@ function App() {
   const [isLoading, setIsLoading] = useState(false);
   const [userDisplayName, setUserDisplayName] = useState('');
   const [profileUpdateTime, setProfileUpdateTime] = useState(0);
+  const [sessionId, setSessionId] = useState(null); // Track current conversation session
   
   const messagesEndRef = useRef(null);
 
@@ -187,10 +188,16 @@ function App() {
         selectedModel,
         0.7,  // temperature
         1000,  // max tokens
-        personality // Include personality in the request
+        personality, // Include personality in the request
+        sessionId // Include session ID in the request
       );
       
       console.log('Chat response:', response);
+      
+      // Store session ID for conversation continuity
+      if (response.session_id) {
+        setSessionId(response.session_id);
+      }
       
       // Check if a user was created or if we need to update the current user
       if (response.user_id && response.user_id !== userId) {
@@ -245,8 +252,8 @@ function App() {
       { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
     ]);
     
-    // User data will be loaded by the useEffect that depends on userId
-    // No need to duplicate that logic here
+    // Reset session for new conversation
+    setSessionId(null);
   }, [userId]);
 
   // Update the system message when personality changes
