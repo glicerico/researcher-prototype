@@ -14,6 +14,9 @@ from nodes.base import (
     get_current_datetime_str
 )
 
+# Import the memory context template
+from prompts import MEMORY_CONTEXT_TEMPLATE
+
 
 def search_prompt_optimizer_node(state: ChatState) -> ChatState:
     """Refines the user's query into an optimized search query using an LLM, considering conversation context."""
@@ -40,8 +43,17 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
     logger.info(f"🔬 Search Optimizer: Refining query: \"{display_msg}\"")
     
     # Create system message with optimizer instructions
+    memory_context = state.get("memory_context")
+    memory_context_section = ""
+    if memory_context:
+        memory_context_section = MEMORY_CONTEXT_TEMPLATE.format(memory_context=memory_context)
+        logger.debug("🔬 Search Optimizer: Including memory context in search optimization")
+    else:
+        logger.debug("🔬 Search Optimizer: No memory context available")
+    
     system_message = SystemMessage(content=SEARCH_OPTIMIZER_SYSTEM_PROMPT.format(
-        current_time=current_time_str
+        current_time=current_time_str,
+        memory_context_section=memory_context_section
     ))
     
     history_messages = state.get("messages", [])

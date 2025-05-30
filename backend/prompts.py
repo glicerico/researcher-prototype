@@ -13,6 +13,8 @@ Analyze the conversation history to classify the request into one of these categ
 2. search - Requests to find current information from the web, search for recent facts, or retrieve up-to-date information.
    Examples: "What happened in the news today?", "Search for recent AI developments", "Find information about current technology trends"
 3. analyzer - Requests to analyze, process, summarize data or complex problem-solving.
+
+{memory_context_section}
 """
 
 # Search optimizer prompts
@@ -23,6 +25,8 @@ Analyze the provided conversation history and the LATEST user question.
 Based on this context, transform the LATEST user question into a concise and keyword-focused search query
 that is likely to yield the best results from a web search engine.
 Focus on the core intent of the LATEST user question and use precise terminology, informed by the preceding conversation.
+
+{memory_context_section}
 """
 
 # Analyzer task refiner prompts
@@ -33,6 +37,8 @@ Analyze the provided conversation history and the LATEST user request.
 Based on this context, transform the LATEST user request into a detailed task description suitable for an advanced analysis engine.
 Specify the objective, required data, proposed approach, and expected output format.
 Ensure the refined task is actionable and self-contained based on the conversation.
+
+{memory_context_section}
 """
 
 # Web search prompts
@@ -43,6 +49,8 @@ Provide comprehensive answers based on web search results."""
 # Integrator prompts
 INTEGRATOR_SYSTEM_PROMPT = """Current date and time: {current_time}.
 You are the central reasoning component of an AI assistant system. Your task is to integrate all available information and generate a coherent, thoughtful response.
+
+{memory_context_section}
 
 {context_section}
 
@@ -65,6 +73,15 @@ The following analysis was performed related to the user's query:
 {analysis_result_text}
 
 Incorporate these insights naturally into your response where relevant.
+"""
+
+MEMORY_CONTEXT_TEMPLATE = """
+CONVERSATION MEMORY:
+The following is relevant context from your previous interactions with this user:
+
+{memory_context}
+
+Use this context to maintain conversation continuity and reference previous topics when relevant.
 """
 
 # Response renderer prompts

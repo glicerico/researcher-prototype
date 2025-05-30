@@ -18,6 +18,7 @@ from utils import get_current_datetime_str
 # Import our storage components
 from storage.storage_manager import StorageManager
 from storage.user_manager import UserManager
+from storage.zep_manager import ZepManager
 
 # Import all prompt templates from prompts.py
 from prompts import (
@@ -50,6 +51,7 @@ from llm_models import (
 storage_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage_data")
 storage_manager = StorageManager(storage_dir)
 user_manager = UserManager(storage_manager)
+zep_manager = ZepManager()
 
 class ChatState(TypedDict):
     """Type definition for the chat state that flows through the graph."""
@@ -62,4 +64,6 @@ class ChatState(TypedDict):
     module_results: Annotated[Dict[str, Any], "Results from different modules"]
     workflow_context: Annotated[Dict[str, Any], "Contextual data for the current workflow execution."]
     user_id: Annotated[Optional[str], "The ID of the current user"]
-    routing_analysis: Annotated[Optional[Dict[str, Any]], "Analysis from the router"] 
+    routing_analysis: Annotated[Optional[Dict[str, Any]], "Analysis from the router"]
+    session_id: Annotated[Optional[str], "The session ID for memory management"]
+    memory_context: Annotated[Optional[str], "Memory context retrieved from Zep"] 

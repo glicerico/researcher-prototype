@@ -36,7 +36,7 @@ export const getModels = async () => {
 };
 
 // Send a chat message
-export const sendChatMessage = async (messages, model, temperature = 0.7, maxTokens = 1000, personality = null) => {
+export const sendChatMessage = async (messages, model, temperature = 0.7, maxTokens = 1000, personality = null, sessionId = null) => {
   try {
     const payload = {
       messages,
@@ -48,6 +48,11 @@ export const sendChatMessage = async (messages, model, temperature = 0.7, maxTok
     // Include personality if available
     if (personality) {
       payload.personality = personality;
+    }
+    
+    // Include session_id if available
+    if (sessionId) {
+      payload.session_id = sessionId;
     }
     
     const response = await api.post('/chat', payload);
