@@ -2,7 +2,7 @@
 Initializer node for setting up user and state.
 """
 import uuid
-from langchain_core.messages import trim_messages
+from langchain_core.messages import trim_messages, HumanMessage
 from nodes.base import (
     ChatState, 
     logger, 
@@ -43,6 +43,19 @@ async def initializer_node(state: ChatState) -> ChatState:
         session_id = f"{user_id}-{str(uuid.uuid4())[:8]}"
         state["session_id"] = session_id
         logger.info(f"🔄 Initializer: Generated new session ID: {session_id}")
+        
+        # Create session in ZEP when we generate a new session ID
+        if zep_manager.is_enabled():
+            try:
+                await zep_manager.create_session(session_id, user_id)
+                
+                # Add an empty message to prime the session and trigger context population
+                await zep_manager.add_message(session_id, "Session initialized", "system")
+                logger.debug(f"🔄 Initializer: Primed ZEP session {session_id} with initialization message")
+                
+            except Exception as e:
+                logger.warning(f"Failed to create session in ZEP: {str(e)}")
+                # Don't fail the request if ZEP session creation fails
     else:
         logger.info(f"🔄 Initializer: Using provided session ID: {session_id}")
     
