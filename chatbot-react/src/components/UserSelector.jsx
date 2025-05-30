@@ -74,7 +74,7 @@ const UserSelector = ({ onUserSelected }) => {
 
     try {
       setIsLoading(true);
-      const newUser = await createUser(newUserName);
+      const newUser = await createUser({ display_name: newUserName.trim()});
       setUsers(prevUsers => [...prevUsers, {
         user_id: newUser.user_id,
         created_at: newUser.created_at,

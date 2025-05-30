@@ -258,14 +258,20 @@ function App() {
 
   // Update the system message when personality changes
   useEffect(() => {
-    if (personality && messages.length > 0 && messages[0].role === 'system') {
-      const systemMessage = getSystemMessage();
-      setMessages(prevMessages => [
-        { role: 'system', content: systemMessage.content },
-        ...prevMessages.slice(1)
-      ]);
-    }
-  }, [personality, getSystemMessage, messages]);
+    if (!personality) return;
+
+    setMessages(prevMessages => {
+      // Only update if the first message is a system message
+      if (prevMessages.length > 0 && prevMessages[0].role === 'system') {
+        const systemMessage = getSystemMessage();
+        return [
+          { role: 'system', content: systemMessage.content },
+          ...prevMessages.slice(1)
+        ];
+      }
+      return prevMessages;
+    });
+  }, [personality, getSystemMessage]);
 
   const handleToggleUserSelector = useCallback(() => {
     setShowUserSelector(prevState => {
