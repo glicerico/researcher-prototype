@@ -4,6 +4,7 @@ from fastapi.responses import JSONResponse
 from typing import Optional, List
 import os
 import traceback
+import time
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 # Import and configure logging first, before other imports
@@ -458,6 +459,370 @@ async def get_topic_processing_status(
     except Exception as e:
         logger.error(f"Error checking topic status for user {user_id}, session {session_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error checking topic status: {str(e)}")
+
+
+@app.get("/topics/stats")
+async def get_topic_statistics(
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Get statistics about the user's topic suggestions."""
+    try:
+        # Get all topic suggestions from user profile
+        all_topics_by_session = user_manager.get_all_topic_suggestions(user_id)
+        
+        # Calculate statistics
+        total_topics = 0
+        total_sessions = len(all_topics_by_session)
+        confidence_scores = []
+        oldest_timestamp = None
+        
+        for session_id, topics in all_topics_by_session.items():
+            total_topics += len(topics)
+            for topic in topics:
+                confidence_scores.append(topic.get("confidence_score", 0.0))
+                suggested_at = topic.get("suggested_at", 0)
+                if oldest_timestamp is None or suggested_at < oldest_timestamp:
+                    oldest_timestamp = suggested_at
+        
+        # Calculate average confidence
+        average_confidence_score = sum(confidence_scores) / len(confidence_scores) if confidence_scores else 0.0
+        
+        # Calculate oldest topic age in days
+        current_time = time.time()
+        oldest_topic_age_days = 0
+        if oldest_timestamp:
+            oldest_topic_age_days = int((current_time - oldest_timestamp) / (24 * 60 * 60))
+        
+        return {
+            "user_id": user_id,
+            "total_topics": total_topics,
+            "total_sessions": total_sessions,
+            "average_confidence_score": average_confidence_score,
+            "oldest_topic_age_days": oldest_topic_age_days
+        }
+        
+    except Exception as e:
+        logger.error(f"Error retrieving topic statistics for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving topic statistics: {str(e)}")
+
+
+@app.delete("/topics/session/{session_id}")
+async def delete_session_topics(
+    session_id: str,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Delete all topic suggestions for a specific session."""
+    try:
+        # Get user profile
+        profile = user_manager.get_user(user_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Remove topics for this session
+        topic_suggestions = profile.get("topic_suggestions", {})
+        if session_id in topic_suggestions:
+            del topic_suggestions[session_id]
+            
+            # Update the profile
+            profile["topic_suggestions"] = topic_suggestions
+            success = user_manager.storage.write(user_manager._get_profile_path(user_id), profile)
+            
+            if not success:
+                raise HTTPException(status_code=500, detail="Failed to delete session topics")
+            
+            return {
+                "success": True,
+                "message": f"Deleted topics for session {session_id}",
+                "session_id": session_id
+            }
+        else:
+            return {
+                "success": True,
+                "message": f"No topics found for session {session_id}",
+                "session_id": session_id
+            }
+        
+    except Exception as e:
+        logger.error(f"Error deleting topics for session {session_id}, user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting session topics: {str(e)}")
+
+
+@app.delete("/topics/cleanup")
+async def cleanup_topics(
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Clean up old and duplicate topics for the user."""
+    try:
+        # Get user profile
+        profile = user_manager.get_user(user_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        topic_suggestions = profile.get("topic_suggestions", {})
+        if not topic_suggestions:
+            return {
+                "success": True,
+                "message": "No topics to clean up",
+                "topics_removed": 0,
+                "sessions_cleaned": 0
+            }
+        
+        current_time = time.time()
+        retention_days = 30  # Keep topics for 30 days
+        retention_threshold = current_time - (retention_days * 24 * 60 * 60)
+        
+        topics_removed = 0
+        sessions_cleaned = 0
+        sessions_to_remove = []
+        
+        # Clean up old topics and duplicates
+        for session_id, topics in topic_suggestions.items():
+            # Filter out old topics
+            filtered_topics = []
+            for topic in topics:
+                suggested_at = topic.get("suggested_at", 0)
+                if suggested_at >= retention_threshold:
+                    filtered_topics.append(topic)
+                else:
+                    topics_removed += 1
+            
+            # Remove duplicate topics within the session (by name)
+            seen_names = set()
+            deduplicated_topics = []
+            for topic in filtered_topics:
+                topic_name = topic.get("topic_name", "").lower()
+                if topic_name not in seen_names:
+                    seen_names.add(topic_name)
+                    deduplicated_topics.append(topic)
+                else:
+                    topics_removed += 1
+            
+            if deduplicated_topics:
+                topic_suggestions[session_id] = deduplicated_topics
+            else:
+                sessions_to_remove.append(session_id)
+                sessions_cleaned += 1
+        
+        # Remove empty sessions
+        for session_id in sessions_to_remove:
+            del topic_suggestions[session_id]
+        
+        # Update the profile
+        profile["topic_suggestions"] = topic_suggestions
+        success = user_manager.storage.write(user_manager._get_profile_path(user_id), profile)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to clean up topics")
+        
+        return {
+            "success": True,
+            "message": f"Cleaned up {topics_removed} topics and {sessions_cleaned} empty sessions",
+            "topics_removed": topics_removed,
+            "sessions_cleaned": sessions_cleaned
+        }
+        
+    except Exception as e:
+        logger.error(f"Error cleaning up topics for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error cleaning up topics: {str(e)}")
+
+
+@app.get("/topics/session/{session_id}/top")
+async def get_top_session_topics(
+    session_id: str,
+    limit: int = Query(default=3, ge=1, le=10),
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Get the top N topics for a session, ordered by confidence score."""
+    try:
+        # Get stored topic suggestions from user profile
+        stored_topics = user_manager.get_topic_suggestions(user_id, session_id)
+        
+        # Convert to response format and sort by confidence
+        topic_suggestions = []
+        for index, topic in enumerate(stored_topics):
+            topic_suggestions.append({
+                "index": index,
+                "session_id": session_id,
+                "name": topic.get("topic_name", ""),
+                "description": topic.get("description", ""),
+                "confidence_score": topic.get("confidence_score", 0.0),
+                "suggested_at": topic.get("suggested_at", 0),
+                "conversation_context": topic.get("conversation_context", ""),
+                "is_active_research": topic.get("is_active_research", False)
+            })
+        
+        # Sort by confidence score (highest first) and limit results
+        topic_suggestions.sort(key=lambda x: x["confidence_score"], reverse=True)
+        top_topics = topic_suggestions[:limit]
+        
+        return {
+            "session_id": session_id,
+            "user_id": user_id,
+            "topics": top_topics,
+            "total_count": len(top_topics),
+            "available_count": len(stored_topics)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error retrieving top topics for user {user_id}, session {session_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving top topics: {str(e)}")
+
+
+@app.delete("/topics/session/{session_id}/topic/{topic_index}")
+async def delete_individual_topic(
+    session_id: str,
+    topic_index: int,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Delete an individual topic from a session."""
+    try:
+        # Get user profile
+        profile = user_manager.get_user(user_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get session topics
+        topic_suggestions = profile.get("topic_suggestions", {})
+        session_topics = topic_suggestions.get(session_id, [])
+        
+        # Check if topic index is valid
+        if topic_index < 0 or topic_index >= len(session_topics):
+            raise HTTPException(status_code=404, detail="Topic not found")
+        
+        # Remove the specific topic
+        deleted_topic = session_topics.pop(topic_index)
+        
+        # Update the profile
+        if session_topics:
+            topic_suggestions[session_id] = session_topics
+        else:
+            # Remove empty session
+            del topic_suggestions[session_id]
+        
+        profile["topic_suggestions"] = topic_suggestions
+        success = user_manager.storage.write(user_manager._get_profile_path(user_id), profile)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to delete topic")
+        
+        return {
+            "success": True,
+            "message": f"Deleted topic: {deleted_topic.get('topic_name', 'Unknown')}",
+            "deleted_topic": {
+                "name": deleted_topic.get("topic_name", ""),
+                "description": deleted_topic.get("description", "")
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting topic {topic_index} from session {session_id}, user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting topic: {str(e)}")
+
+
+@app.post("/topics/session/{session_id}/topic/{topic_index}/enable-research")
+async def enable_topic_research(
+    session_id: str,
+    topic_index: int,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Mark a topic as active research."""
+    try:
+        # Get user profile
+        profile = user_manager.get_user(user_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get session topics
+        topic_suggestions = profile.get("topic_suggestions", {})
+        session_topics = topic_suggestions.get(session_id, [])
+        
+        # Check if topic index is valid
+        if topic_index < 0 or topic_index >= len(session_topics):
+            raise HTTPException(status_code=404, detail="Topic not found")
+        
+        # Mark topic as active research
+        session_topics[topic_index]["is_active_research"] = True
+        session_topics[topic_index]["research_enabled_at"] = time.time()
+        
+        # Update the profile
+        topic_suggestions[session_id] = session_topics
+        profile["topic_suggestions"] = topic_suggestions
+        success = user_manager.storage.write(user_manager._get_profile_path(user_id), profile)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to enable research for topic")
+        
+        topic_name = session_topics[topic_index].get("topic_name", "Unknown")
+        
+        return {
+            "success": True,
+            "message": f"Enabled research for topic: {topic_name}",
+            "topic": {
+                "name": topic_name,
+                "description": session_topics[topic_index].get("description", ""),
+                "is_active_research": True
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error enabling research for topic {topic_index} in session {session_id}, user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error enabling research: {str(e)}")
+
+
+@app.delete("/topics/session/{session_id}/topic/{topic_index}/disable-research")
+async def disable_topic_research(
+    session_id: str,
+    topic_index: int,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Remove a topic from active research."""
+    try:
+        # Get user profile
+        profile = user_manager.get_user(user_id)
+        if not profile:
+            raise HTTPException(status_code=404, detail="User not found")
+        
+        # Get session topics
+        topic_suggestions = profile.get("topic_suggestions", {})
+        session_topics = topic_suggestions.get(session_id, [])
+        
+        # Check if topic index is valid
+        if topic_index < 0 or topic_index >= len(session_topics):
+            raise HTTPException(status_code=404, detail="Topic not found")
+        
+        # Remove from active research
+        session_topics[topic_index]["is_active_research"] = False
+        session_topics[topic_index]["research_disabled_at"] = time.time()
+        
+        # Update the profile
+        topic_suggestions[session_id] = session_topics
+        profile["topic_suggestions"] = topic_suggestions
+        success = user_manager.storage.write(user_manager._get_profile_path(user_id), profile)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to disable research for topic")
+        
+        topic_name = session_topics[topic_index].get("topic_name", "Unknown")
+        
+        return {
+            "success": True,
+            "message": f"Disabled research for topic: {topic_name}",
+            "topic": {
+                "name": topic_name,
+                "description": session_topics[topic_index].get("description", ""),
+                "is_active_research": False
+            }
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error disabling research for topic {topic_index} in session {session_id}, user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error disabling research: {str(e)}")
 
 
 if __name__ == "__main__":

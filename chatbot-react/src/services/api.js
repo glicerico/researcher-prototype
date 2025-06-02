@@ -149,4 +149,108 @@ export const getPersonalityPresets = async () => {
   }
 };
 
+// Topic management functions
+export const getAllTopicSuggestions = async () => {
+  try {
+    const response = await api.get('/topics/suggestions');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching topic suggestions:', error);
+    throw error;
+  }
+};
+
+export const getSessionTopicSuggestions = async (sessionId) => {
+  try {
+    const response = await api.get(`/topics/suggestions/${sessionId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching session topic suggestions:', error);
+    throw error;
+  }
+};
+
+export const getTopicStatistics = async () => {
+  try {
+    const response = await api.get('/topics/stats');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching topic statistics:', error);
+    throw error;
+  }
+};
+
+export const deleteSessionTopics = async (sessionId) => {
+  try {
+    const response = await api.delete(`/topics/session/${sessionId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting session topics:', error);
+    throw error;
+  }
+};
+
+export const cleanupTopics = async () => {
+  try {
+    const response = await api.delete('/topics/cleanup');
+    return response.data;
+  } catch (error) {
+    console.error('Error cleaning up topics:', error);
+    throw error;
+  }
+};
+
+export const getTopicProcessingStatus = async (sessionId) => {
+  try {
+    const response = await api.get(`/topics/status/${sessionId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error checking topic processing status:', error);
+    throw error;
+  }
+};
+
+// Conversation topics sidebar functions
+export const getTopSessionTopics = async (sessionId, limit = 3) => {
+  try {
+    const response = await api.get(`/topics/session/${sessionId}/top`, {
+      params: { limit }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching top session topics:', error);
+    throw error;
+  }
+};
+
+export const deleteIndividualTopic = async (sessionId, topicIndex) => {
+  try {
+    const response = await api.delete(`/topics/session/${sessionId}/topic/${topicIndex}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting individual topic:', error);
+    throw error;
+  }
+};
+
+export const enableTopicResearch = async (sessionId, topicIndex) => {
+  try {
+    const response = await api.post(`/topics/session/${sessionId}/topic/${topicIndex}/enable-research`);
+    return response.data;
+  } catch (error) {
+    console.error('Error enabling topic research:', error);
+    throw error;
+  }
+};
+
+export const disableTopicResearch = async (sessionId, topicIndex) => {
+  try {
+    const response = await api.delete(`/topics/session/${sessionId}/topic/${topicIndex}/disable-research`);
+    return response.data;
+  } catch (error) {
+    console.error('Error disabling topic research:', error);
+    throw error;
+  }
+};
+
 export default api; 
