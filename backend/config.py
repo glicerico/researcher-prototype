@@ -37,4 +37,11 @@ SUPPORTED_MODELS = {
 }
 
 # Message management configuration
-MAX_MESSAGES_IN_STATE = int(os.getenv("MAX_MESSAGES_IN_STATE", "4")) 
+MAX_MESSAGES_IN_STATE = int(os.getenv("MAX_MESSAGES_IN_STATE", "4"))
+
+# Topic extraction configuration
+TOPIC_EXTRACTION_MODEL = os.getenv("TOPIC_EXTRACTION_MODEL", "gpt-4o-mini")
+TOPIC_MIN_CONFIDENCE = float(os.getenv("TOPIC_MIN_CONFIDENCE", "0.6"))
+TOPIC_MAX_SUGGESTIONS = int(os.getenv("TOPIC_MAX_SUGGESTIONS", "5"))
+TOPIC_EXTRACTION_TEMPERATURE = float(os.getenv("TOPIC_EXTRACTION_TEMPERATURE", "0.3"))
+TOPIC_EXTRACTION_MAX_TOKENS = int(os.getenv("TOPIC_EXTRACTION_MAX_TOKENS", "800")) 

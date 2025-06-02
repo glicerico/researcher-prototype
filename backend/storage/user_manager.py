@@ -230,4 +230,85 @@ class UserManager:
             True if the user exists, False otherwise
         """
         profile_path = self._get_profile_path(user_id)
-        return self.storage._get_file_path(profile_path).exists() 
+        file_path = self.storage._get_file_path(profile_path)
+        return file_path.exists()
+    
+    def store_topic_suggestions(self, user_id: str, session_id: str, topics: List[Dict[str, Any]], conversation_context: str = "") -> bool:
+        """
+        Store topic suggestions for a user session.
+        
+        Args:
+            user_id: The ID of the user
+            session_id: The session ID
+            topics: List of topic dictionaries with name, description, confidence_score
+            conversation_context: Brief context from the conversation
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not topics:
+            return True  # Nothing to store
+        
+        # Get user profile
+        profile = self.get_user(user_id)
+        if not profile:
+            logger.error(f"User {user_id} not found when storing topic suggestions")
+            return False
+        
+        # Initialize topic suggestions structure if needed
+        if "topic_suggestions" not in profile:
+            profile["topic_suggestions"] = {}
+        
+        # Store topics for this session
+        import time
+        current_time = time.time()
+        
+        session_topics = []
+        for topic in topics:
+            topic_entry = {
+                "topic_name": topic.get("name"),
+                "description": topic.get("description"),
+                "confidence_score": topic.get("confidence_score"),
+                "suggested_at": current_time,
+                "conversation_context": conversation_context
+            }
+            session_topics.append(topic_entry)
+        
+        profile["topic_suggestions"][session_id] = session_topics
+        
+        # Save updated profile
+        return self.storage.write(self._get_profile_path(user_id), profile)
+    
+    def get_topic_suggestions(self, user_id: str, session_id: str) -> List[Dict[str, Any]]:
+        """
+        Get topic suggestions for a user session.
+        
+        Args:
+            user_id: The ID of the user
+            session_id: The session ID
+            
+        Returns:
+            List of topic suggestion dictionaries
+        """
+        profile = self.get_user(user_id)
+        if not profile:
+            return []
+        
+        topic_suggestions = profile.get("topic_suggestions", {})
+        return topic_suggestions.get(session_id, [])
+    
+    def get_all_topic_suggestions(self, user_id: str) -> Dict[str, List[Dict[str, Any]]]:
+        """
+        Get all topic suggestions for a user across all sessions.
+        
+        Args:
+            user_id: The ID of the user
+            
+        Returns:
+            Dictionary mapping session_id to list of topic suggestions
+        """
+        profile = self.get_user(user_id)
+        if not profile:
+            return {}
+        
+        return profile.get("topic_suggestions", {}) 

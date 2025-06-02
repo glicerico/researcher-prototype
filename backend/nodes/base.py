@@ -36,7 +36,10 @@ from prompts import (
     INTEGRATOR_SYSTEM_PROMPT,
 
     # Renderer prompts
-    RESPONSE_RENDERER_SYSTEM_PROMPT
+    RESPONSE_RENDERER_SYSTEM_PROMPT,
+
+    # Topic extractor prompts
+    TOPIC_EXTRACTOR_SYSTEM_PROMPT
 )
 
 # Import all model classes from llm_models.py and models.py
@@ -44,7 +47,9 @@ from llm_models import (
     RoutingAnalysis,
     SearchQuery,
     AnalysisTask,
-    FormattedResponse
+    FormattedResponse,
+    TopicSuggestions,
+    TopicSuggestionItem
 )
 
 # Initialize storage components

@@ -13,7 +13,7 @@ from logging_config import configure_logging, get_logger
 logger = configure_logging()
 
 # Now import other modules that might use logging
-from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile
+from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile, TopicSuggestion
 from storage import StorageManager, UserManager, ZepManager
 from graph_builder import create_chat_graph
 import config
@@ -42,6 +42,43 @@ zep_manager = ZepManager()
 
 # Build the chat graph
 chat_graph = create_chat_graph()
+
+async def extract_and_store_topics_async(state: dict, user_id: str, session_id: str, conversation_context: str):
+    """Background function to extract and store topic suggestions."""
+    try:
+        from nodes.topic_extractor_node import topic_extractor_node
+        
+        logger.info(f"🔍 Background: Starting topic extraction for session {session_id}")
+        
+        # Run topic extraction on the conversation state
+        updated_state = topic_extractor_node(state)
+        
+        # Check if topic extraction was successful
+        topic_results = updated_state.get("module_results", {}).get("topic_extractor", {})
+        
+        if topic_results.get("success", False):
+            raw_topics = topic_results.get("result", [])
+            
+            if raw_topics:
+                # Store topic suggestions in user profile
+                success = user_manager.store_topic_suggestions(
+                    user_id=user_id,
+                    session_id=session_id,
+                    topics=raw_topics,
+                    conversation_context=conversation_context
+                )
+                
+                if success:
+                    logger.info(f"🔍 Background: Stored {len(raw_topics)} topic suggestions for user {user_id}, session {session_id}")
+                else:
+                    logger.error(f"🔍 Background: Failed to store topic suggestions for user {user_id}, session {session_id}")
+            else:
+                logger.info(f"🔍 Background: No topics extracted for session {session_id}")
+        else:
+            logger.warning(f"🔍 Background: Topic extraction failed for session {session_id}: {topic_results.get('message', 'Unknown error')}")
+            
+    except Exception as e:
+        logger.error(f"🔍 Background: Error in topic extraction for session {session_id}: {str(e)}", exc_info=True)
 
 def generate_display_name_from_user_id(user_id: str) -> str:
     """Generate a display name from a user ID."""
@@ -152,6 +189,21 @@ async def chat(
                 # Log error but don't fail the request
                 logger.warning(f"Failed to store conversation in Zep: {str(e)}")
         
+        # Process topic suggestions in background (don't wait for completion)
+        if result.get("session_id") and len(request.messages) > 0:
+            try:
+                import asyncio
+                asyncio.create_task(
+                    extract_and_store_topics_async(
+                        state=result,
+                        user_id=user_id,
+                        session_id=result["session_id"],
+                        conversation_context=request.messages[-1].content[:200] + "..." if len(request.messages[-1].content) > 200 else request.messages[-1].content
+                    )
+                )
+            except Exception as e:
+                logger.warning(f"Failed to start background topic extraction: {str(e)}")
+        
         return ChatResponse(
             response=assistant_message.content,
             model=request.model,
@@ -159,7 +211,8 @@ async def chat(
             module_used=result.get("current_module", "unknown"),
             routing_analysis=result.get("routing_analysis"),
             user_id=user_id,
-            session_id=result.get("session_id")  # Return the session_id to frontend
+            session_id=result.get("session_id"),  # Return the session_id to frontend
+            suggested_topics=[]  # Empty list - topics will be available via the topics endpoint after processing
         )
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
@@ -297,12 +350,114 @@ async def health_check():
 
 @app.get("/zep/status")
 async def zep_status():
-    """Check Zep integration status."""
-    return {
-        "enabled": zep_manager.is_enabled(),
-        "configured": config.ZEP_ENABLED,
-        "api_key_set": bool(config.ZEP_API_KEY)
-    }
+    """Get Zep memory status."""
+    try:
+        return {
+            "enabled": zep_manager.is_enabled(),
+            "configured": config.ZEP_ENABLED,
+            "api_key_set": bool(config.ZEP_API_KEY)
+        }
+    except Exception as e:
+        logger.error(f"Error getting Zep status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting Zep status: {str(e)}")
+
+
+@app.get("/topics/suggestions/{session_id}")
+async def get_topic_suggestions(
+    session_id: str,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Get all suggested topics for a session."""
+    try:
+        # Get stored topic suggestions from user profile
+        stored_topics = user_manager.get_topic_suggestions(user_id, session_id)
+        
+        # Convert to response format
+        topic_suggestions = []
+        for topic in stored_topics:
+            topic_suggestions.append({
+                "name": topic.get("topic_name", ""),
+                "description": topic.get("description", ""),
+                "confidence_score": topic.get("confidence_score", 0.0),
+                "suggested_at": topic.get("suggested_at", 0),
+                "conversation_context": topic.get("conversation_context", "")
+            })
+        
+        # Sort by suggestion time (most recent first)
+        topic_suggestions.sort(key=lambda x: x["suggested_at"], reverse=True)
+        
+        return {
+            "session_id": session_id,
+            "user_id": user_id,
+            "topic_suggestions": topic_suggestions,
+            "total_count": len(topic_suggestions)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error retrieving topic suggestions for user {user_id}, session {session_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving topic suggestions: {str(e)}")
+
+
+@app.get("/topics/suggestions")
+async def get_all_topic_suggestions(
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Get all suggested topics for a user across all sessions."""
+    try:
+        # Get all topic suggestions from user profile
+        all_topics_by_session = user_manager.get_all_topic_suggestions(user_id)
+        
+        # Flatten and convert to response format
+        all_topics = []
+        for session_id, topics in all_topics_by_session.items():
+            for topic in topics:
+                all_topics.append({
+                    "session_id": session_id,
+                    "name": topic.get("topic_name", ""),
+                    "description": topic.get("description", ""),
+                    "confidence_score": topic.get("confidence_score", 0.0),
+                    "suggested_at": topic.get("suggested_at", 0),
+                    "conversation_context": topic.get("conversation_context", "")
+                })
+        
+        # Sort by suggestion time (most recent first)
+        all_topics.sort(key=lambda x: x["suggested_at"], reverse=True)
+        
+        return {
+            "user_id": user_id,
+            "topic_suggestions": all_topics,
+            "total_count": len(all_topics),
+            "sessions_count": len(all_topics_by_session)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error retrieving all topic suggestions for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error retrieving topic suggestions: {str(e)}")
+
+
+@app.get("/topics/status/{session_id}")
+async def get_topic_processing_status(
+    session_id: str,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Check if topic suggestions are available for a session (useful for polling after chat)."""
+    try:
+        # Get stored topic suggestions from user profile
+        stored_topics = user_manager.get_topic_suggestions(user_id, session_id)
+        
+        has_topics = len(stored_topics) > 0
+        
+        return {
+            "session_id": session_id,
+            "user_id": user_id,
+            "has_topics": has_topics,
+            "topic_count": len(stored_topics),
+            "processing_complete": has_topics  # Simple check - if topics exist, processing is done
+        }
+        
+    except Exception as e:
+        logger.error(f"Error checking topic status for user {user_id}, session {session_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error checking topic status: {str(e)}")
 
 
 if __name__ == "__main__":

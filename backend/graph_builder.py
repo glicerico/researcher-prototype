@@ -84,7 +84,7 @@ def create_chat_graph():
     # Connect the integrator to the response renderer
     builder.add_edge("integrator", "response_renderer")
     
-    # End the graph after rendering the response
+    # End the graph after rendering the response (topic extraction moved to background)
     builder.add_edge("response_renderer", END)
     
     # Compile the graph

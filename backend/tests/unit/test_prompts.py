@@ -5,14 +5,15 @@ from prompts import (
     ANALYSIS_REFINER_SYSTEM_PROMPT,
     PERPLEXITY_SYSTEM_PROMPT,
     INTEGRATOR_SYSTEM_PROMPT,
-    SEARCH_RESULTS_TEMPLATE,
-    ANALYSIS_RESULTS_TEMPLATE,
-    RESPONSE_RENDERER_SYSTEM_PROMPT
+    SEARCH_CONTEXT_TEMPLATE,
+    ANALYSIS_CONTEXT_TEMPLATE,
+    RESPONSE_RENDERER_SYSTEM_PROMPT,
+    TOPIC_EXTRACTOR_SYSTEM_PROMPT
 )
 
 def test_router_system_prompt_formatting():
     """Test that the router system prompt can be formatted correctly."""
-    formatted = ROUTER_SYSTEM_PROMPT.format(current_time="2023-06-01 12:00:00")
+    formatted = ROUTER_SYSTEM_PROMPT.format(current_time="2023-06-01 12:00:00", memory_context_section="")
     assert "Current date and time: 2023-06-01 12:00:00" in formatted
     assert "1. chat" in formatted
     assert "2. search" in formatted
@@ -20,18 +21,18 @@ def test_router_system_prompt_formatting():
 
 def test_search_optimizer_system_prompt_formatting():
     """Test that the search optimizer system prompt can be formatted correctly."""
-    formatted = SEARCH_OPTIMIZER_SYSTEM_PROMPT.format(current_time="2023-06-01 12:00:00")
+    formatted = SEARCH_OPTIMIZER_SYSTEM_PROMPT.format(current_time="2023-06-01 12:00:00", memory_context_section="")
     assert "Current date and time: 2023-06-01 12:00:00" in formatted
     assert "transform the LATEST user question" in formatted
 
-def test_search_results_template_formatting():
-    """Test that the search results template can be formatted correctly."""
+def test_search_context_template_formatting():
+    """Test that the search context template can be formatted correctly."""
     search_results = "Result 1\nResult 2\nResult 3"
-    formatted = SEARCH_RESULTS_TEMPLATE.format(search_result_text=search_results)
+    formatted = SEARCH_CONTEXT_TEMPLATE.format(search_result_text=search_results)
     assert "Result 1" in formatted
     assert "Result 2" in formatted
     assert "Result 3" in formatted
-    assert "IMPORTANT FACTUAL INFORMATION FROM SEARCH" in formatted
+    assert "CURRENT INFORMATION FROM WEB SEARCH" in formatted
 
 def test_response_renderer_system_prompt_formatting():
     """Test that the response renderer system prompt can be formatted correctly."""
@@ -44,4 +45,18 @@ def test_response_renderer_system_prompt_formatting():
     assert "Current date and time: 2023-06-01 12:00:00" in formatted
     assert "concise" in formatted
     assert "professional" in formatted
-    assert "search" in formatted 
+    assert "search" in formatted
+
+def test_topic_extractor_system_prompt_formatting():
+    """Test that the topic extractor system prompt can be formatted correctly."""
+    formatted = TOPIC_EXTRACTOR_SYSTEM_PROMPT.format(
+        current_time="2023-06-01 12:00:00",
+        min_confidence=0.6,
+        max_suggestions=5
+    )
+    assert "Current date and time: 2023-06-01 12:00:00" in formatted
+    assert "0.6" in formatted
+    assert "5" in formatted
+    assert "research-worthy topics" in formatted
+    # Should NOT contain JSON structure since we use Pydantic structured output
+    assert "{{" not in formatted  # No JSON formatting instructions 

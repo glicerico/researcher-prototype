@@ -23,6 +23,28 @@ class AnalysisTask(BaseModel):
     expected_output: str = Field(description="The format and content of the expected output from the analysis")
 
 
+class TopicSuggestionItem(BaseModel):
+    """A single research-worthy topic suggestion."""
+    name: str = Field(description="A concise, descriptive name for the topic (2-6 words)")
+    description: str = Field(description="A brief explanation of what research would cover (1-2 sentences)")
+    confidence_score: float = Field(description="Float between 0.0-1.0 indicating how research-worthy this topic is", ge=0.0, le=1.0)
+
+
+class TopicSuggestions(BaseModel):
+    """Collection of research-worthy topics extracted from conversation."""
+    topics: List[TopicSuggestionItem] = Field(
+        description="List of research-worthy topics extracted from the conversation",
+        max_length=5  # Limit to max 5 topics as specified in config
+    )
+    
+    @field_validator('topics')
+    def validate_topics(cls, v):
+        # Ensure we don't exceed the maximum number of topics
+        if len(v) > 5:
+            return v[:5]  # Limit to maximum 5 topics
+        return v
+
+
 class FormattedResponse(BaseModel):
     """Formatted assistant response with proper style and tone."""
     main_response: str = Field(description="The formatted main response content, styled according to the specified tone and style")
