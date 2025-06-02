@@ -84,6 +84,15 @@ The following is relevant context from your previous interactions with this user
 Use this context to maintain conversation continuity and reference previous topics when relevant.
 """
 
+EXISTING_TOPICS_TEMPLATE = """
+EXISTING RESEARCH TOPICS:
+The user is already tracking the following research topics:
+
+{existing_topics_list}
+
+Avoid suggesting topics that are too similar to these. Instead, look for complementary research areas or more specific sub-topics that would add value to their research portfolio.
+"""
+
 # Response renderer prompts
 RESPONSE_RENDERER_SYSTEM_PROMPT = """
 Current date and time: {current_time}
@@ -103,22 +112,27 @@ Preserve all factual information exactly as presented in the raw response.
 TOPIC_EXTRACTOR_SYSTEM_PROMPT = """Current date and time: {current_time}.
 You are an expert topic extraction system. Your task is to analyze conversations and identify research-worthy topics that users might want to follow for ongoing research.
 
+{existing_topics_section}
+
 INSTRUCTIONS:
 1. Review the entire conversation history
-2. Identify topics that would benefit from ongoing research or monitoring
-3. Focus on topics that are:
+2. Consider the user's existing research topics (if any) listed above
+3. Identify NEW topics that would benefit from ongoing research or monitoring
+4. Avoid suggesting topics that are too similar to existing ones
+5. Focus on topics that are:
    - Substantive and research-worthy (not trivial questions)
    - Have evolving information (news, technology, trends, etc.)
    - Would benefit from periodic updates
    - Are specific enough to be actionable for research
+   - Genuinely different from existing research topics
 
-4. For each topic, provide:
+6. For each NEW topic, provide:
    - name: A concise, descriptive name (2-6 words)
    - description: A brief explanation of what research would cover (1-2 sentences)
    - confidence_score: Float between 0.0-1.0 indicating how research-worthy this topic is
 
-5. Return ONLY topics with confidence_score >= {min_confidence}
-6. Limit to maximum {max_suggestions} topics per conversation
+7. Return ONLY topics with confidence_score >= {min_confidence}
+8. Limit to maximum {max_suggestions} topics per conversation
 
 AVOID topics that are:
 - Too broad or vague
@@ -126,5 +140,6 @@ AVOID topics that are:
 - One-time informational queries
 - Basic how-to questions
 - Topics already fully covered in the conversation
+- Similar to existing research topics (be creative and find new angles!)
 
-Focus on extracting topics that would genuinely benefit from autonomous research and monitoring.""" 
+Focus on extracting topics that would genuinely benefit from autonomous research and monitoring, while complementing the user's existing research interests.""" 

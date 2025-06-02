@@ -11,8 +11,10 @@ from nodes.base import (
     config,
     get_current_datetime_str,
     TOPIC_EXTRACTOR_SYSTEM_PROMPT,
-    TopicSuggestions
+    TopicSuggestions,
+    user_manager
 )
+from prompts import EXISTING_TOPICS_TEMPLATE
 from typing import List, Dict, Any
 
 
@@ -31,6 +33,7 @@ def topic_extractor_node(state: ChatState) -> ChatState:
     
     # Get conversation messages for analysis
     messages = state.get("messages", [])
+    user_id = state.get("user_id")
     
     if len(messages) < 2:  # Need at least one user message and one AI response
         logger.debug("🔍 Topic Extractor: Insufficient conversation history for topic extraction")
@@ -44,9 +47,43 @@ def topic_extractor_node(state: ChatState) -> ChatState:
     # Log conversation length for debugging
     logger.info(f"🔍 Topic Extractor: Analyzing conversation with {len(messages)} messages")
     
-    # Create system message with formatted prompt
+    # Get existing topics for this user to avoid duplicates
+    existing_topics_section = ""
+    if user_id:
+        try:
+            all_existing_topics = user_manager.get_all_topic_suggestions(user_id)
+            if all_existing_topics:
+                # Create a formatted list of existing topics
+                topic_list = []
+                for session_id, topics in all_existing_topics.items():
+                    for topic in topics:
+                        topic_name = topic.get("topic_name", "Unknown")
+                        description = topic.get("description", "")
+                        confidence = topic.get("confidence_score", 0)
+                        topic_list.append(f"• {topic_name} (confidence: {confidence:.2f}) - {description}")
+                
+                if topic_list:
+                    existing_topics_list = "\n".join(topic_list[:20])  # Limit to top 20 to avoid huge prompts
+                    existing_topics_section = EXISTING_TOPICS_TEMPLATE.format(
+                        existing_topics_list=existing_topics_list
+                    )
+                    logger.debug(f"🔍 Topic Extractor: Including {len(topic_list)} existing topics in context")
+                else:
+                    existing_topics_section = ""
+            else:
+                existing_topics_section = ""
+                logger.debug("🔍 Topic Extractor: No existing topics found for user")
+        except Exception as e:
+            logger.warning(f"🔍 Topic Extractor: Error retrieving existing topics: {str(e)}")
+            existing_topics_section = ""
+    else:
+        existing_topics_section = ""
+        logger.debug("🔍 Topic Extractor: No user_id available for existing topics lookup")
+    
+    # Create system message with formatted prompt including existing topics
     system_message_content = TOPIC_EXTRACTOR_SYSTEM_PROMPT.format(
         current_time=current_time_str,
+        existing_topics_section=existing_topics_section,
         min_confidence=min_confidence,
         max_suggestions=max_suggestions
     )

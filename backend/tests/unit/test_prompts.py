@@ -51,12 +51,15 @@ def test_topic_extractor_system_prompt_formatting():
     """Test that the topic extractor system prompt can be formatted correctly."""
     formatted = TOPIC_EXTRACTOR_SYSTEM_PROMPT.format(
         current_time="2023-06-01 12:00:00",
+        existing_topics_section="Test existing topics section",
         min_confidence=0.6,
         max_suggestions=5
     )
     assert "Current date and time: 2023-06-01 12:00:00" in formatted
+    assert "Test existing topics section" in formatted
     assert "0.6" in formatted
     assert "5" in formatted
     assert "research-worthy topics" in formatted
+    assert "NEW topics" in formatted  # Should emphasize new topics
     # Should NOT contain JSON structure since we use Pydantic structured output
     assert "{{" not in formatted  # No JSON formatting instructions 
