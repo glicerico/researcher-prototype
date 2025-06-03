@@ -223,7 +223,20 @@ export const getTopSessionTopics = async (sessionId, limit = 3) => {
   }
 };
 
+// NEW: ID-based topic deletion (SAFE - no index mismatch)
+export const deleteTopicById = async (topicId) => {
+  try {
+    const response = await api.delete(`/topics/topic/${topicId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting topic by ID:', error);
+    throw error;
+  }
+};
+
+// DEPRECATED: Index-based deletion (has sorting bug - use deleteTopicById instead)
 export const deleteIndividualTopic = async (sessionId, topicIndex) => {
+  console.warn('⚠️ deleteIndividualTopic is deprecated due to index mismatch bug. Use deleteTopicById instead.');
   try {
     const response = await api.delete(`/topics/session/${sessionId}/topic/${topicIndex}`);
     return response.data;

@@ -3,6 +3,7 @@ import {
   getAllTopicSuggestions, 
   getTopicStatistics, 
   deleteSessionTopics, 
+  deleteTopicById,
   cleanupTopics 
 } from '../services/api';
 import TopicCard from './TopicCard';
@@ -187,14 +188,14 @@ const TopicsDashboard = () => {
   };
 
   // Handle individual topic deletion
-  const handleDeleteTopic = async (sessionId) => {
-    if (!window.confirm('Delete all topics from this session?')) {
+  const handleDeleteTopic = async (topicId, topicName) => {
+    if (!window.confirm(`Delete topic "${topicName}"?`)) {
       return;
     }
     
     try {
-      await deleteSessionTopics(sessionId);
-      await loadData();
+      await deleteTopicById(topicId);  // Use safe ID-based deletion
+      await loadData();  // Reload to reflect changes
     } catch (err) {
       console.error('Error deleting topic:', err);
       setError('Failed to delete topic. Please try again.');
@@ -256,7 +257,7 @@ const TopicsDashboard = () => {
                 topic={topic}
                 isSelected={selectedTopics.has(`${topic.session_id}-${index}`)}
                 onSelect={(selected) => handleTopicSelect(topic.session_id, index, selected)}
-                onDelete={() => handleDeleteTopic(topic.session_id)}
+                onDelete={() => handleDeleteTopic(topic.topic_id, topic.name)}
               />
             ))}
           </div>

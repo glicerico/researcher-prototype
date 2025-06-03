@@ -5,6 +5,7 @@ User Manager for handling user profiles and preferences.
 import uuid
 import time
 import random
+import threading
 from typing import Dict, Any, List, Optional
 
 # Import the centralized logging configuration
@@ -22,6 +23,16 @@ class UserManager:
         """Initialize the user manager with a storage manager."""
         self.storage = storage_manager
         self.users_path = "users"
+        # Add threading locks for safe concurrent operations
+        self._user_locks = {}
+        self._locks_lock = threading.Lock()
+    
+    def _get_user_lock(self, user_id: str) -> threading.Lock:
+        """Get or create a lock for a specific user."""
+        with self._locks_lock:
+            if user_id not in self._user_locks:
+                self._user_locks[user_id] = threading.Lock()
+            return self._user_locks[user_id]
     
     def _generate_friendly_user_id(self) -> str:
         """
@@ -249,43 +260,46 @@ class UserManager:
         if not topics:
             return True  # Nothing to store
         
-        try:
-            # Ensure migration from profile.json if needed
-            self.migrate_topics_from_profile(user_id)
+        # Use user-specific lock for thread safety
+        with self._get_user_lock(user_id):
+            try:
+                # Ensure migration from profile.json if needed
+                self.migrate_topics_from_profile(user_id)
+                
+                # Load current topics data
+                topics_data = self.get_user_topics(user_id)
+                
+                # Prepare session topics with unique IDs
+                current_time = time.time()
+                session_topics = []
+                
+                for topic in topics:
+                    topic_entry = {
+                        "topic_id": str(uuid.uuid4()),  # Add unique topic ID
+                        "topic_name": topic.get("name"),
+                        "description": topic.get("description"),
+                        "confidence_score": topic.get("confidence_score"),
+                        "suggested_at": current_time,
+                        "conversation_context": conversation_context,
+                        "is_active_research": False,  # Default to inactive
+                        "research_count": 0
+                    }
+                    session_topics.append(topic_entry)
             
-            # Load current topics data
-            topics_data = self.get_user_topics(user_id)
-            
-            # Prepare session topics
-            current_time = time.time()
-            session_topics = []
-            
-            for topic in topics:
-                topic_entry = {
-                    "topic_name": topic.get("name"),
-                    "description": topic.get("description"),
-                    "confidence_score": topic.get("confidence_score"),
-                    "suggested_at": current_time,
-                    "conversation_context": conversation_context,
-                    "is_active_research": False,  # Default to inactive
-                    "research_count": 0
-                }
-                session_topics.append(topic_entry)
-            
-            # Store topics for this session
-            topics_data["sessions"][session_id] = session_topics
-            
-            # Update metadata
-            topics_data["metadata"]["total_topics"] = sum(
-                len(topics) for topics in topics_data["sessions"].values()
-            )
-            
-            # Save updated topics
-            return self.save_user_topics(user_id, topics_data)
-            
-        except Exception as e:
-            logger.error(f"Error storing topic suggestions for user {user_id}: {str(e)}")
-            return False
+                # Store topics for this session
+                topics_data["sessions"][session_id] = session_topics
+                
+                # Update metadata
+                topics_data["metadata"]["total_topics"] = sum(
+                    len(topics) for topics in topics_data["sessions"].values()
+                )
+                
+                # Save updated topics
+                return self.save_user_topics(user_id, topics_data)
+                
+            except Exception as e:
+                logger.error(f"Error storing topic suggestions for user {user_id}: {str(e)}")
+                return False
     
     def get_topic_suggestions(self, user_id: str, session_id: str) -> List[Dict[str, Any]]:
         """
@@ -679,4 +693,213 @@ class UserManager:
             
         except Exception as e:
             logger.error(f"Error migrating topics for user {user_id}: {str(e)}")
-            return False 
+            return False
+    
+    # =================== SAFE DELETION METHODS ===================
+    
+    def delete_topic_by_id(self, user_id: str, topic_id: str) -> Dict[str, Any]:
+        """
+        Safely delete a topic by its unique ID instead of index.
+        
+        Args:
+            user_id: The ID of the user
+            topic_id: The unique topic ID
+            
+        Returns:
+            Dictionary with success status and deleted topic info
+        """
+        with self._get_user_lock(user_id):
+            try:
+                # Ensure migration from profile.json if needed
+                self.migrate_topics_from_profile(user_id)
+                
+                # Load topics data
+                topics_data = self.get_user_topics(user_id)
+                
+                # Find and remove the topic
+                deleted_topic = None
+                session_to_update = None
+                
+                for session_id, session_topics in topics_data.get("sessions", {}).items():
+                    for i, topic in enumerate(session_topics):
+                        if topic.get("topic_id") == topic_id:
+                            deleted_topic = session_topics.pop(i)
+                            session_to_update = session_id
+                            break
+                    
+                    if deleted_topic:
+                        break
+                
+                if not deleted_topic:
+                    return {
+                        "success": False,
+                        "error": f"Topic with ID {topic_id} not found",
+                        "deleted_topic": None
+                    }
+                
+                # Update or remove session if empty
+                if session_topics:
+                    topics_data["sessions"][session_to_update] = session_topics
+                else:
+                    del topics_data["sessions"][session_to_update]
+                
+                # Update metadata
+                topics_data["metadata"]["total_topics"] = sum(
+                    len(topics) for topics in topics_data["sessions"].values()
+                )
+                topics_data["metadata"]["active_research_topics"] = sum(
+                    1 for session_topics in topics_data["sessions"].values()
+                    for topic in session_topics
+                    if topic.get("is_active_research", False)
+                )
+                
+                # Save updated topics
+                success = self.save_user_topics(user_id, topics_data)
+                
+                if success:
+                    return {
+                        "success": True,
+                        "deleted_topic": {
+                            "topic_id": deleted_topic.get("topic_id"),
+                            "topic_name": deleted_topic.get("topic_name"),
+                            "description": deleted_topic.get("description"),
+                            "session_id": session_to_update
+                        }
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": "Failed to save after deletion",
+                        "deleted_topic": None
+                    }
+                
+            except Exception as e:
+                logger.error(f"Error deleting topic by ID {topic_id} for user {user_id}: {str(e)}")
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "deleted_topic": None
+                }
+    
+    def delete_topic_by_index_safe(self, user_id: str, session_id: str, topic_index: int) -> Dict[str, Any]:
+        """
+        Safely delete a topic by session and index with proper validation.
+        This is a wrapper around delete_topic_by_id for API compatibility.
+        
+        Args:
+            user_id: The ID of the user
+            session_id: The session ID
+            topic_index: The topic index
+            
+        Returns:
+            Dictionary with success status and deleted topic info
+        """
+        with self._get_user_lock(user_id):
+            try:
+                # Ensure migration from profile.json if needed
+                self.migrate_topics_from_profile(user_id)
+                
+                # Load topics data
+                topics_data = self.get_user_topics(user_id)
+                
+                # Get session topics
+                session_topics = topics_data.get("sessions", {}).get(session_id, [])
+                
+                # Validate index
+                if topic_index < 0 or topic_index >= len(session_topics):
+                    return {
+                        "success": False,
+                        "error": f"Topic index {topic_index} is out of bounds (session has {len(session_topics)} topics)",
+                        "deleted_topic": None
+                    }
+                
+                # Get the topic ID and use the safe ID-based deletion
+                topic_to_delete = session_topics[topic_index]
+                topic_id = topic_to_delete.get("topic_id")
+                
+                if not topic_id:
+                    # Fallback for topics without IDs (old data)
+                    # Add an ID and proceed with index-based deletion
+                    topic_to_delete["topic_id"] = str(uuid.uuid4())
+                    topics_data["sessions"][session_id] = session_topics
+                    self.save_user_topics(user_id, topics_data)
+                    topic_id = topic_to_delete["topic_id"]
+                
+                # Use ID-based deletion for safety
+                return self.delete_topic_by_id(user_id, topic_id)
+                
+            except Exception as e:
+                logger.error(f"Error in safe index deletion for user {user_id}, session {session_id}, index {topic_index}: {str(e)}")
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "deleted_topic": None
+                }
+    
+    def delete_session_safe(self, user_id: str, session_id: str) -> Dict[str, Any]:
+        """
+        Safely delete an entire session with all its topics.
+        
+        Args:
+            user_id: The ID of the user
+            session_id: The session ID
+            
+        Returns:
+            Dictionary with success status and deletion info
+        """
+        with self._get_user_lock(user_id):
+            try:
+                # Ensure migration from profile.json if needed
+                self.migrate_topics_from_profile(user_id)
+                
+                # Load topics data
+                topics_data = self.get_user_topics(user_id)
+                
+                # Check if session exists
+                if session_id not in topics_data.get("sessions", {}):
+                    return {
+                        "success": True,  # Already doesn't exist
+                        "message": f"Session {session_id} not found (already deleted)",
+                        "topics_deleted": 0
+                    }
+                
+                # Get topic count before deletion
+                topic_count = len(topics_data["sessions"][session_id])
+                
+                # Remove session
+                del topics_data["sessions"][session_id]
+                
+                # Update metadata
+                topics_data["metadata"]["total_topics"] = sum(
+                    len(topics) for topics in topics_data["sessions"].values()
+                )
+                topics_data["metadata"]["active_research_topics"] = sum(
+                    1 for session_topics in topics_data["sessions"].values()
+                    for topic in session_topics
+                    if topic.get("is_active_research", False)
+                )
+                
+                # Save updated topics
+                success = self.save_user_topics(user_id, topics_data)
+                
+                if success:
+                    return {
+                        "success": True,
+                        "message": f"Deleted session {session_id} with {topic_count} topics",
+                        "session_id": session_id,
+                        "topics_deleted": topic_count
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": "Failed to save after session deletion",
+                        "topics_deleted": 0
+                    }
+                
+            except Exception as e:
+                logger.error(f"Error deleting session {session_id} for user {user_id}: {str(e)}")
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "topics_deleted": 0
+                } 

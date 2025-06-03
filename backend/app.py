@@ -373,16 +373,26 @@ async def get_topic_suggestions(
         # Get stored topic suggestions from user profile
         stored_topics = user_manager.get_topic_suggestions(user_id, session_id)
         
-        # Convert to response format
+        # Convert to response format with topic IDs
         topic_suggestions = []
-        for topic in stored_topics:
-            topic_suggestions.append({
+        for i, topic in enumerate(stored_topics):
+            topic_suggestion = {
+                "index": i,  # Keep index for backward compatibility
+                "topic_id": topic.get("topic_id"),  # Add topic ID for safe deletion
                 "name": topic.get("topic_name", ""),
                 "description": topic.get("description", ""),
                 "confidence_score": topic.get("confidence_score", 0.0),
                 "suggested_at": topic.get("suggested_at", 0),
-                "conversation_context": topic.get("conversation_context", "")
-            })
+                "conversation_context": topic.get("conversation_context", ""),
+                "is_active_research": topic.get("is_active_research", False)
+            }
+            
+            # Add topic ID if missing (for backward compatibility)
+            if not topic_suggestion["topic_id"]:
+                topic_suggestion["topic_id"] = f"legacy_{session_id}_{i}"
+                logger.warning(f"Topic at index {i} in session {session_id} missing topic_id, using legacy ID")
+            
+            topic_suggestions.append(topic_suggestion)
         
         # Sort by suggestion time (most recent first)
         topic_suggestions.sort(key=lambda x: x["suggested_at"], reverse=True)
@@ -414,6 +424,7 @@ async def get_all_topic_suggestions(
             for topic in topics:
                 all_topics.append({
                     "session_id": session_id,
+                    "topic_id": topic.get("topic_id"),  # Add topic ID for safe deletion
                     "name": topic.get("topic_name", ""),
                     "description": topic.get("description", ""),
                     "confidence_score": topic.get("confidence_score", 0.0),
@@ -511,37 +522,23 @@ async def delete_session_topics(
     session_id: str,
     user_id: str = Depends(get_or_create_user_id)
 ):
-    """Delete all topic suggestions for a specific session."""
+    """Delete all topic suggestions for a specific session using safe deletion."""
     try:
-        # Get user profile
-        profile = user_manager.get_user(user_id)
-        if not profile:
-            raise HTTPException(status_code=404, detail="User not found")
+        # Use the new safe session deletion method
+        result = user_manager.delete_session_safe(user_id, session_id)
         
-        # Remove topics for this session
-        topic_suggestions = profile.get("topic_suggestions", {})
-        if session_id in topic_suggestions:
-            del topic_suggestions[session_id]
-            
-            # Update the profile
-            profile["topic_suggestions"] = topic_suggestions
-            success = user_manager.storage.write(user_manager._get_profile_path(user_id), profile)
-            
-            if not success:
-                raise HTTPException(status_code=500, detail="Failed to delete session topics")
-            
+        if result["success"]:
             return {
                 "success": True,
-                "message": f"Deleted topics for session {session_id}",
-                "session_id": session_id
+                "message": result["message"],
+                "session_id": session_id,
+                "topics_deleted": result["topics_deleted"]
             }
         else:
-            return {
-                "success": True,
-                "message": f"No topics found for session {session_id}",
-                "session_id": session_id
-            }
+            raise HTTPException(status_code=500, detail=result["error"])
         
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error deleting topics for session {session_id}, user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error deleting session topics: {str(e)}")
@@ -553,13 +550,13 @@ async def cleanup_topics(
 ):
     """Clean up old and duplicate topics for the user."""
     try:
-        # Get user profile
-        profile = user_manager.get_user(user_id)
-        if not profile:
-            raise HTTPException(status_code=404, detail="User not found")
+        # Ensure migration from profile.json if needed
+        user_manager.migrate_topics_from_profile(user_id)
         
-        topic_suggestions = profile.get("topic_suggestions", {})
-        if not topic_suggestions:
+        # Load topics data
+        topics_data = user_manager.get_user_topics(user_id)
+        
+        if not topics_data.get("sessions"):
             return {
                 "success": True,
                 "message": "No topics to clean up",
@@ -576,7 +573,7 @@ async def cleanup_topics(
         sessions_to_remove = []
         
         # Clean up old topics and duplicates
-        for session_id, topics in topic_suggestions.items():
+        for session_id, topics in topics_data["sessions"].items():
             # Filter out old topics
             filtered_topics = []
             for topic in topics:
@@ -598,18 +595,28 @@ async def cleanup_topics(
                     topics_removed += 1
             
             if deduplicated_topics:
-                topic_suggestions[session_id] = deduplicated_topics
+                topics_data["sessions"][session_id] = deduplicated_topics
             else:
                 sessions_to_remove.append(session_id)
                 sessions_cleaned += 1
         
         # Remove empty sessions
         for session_id in sessions_to_remove:
-            del topic_suggestions[session_id]
+            del topics_data["sessions"][session_id]
         
-        # Update the profile
-        profile["topic_suggestions"] = topic_suggestions
-        success = user_manager.storage.write(user_manager._get_profile_path(user_id), profile)
+        # Update metadata
+        topics_data["metadata"]["total_topics"] = sum(
+            len(topics) for topics in topics_data["sessions"].values()
+        )
+        topics_data["metadata"]["active_research_topics"] = sum(
+            1 for session_topics in topics_data["sessions"].values()
+            for topic in session_topics
+            if topic.get("is_active_research", False)
+        )
+        topics_data["metadata"]["last_cleanup"] = current_time
+        
+        # Save updated topics
+        success = user_manager.save_user_topics(user_id, topics_data)
         
         if not success:
             raise HTTPException(status_code=500, detail="Failed to clean up topics")
@@ -640,8 +647,9 @@ async def get_top_session_topics(
         # Convert to response format and sort by confidence
         topic_suggestions = []
         for index, topic in enumerate(stored_topics):
-            topic_suggestions.append({
+            topic_suggestion = {
                 "index": index,
+                "topic_id": topic.get("topic_id"),  # Add topic ID for safe deletion
                 "session_id": session_id,
                 "name": topic.get("topic_name", ""),
                 "description": topic.get("description", ""),
@@ -649,7 +657,14 @@ async def get_top_session_topics(
                 "suggested_at": topic.get("suggested_at", 0),
                 "conversation_context": topic.get("conversation_context", ""),
                 "is_active_research": topic.get("is_active_research", False)
-            })
+            }
+            
+            # Add topic ID if missing (for backward compatibility)
+            if not topic_suggestion["topic_id"]:
+                topic_suggestion["topic_id"] = f"legacy_{session_id}_{index}"
+                logger.warning(f"Topic at index {index} in session {session_id} missing topic_id, using legacy ID")
+            
+            topic_suggestions.append(topic_suggestion)
         
         # Sort by confidence score (highest first) and limit results
         topic_suggestions.sort(key=lambda x: x["confidence_score"], reverse=True)
@@ -668,51 +683,70 @@ async def get_top_session_topics(
         raise HTTPException(status_code=500, detail=f"Error retrieving top topics: {str(e)}")
 
 
+@app.delete("/topics/topic/{topic_id}")
+async def delete_topic_by_id(
+    topic_id: str,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Delete a topic by its unique ID (safer than index-based deletion)."""
+    try:
+        # Use the safe ID-based deletion method
+        result = user_manager.delete_topic_by_id(user_id, topic_id)
+        
+        if result["success"]:
+            deleted_topic = result["deleted_topic"]
+            return {
+                "success": True,
+                "message": f"Deleted topic: {deleted_topic['topic_name']}",
+                "deleted_topic": {
+                    "topic_id": deleted_topic["topic_id"],
+                    "name": deleted_topic["topic_name"],
+                    "description": deleted_topic["description"],
+                    "session_id": deleted_topic["session_id"]
+                }
+            }
+        else:
+            # Map specific errors to appropriate HTTP status codes
+            if "not found" in result["error"]:
+                raise HTTPException(status_code=404, detail=result["error"])
+            else:
+                raise HTTPException(status_code=500, detail=result["error"])
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting topic by ID {topic_id} for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting topic: {str(e)}")
+
+
 @app.delete("/topics/session/{session_id}/topic/{topic_index}")
 async def delete_individual_topic(
     session_id: str,
     topic_index: int,
     user_id: str = Depends(get_or_create_user_id)
 ):
-    """Delete an individual topic from a session."""
+    """Delete an individual topic from a session using safe deletion method."""
     try:
-        # Get user profile
-        profile = user_manager.get_user(user_id)
-        if not profile:
-            raise HTTPException(status_code=404, detail="User not found")
+        # Use the new safe deletion method
+        result = user_manager.delete_topic_by_index_safe(user_id, session_id, topic_index)
         
-        # Get session topics
-        topic_suggestions = profile.get("topic_suggestions", {})
-        session_topics = topic_suggestions.get(session_id, [])
-        
-        # Check if topic index is valid
-        if topic_index < 0 or topic_index >= len(session_topics):
-            raise HTTPException(status_code=404, detail="Topic not found")
-        
-        # Remove the specific topic
-        deleted_topic = session_topics.pop(topic_index)
-        
-        # Update the profile
-        if session_topics:
-            topic_suggestions[session_id] = session_topics
-        else:
-            # Remove empty session
-            del topic_suggestions[session_id]
-        
-        profile["topic_suggestions"] = topic_suggestions
-        success = user_manager.storage.write(user_manager._get_profile_path(user_id), profile)
-        
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to delete topic")
-        
-        return {
-            "success": True,
-            "message": f"Deleted topic: {deleted_topic.get('topic_name', 'Unknown')}",
-            "deleted_topic": {
-                "name": deleted_topic.get("topic_name", ""),
-                "description": deleted_topic.get("description", "")
+        if result["success"]:
+            deleted_topic = result["deleted_topic"]
+            return {
+                "success": True,
+                "message": f"Deleted topic: {deleted_topic['topic_name']}",
+                "deleted_topic": {
+                    "name": deleted_topic["topic_name"],
+                    "description": deleted_topic["description"],
+                    "topic_id": deleted_topic["topic_id"]
+                }
             }
-        }
+        else:
+            # Map specific errors to appropriate HTTP status codes
+            if "out of bounds" in result["error"] or "not found" in result["error"]:
+                raise HTTPException(status_code=404, detail=result["error"])
+            else:
+                raise HTTPException(status_code=500, detail=result["error"])
         
     except HTTPException:
         raise

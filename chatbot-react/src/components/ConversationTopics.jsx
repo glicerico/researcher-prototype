@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getTopSessionTopics, deleteIndividualTopic, enableTopicResearch, disableTopicResearch } from '../services/api';
+import { getTopSessionTopics, deleteTopicById, enableTopicResearch, disableTopicResearch } from '../services/api';
 import TopicSidebarItem from './TopicSidebarItem';
 import '../styles/ConversationTopics.css';
 
@@ -93,13 +93,13 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
   };
 
   // Handle deleting a topic
-  const handleDeleteTopic = async (topicIndex) => {
+  const handleDeleteTopic = async (topicId) => {
     try {
-      await deleteIndividualTopic(sessionId, topicIndex);
+      await deleteTopicById(topicId);
       
-      // Remove topic from UI immediately
+      // Remove topic from UI immediately by filtering by topic ID
       setTopics(prevTopics => 
-        prevTopics.filter((_, index) => index !== topicIndex)
+        prevTopics.filter(topic => topic.topic_id !== topicId)
       );
     } catch (error) {
       console.error('Error deleting topic:', error);
@@ -184,7 +184,7 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
                 index={index}
                 onEnableResearch={() => handleEnableResearch(index)}
                 onDisableResearch={() => handleDisableResearch(index)}
-                onDelete={() => handleDeleteTopic(index)}
+                onDelete={() => handleDeleteTopic(topic.topic_id)}
               />
             ))}
           </div>

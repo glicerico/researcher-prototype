@@ -133,7 +133,7 @@ const TopicCard = ({ topic, isSelected, onSelect, onDelete }) => {
               e.stopPropagation();
               onDelete();
             }}
-            title="Delete this session's topics"
+            title="Delete this topic"
           >
             🗑️
           </button>
