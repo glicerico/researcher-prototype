@@ -33,6 +33,45 @@ const ChatPage = () => {
   
   const messagesEndRef = useRef(null);
 
+  // Load stored conversation when user changes
+  useEffect(() => {
+    if (!userId) {
+      setMessages([
+        { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
+      ]);
+      setSessionId(null);
+      return;
+    }
+
+    const storedMessages = localStorage.getItem(`chat_messages_${userId}`);
+    if (storedMessages) {
+      try {
+        setMessages(JSON.parse(storedMessages));
+      } catch {
+        // ignore parse errors
+      }
+    }
+
+    const storedSession = localStorage.getItem(`session_id_${userId}`);
+    if (storedSession) {
+      setSessionId(storedSession);
+    }
+  }, [userId]);
+
+  // Persist conversation to localStorage
+  useEffect(() => {
+    if (userId) {
+      localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(messages));
+    }
+  }, [messages, userId]);
+
+  // Persist session ID
+  useEffect(() => {
+    if (userId && sessionId) {
+      localStorage.setItem(`session_id_${userId}`, sessionId);
+    }
+  }, [sessionId, userId]);
+
   // Validate stored user ID on app startup
   useEffect(() => {
     const validateStoredUserId = async () => {
@@ -230,16 +269,26 @@ const ChatPage = () => {
 
   const handleUserSelected = useCallback((selectedUserId) => {
     console.log('User selected:', selectedUserId);
-    
+
     if (selectedUserId) {
       setUserId(selectedUserId);
       localStorage.setItem('user_id', selectedUserId);
     } else {
+      if (userId) {
+        localStorage.removeItem(`chat_messages_${userId}`);
+        localStorage.removeItem(`session_id_${userId}`);
+      }
       setUserId('');
       localStorage.removeItem('user_id');
       setUserDisplayName('');
       setPersonality(null);
     }
+
+    // Reset conversation when switching users
+    setMessages([
+      { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
+    ]);
+    setSessionId(null);
     
     // Hide the user selector after selection
     setShowUserSelector(false);
