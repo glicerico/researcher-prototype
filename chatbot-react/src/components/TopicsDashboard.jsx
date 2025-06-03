@@ -127,15 +127,15 @@ const TopicsDashboard = () => {
   // Handle bulk delete
   const handleBulkDelete = async () => {
     if (selectedTopics.size === 0) return;
-    
+
     if (!window.confirm(`Delete ${selectedTopics.size} selected topics?`)) {
       return;
     }
-    
+
     try {
       setLoading(true);
-      
-      // Group by session for efficient deletion
+
+      // Group selected topics by session
       const sessionGroups = {};
       filteredAndSortedTopics.forEach((topic, index) => {
         const topicKey = `${topic.session_id}-${index}`;
@@ -146,21 +146,32 @@ const TopicsDashboard = () => {
           sessionGroups[topic.session_id].push(topic);
         }
       });
-      
-      // Delete entire sessions that have all topics selected
+
+      // Count total topics per session
+      const totalBySession = {};
+      topics.forEach((topic) => {
+        totalBySession[topic.session_id] = (totalBySession[topic.session_id] || 0) + 1;
+      });
+
       const deletionPromises = [];
       for (const [sessionId, sessionTopics] of Object.entries(sessionGroups)) {
-        // For now, we'll delete the entire session if any topics are selected
-        // In a more sophisticated implementation, we'd have individual topic deletion
-        deletionPromises.push(deleteSessionTopics(sessionId));
+        if (sessionTopics.length === totalBySession[sessionId]) {
+          // All topics from this session selected - delete entire session
+          deletionPromises.push(deleteSessionTopics(sessionId));
+        } else {
+          // Delete individual topics by ID
+          sessionTopics.forEach((topic) => {
+            deletionPromises.push(deleteTopicById(topic.topic_id));
+          });
+        }
       }
-      
+
       await Promise.all(deletionPromises);
-      
+
       // Clear selection and reload data
       setSelectedTopics(new Set());
       await loadData();
-      
+
     } catch (err) {
       console.error('Error deleting topics:', err);
       setError('Failed to delete topics. Please try again.');
