@@ -60,6 +60,45 @@ To enable, add `ZEP_API_KEY` and set `ZEP_ENABLED=true` in your `.env` file.
 Get an API key at [getzep.com](https://www.getzep.com/).
 The system gracefully degrades when ZEP is unavailable, ensuring uninterrupted operation.
 
+## Autonomous Research Engine
+
+The application includes a powerful autonomous research engine that automatically conducts background research on topics you're interested in. This system operates independently of your chat sessions, continuously finding new information and insights.
+
+### How It Works
+
+1. **Topic Discovery**: As you chat, the system identifies research-worthy topics from your conversations
+2. **Topic Subscription**: You can mark topics as "active research" to enable autonomous research
+3. **Background Research**: Every 2 hours (configurable), the system automatically researches your subscribed topics
+4. **Quality Assessment**: Research findings are evaluated for relevance, recency, depth, credibility, and novelty
+5. **Deduplication**: The system avoids storing duplicate information by comparing against existing findings
+6. **Intelligent Storage**: Only high-quality, unique findings are stored for your review
+
+### Using the Research Engine
+
+#### Managing Research Topics
+
+After any conversation, you'll see suggested research topics in the side panel. For each topic, you can:
+
+- **Subscribe**: Click the "🔬 Research this topic" button to enable autonomous research
+- **View Details**: See the topic description and why it was suggested
+- **Unsubscribe**: Remove topics you're no longer interested in
+
+Research findings include:
+- **Summary**: Key insights and main points
+- **Quality Scores**: Ratings for recency, relevance, depth, credibility, and novelty
+- **Source URLs**: Links to original sources when available
+- **Research Time**: When the research was conducted
+- **Key Insights**: Bullet points of important discoveries
+
+### Best Practices
+
+- **Start Small**: Begin with 1-2 research topics to see how the system works
+- **Quality Threshold**: Lower the threshold (e.g., 0.4) to get more findings, raise it (e.g., 0.8) for only the highest quality
+- **Topic Specificity**: More specific topics (e.g., "GPT-4 performance benchmarks") yield better results than broad ones (e.g., "AI")
+- **Regular Review**: Check your findings periodically and unsubscribe from topics that are no longer relevant
+
+The research engine provides detailed logging with 🔬 emojis to help track research activities. All research operations are also traced through LangSmith if enabled.
+
 ## Setup
 
 ### Prerequisites
@@ -123,12 +162,17 @@ The system gracefully degrades when ZEP is unavailable, ensuring uninterrupted o
 - `backend/`: Contains the FastAPI application and LangGraph implementation
   - `app.py`: Main FastAPI application
   - `graph_builder.py`: LangGraph builder that creates the processing graph
+  - `research_graph_builder.py`: LangGraph builder for autonomous research workflow
+  - `autonomous_research_engine.py`: Main autonomous research engine using LangGraph
   - `nodes/`: Modular node components used to build the graph
+    - **Chat nodes**: `initializer_node.py`, `router_node.py`, `search_node.py`, etc.
+    - **Research nodes**: `research_initializer_node.py`, `research_query_generator_node.py`, `research_quality_assessor_node.py`, `research_deduplication_node.py`, `research_storage_node.py`
   - `tests/`: Unit and integration tests
     - `unit/`: Unit tests for individual components
     - `integration/`: Integration tests requiring external services
   - `models.py`: Pydantic models for request/response
-  - `prompts.py`: Centralized prompts used throughout the system
+  - `llm_models.py`: Pydantic models for structured LLM outputs (including research models)
+  - `prompts.py`: Centralized prompts used throughout the system (chat + research)
   - `config.py`: Configuration settings
   - `requirements.txt`: Python dependencies
 - `chatbot-react/`: Contains the React frontend
@@ -230,6 +274,7 @@ Each component of the graph uses emojis in logs for better visual identification
 - 🧠 Integrator: Central reasoning component
 - ✨ Renderer: Response formatting and enhancement
 - ⚡ Flow: Transitions between components
+- 🔬 Research Engine: Autonomous research operations (initializer, query generator, quality assessor, deduplication, storage)
 
 #### Tracing Message Processing
 

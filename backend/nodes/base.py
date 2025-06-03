@@ -49,7 +49,9 @@ from llm_models import (
     AnalysisTask,
     FormattedResponse,
     TopicSuggestions,
-    TopicSuggestionItem
+    TopicSuggestionItem,
+    ResearchQualityAssessment,
+    ResearchDeduplicationResult
 )
 
 # Initialize storage components

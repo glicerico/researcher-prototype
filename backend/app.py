@@ -729,14 +729,14 @@ async def enable_topic_research(
 ):
     """Mark a topic as active research."""
     try:
-        # Get user profile
-        profile = user_manager.get_user(user_id)
-        if not profile:
-            raise HTTPException(status_code=404, detail="User not found")
+        # Ensure migration from profile.json if needed
+        user_manager.migrate_topics_from_profile(user_id)
+        
+        # Load topics data
+        topics_data = user_manager.get_user_topics(user_id)
         
         # Get session topics
-        topic_suggestions = profile.get("topic_suggestions", {})
-        session_topics = topic_suggestions.get(session_id, [])
+        session_topics = topics_data.get("sessions", {}).get(session_id, [])
         
         # Check if topic index is valid
         if topic_index < 0 or topic_index >= len(session_topics):
@@ -746,10 +746,18 @@ async def enable_topic_research(
         session_topics[topic_index]["is_active_research"] = True
         session_topics[topic_index]["research_enabled_at"] = time.time()
         
-        # Update the profile
-        topic_suggestions[session_id] = session_topics
-        profile["topic_suggestions"] = topic_suggestions
-        success = user_manager.storage.write(user_manager._get_profile_path(user_id), profile)
+        # Update the topics data
+        topics_data["sessions"][session_id] = session_topics
+        
+        # Update metadata
+        topics_data["metadata"]["active_research_topics"] = sum(
+            1 for session_topics in topics_data["sessions"].values()
+            for topic in session_topics
+            if topic.get("is_active_research", False)
+        )
+        
+        # Save updated topics
+        success = user_manager.save_user_topics(user_id, topics_data)
         
         if not success:
             raise HTTPException(status_code=500, detail="Failed to enable research for topic")
@@ -781,14 +789,14 @@ async def disable_topic_research(
 ):
     """Remove a topic from active research."""
     try:
-        # Get user profile
-        profile = user_manager.get_user(user_id)
-        if not profile:
-            raise HTTPException(status_code=404, detail="User not found")
+        # Ensure migration from profile.json if needed
+        user_manager.migrate_topics_from_profile(user_id)
+        
+        # Load topics data
+        topics_data = user_manager.get_user_topics(user_id)
         
         # Get session topics
-        topic_suggestions = profile.get("topic_suggestions", {})
-        session_topics = topic_suggestions.get(session_id, [])
+        session_topics = topics_data.get("sessions", {}).get(session_id, [])
         
         # Check if topic index is valid
         if topic_index < 0 or topic_index >= len(session_topics):
@@ -798,10 +806,18 @@ async def disable_topic_research(
         session_topics[topic_index]["is_active_research"] = False
         session_topics[topic_index]["research_disabled_at"] = time.time()
         
-        # Update the profile
-        topic_suggestions[session_id] = session_topics
-        profile["topic_suggestions"] = topic_suggestions
-        success = user_manager.storage.write(user_manager._get_profile_path(user_id), profile)
+        # Update the topics data
+        topics_data["sessions"][session_id] = session_topics
+        
+        # Update metadata
+        topics_data["metadata"]["active_research_topics"] = sum(
+            1 for session_topics in topics_data["sessions"].values()
+            for topic in session_topics
+            if topic.get("is_active_research", False)
+        )
+        
+        # Save updated topics
+        success = user_manager.save_user_topics(user_id, topics_data)
         
         if not success:
             raise HTTPException(status_code=500, detail="Failed to disable research for topic")
@@ -823,6 +839,184 @@ async def disable_topic_research(
     except Exception as e:
         logger.error(f"Error disabling research for topic {topic_index} in session {session_id}, user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error disabling research: {str(e)}")
+
+
+# =================== RESEARCH FINDINGS API ENDPOINTS ===================
+
+@app.get("/research/findings/{user_id}")
+async def get_research_findings(
+    user_id: str,
+    topic_name: Optional[str] = Query(None, description="Filter by topic name"),
+    unread_only: bool = Query(False, description="Only return unread findings")
+):
+    """Get research findings for a user, optionally filtered by topic or read status."""
+    try:
+        # Use the new API method from user_manager
+        findings = user_manager.get_research_findings_for_api(user_id, topic_name, unread_only)
+        
+        return {
+            "success": True,
+            "user_id": user_id,
+            "total_findings": len(findings),
+            "filters": {
+                "topic_name": topic_name,
+                "unread_only": unread_only
+            },
+            "findings": findings
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting research findings for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting research findings: {str(e)}")
+
+
+@app.post("/research/findings/{finding_id}/mark_read")
+async def mark_research_finding_read(
+    finding_id: str,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Mark a research finding as read."""
+    try:
+        success = user_manager.mark_finding_as_read(user_id, finding_id)
+        
+        if not success:
+            raise HTTPException(status_code=404, detail="Finding not found")
+        
+        return {
+            "success": True,
+            "message": f"Marked finding {finding_id} as read",
+            "finding_id": finding_id
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error marking finding as read for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error marking finding as read: {str(e)}")
+
+
+@app.get("/research/status")
+async def get_research_engine_status():
+    """Get the current status of the autonomous research engine."""
+    try:
+        if hasattr(app.state, 'autonomous_researcher'):
+            status = app.state.autonomous_researcher.get_status()
+            return status
+        else:
+            return {
+                "enabled": False,
+                "running": False,
+                "error": "Autonomous researcher not initialized"
+            }
+        
+    except Exception as e:
+        logger.error(f"Error getting research engine status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting research status: {str(e)}")
+
+
+@app.post("/research/trigger/{user_id}")
+async def trigger_research_for_user(user_id: str):
+    """Manually trigger research for a specific user (for testing/debugging)."""
+    try:
+        if hasattr(app.state, 'autonomous_researcher'):
+            result = await app.state.autonomous_researcher.trigger_research_for_user(user_id)
+            return result
+        else:
+            raise HTTPException(status_code=503, detail="Autonomous researcher not available")
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error triggering research for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error triggering research: {str(e)}")
+
+
+@app.get("/topics/user/{user_id}/research")
+async def get_active_research_topics(user_id: str):
+    """Get all active research topics for a user."""
+    try:
+        active_topics = user_manager.get_active_research_topics(user_id)
+        
+        # Format for API response
+        api_topics = []
+        for topic in active_topics:
+            api_topics.append({
+                "topic_name": topic.get("topic_name"),
+                "description": topic.get("description"),
+                "session_id": topic.get("session_id"),
+                "research_enabled_at": topic.get("research_enabled_at"),
+                "last_researched": topic.get("last_researched"),
+                "research_count": topic.get("research_count", 0),
+                "confidence_score": topic.get("confidence_score", 0.0)
+            })
+        
+        return {
+            "success": True,
+            "user_id": user_id,
+            "active_research_topics": api_topics,
+            "total_count": len(api_topics)
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting active research topics for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting active research topics: {str(e)}")
+
+
+@app.put("/topics/user/{user_id}/topic/{topic_name}/research")
+async def enable_research_by_topic_name(
+    user_id: str,
+    topic_name: str,
+    enable: bool = Query(True, description="True to enable, False to disable")
+):
+    """Enable or disable research for a topic by name (alternative to index-based API)."""
+    try:
+        # Load topics data
+        topics_data = user_manager.get_user_topics(user_id)
+        
+        # Find the topic by name
+        found = False
+        for session_id, session_topics in topics_data.get("sessions", {}).items():
+            for topic in session_topics:
+                if topic.get("topic_name") == topic_name:
+                    topic["is_active_research"] = enable
+                    if enable:
+                        topic["research_enabled_at"] = time.time()
+                    else:
+                        topic["research_disabled_at"] = time.time()
+                    found = True
+                    break
+            if found:
+                break
+        
+        if not found:
+            raise HTTPException(status_code=404, detail=f"Topic '{topic_name}' not found")
+        
+        # Update metadata
+        topics_data["metadata"]["active_research_topics"] = sum(
+            1 for session_topics in topics_data["sessions"].values()
+            for topic in session_topics
+            if topic.get("is_active_research", False)
+        )
+        
+        # Save updated topics
+        success = user_manager.save_user_topics(user_id, topics_data)
+        
+        if not success:
+            raise HTTPException(status_code=500, detail="Failed to update topic research status")
+        
+        action = "enabled" if enable else "disabled"
+        return {
+            "success": True,
+            "message": f"Research {action} for topic: {topic_name}",
+            "topic_name": topic_name,
+            "is_active_research": enable
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating research status for topic '{topic_name}', user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating research status: {str(e)}")
 
 
 if __name__ == "__main__":
