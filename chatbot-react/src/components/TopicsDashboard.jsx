@@ -4,7 +4,9 @@ import {
   getTopicStatistics, 
   deleteSessionTopics, 
   deleteTopicById,
-  cleanupTopics 
+  cleanupTopics,
+  enableTopicResearch,
+  disableTopicResearch
 } from '../services/api';
 import TopicCard from './TopicCard';
 import TopicsHeader from './TopicsHeader';
@@ -213,6 +215,64 @@ const TopicsDashboard = () => {
     }
   };
 
+  // Handle enabling research for a topic
+  const handleEnableResearch = async (topic) => {
+    try {
+      // Find the index of this topic within its session
+      const sessionTopics = topics.filter(t => t.session_id === topic.session_id);
+      const topicIndex = sessionTopics.findIndex(t => t.topic_id === topic.topic_id);
+      
+      if (topicIndex === -1) {
+        throw new Error('Topic not found in session');
+      }
+      
+      await enableTopicResearch(topic.session_id, topicIndex);
+      
+      // Optimistically update the UI
+      setTopics(prevTopics => 
+        prevTopics.map(t => 
+          t.topic_id === topic.topic_id
+            ? { ...t, is_active_research: true }
+            : t
+        )
+      );
+    } catch (error) {
+      console.error('Error enabling research:', error);
+      setError('Failed to enable research. Please try again.');
+      // Refresh topics to get correct state
+      loadData();
+    }
+  };
+
+  // Handle disabling research for a topic
+  const handleDisableResearch = async (topic) => {
+    try {
+      // Find the index of this topic within its session
+      const sessionTopics = topics.filter(t => t.session_id === topic.session_id);
+      const topicIndex = sessionTopics.findIndex(t => t.topic_id === topic.topic_id);
+      
+      if (topicIndex === -1) {
+        throw new Error('Topic not found in session');
+      }
+      
+      await disableTopicResearch(topic.session_id, topicIndex);
+      
+      // Optimistically update the UI
+      setTopics(prevTopics => 
+        prevTopics.map(t => 
+          t.topic_id === topic.topic_id
+            ? { ...t, is_active_research: false }
+            : t
+        )
+      );
+    } catch (error) {
+      console.error('Error disabling research:', error);
+      setError('Failed to disable research. Please try again.');
+      // Refresh topics to get correct state
+      loadData();
+    }
+  };
+
   if (loading && topics.length === 0) {
     return (
       <div className="topics-dashboard">
@@ -266,9 +326,12 @@ const TopicsDashboard = () => {
               <TopicCard
                 key={`${topic.session_id}-${index}`}
                 topic={topic}
+                index={index}
                 isSelected={selectedTopics.has(`${topic.session_id}-${index}`)}
                 onSelect={(selected) => handleTopicSelect(topic.session_id, index, selected)}
                 onDelete={() => handleDeleteTopic(topic.topic_id, topic.name)}
+                onEnableResearch={() => handleEnableResearch(topic)}
+                onDisableResearch={() => handleDisableResearch(topic)}
               />
             ))}
           </div>

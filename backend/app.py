@@ -429,7 +429,8 @@ async def get_all_topic_suggestions(
                     "description": topic.get("description", ""),
                     "confidence_score": topic.get("confidence_score", 0.0),
                     "suggested_at": topic.get("suggested_at", 0),
-                    "conversation_context": topic.get("conversation_context", "")
+                    "conversation_context": topic.get("conversation_context", ""),
+                    "is_active_research": topic.get("is_active_research", False)
                 })
         
         # Sort by suggestion time (most recent first)

@@ -1,8 +1,17 @@
 import React, { useState } from 'react';
 import '../styles/TopicCard.css';
 
-const TopicCard = ({ topic, isSelected, onSelect, onDelete }) => {
+const TopicCard = ({ 
+  topic, 
+  index, 
+  isSelected, 
+  onSelect, 
+  onDelete, 
+  onEnableResearch, 
+  onDisableResearch 
+}) => {
   const [showFullDescription, setShowFullDescription] = useState(false);
+  const [actionLoading, setActionLoading] = useState(null);
   
   const formatDate = (timestamp) => {
     if (!timestamp) return 'Unknown date';
@@ -36,6 +45,26 @@ const TopicCard = ({ topic, isSelected, onSelect, onDelete }) => {
     return text.substring(0, maxLength) + '...';
   };
 
+  const handleEnableResearch = async (e) => {
+    e.stopPropagation();
+    setActionLoading('enable');
+    try {
+      await onEnableResearch();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
+  const handleDisableResearch = async (e) => {
+    e.stopPropagation();
+    setActionLoading('disable');
+    try {
+      await onDisableResearch();
+    } finally {
+      setActionLoading(null);
+    }
+  };
+
   const handleCardClick = (e) => {
     // Don't expand if clicking on interactive elements
     if (e.target.closest('.topic-actions') || 
@@ -48,7 +77,7 @@ const TopicCard = ({ topic, isSelected, onSelect, onDelete }) => {
 
   return (
     <div 
-      className={`topic-card ${isSelected ? 'selected' : ''} ${getConfidenceColor(topic.confidence_score)}`}
+      className={`topic-card ${isSelected ? 'selected' : ''} ${getConfidenceColor(topic.confidence_score)} ${topic.is_active_research ? 'active-research' : ''}`}
       onClick={handleCardClick}
     >
       {/* Selection Checkbox */}
@@ -65,6 +94,12 @@ const TopicCard = ({ topic, isSelected, onSelect, onDelete }) => {
       <div className="topic-header">
         <h3 className="topic-name" title={topic.name}>
           {topic.name}
+          {topic.is_active_research && (
+            <span className="research-status-badge">
+              <span className="badge-icon">🔬</span>
+              <span className="badge-text">RESEARCHING</span>
+            </span>
+          )}
         </h3>
         <div className="topic-meta">
           <div 
@@ -127,6 +162,45 @@ const TopicCard = ({ topic, isSelected, onSelect, onDelete }) => {
 
         {/* Actions */}
         <div className="topic-actions">
+          {/* Research Actions */}
+          {onEnableResearch && onDisableResearch && (
+            <>
+              {!topic.is_active_research ? (
+                <button
+                  className="research-btn"
+                  onClick={handleEnableResearch}
+                  disabled={actionLoading === 'enable'}
+                  title="Start researching this topic"
+                >
+                  {actionLoading === 'enable' ? (
+                    <span className="btn-loading">⏳</span>
+                  ) : (
+                    <>
+                      <span className="btn-icon">🔬</span>
+                      <span className="btn-text">Research</span>
+                    </>
+                  )}
+                </button>
+              ) : (
+                <button
+                  className="stop-research-btn"
+                  onClick={handleDisableResearch}
+                  disabled={actionLoading === 'disable'}
+                  title="Stop researching this topic"
+                >
+                  {actionLoading === 'disable' ? (
+                    <span className="btn-loading">⏳</span>
+                  ) : (
+                    <>
+                      <span className="btn-icon">⏹️</span>
+                      <span className="btn-text">Stop</span>
+                    </>
+                  )}
+                </button>
+              )}
+            </>
+          )}
+          
           <button
             className="delete-btn"
             onClick={(e) => {

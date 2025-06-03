@@ -286,8 +286,23 @@ class UserManager:
                     }
                     session_topics.append(topic_entry)
             
-                # Store topics for this session
-                topics_data["sessions"][session_id] = session_topics
+                # Get existing topics for this session
+                existing_topics = topics_data.get("sessions", {}).get(session_id, [])
+                
+                # Merge new topics with existing ones
+                # Check for duplicates based on topic name to avoid exact duplicates
+                existing_topic_names = {topic.get("topic_name", "").lower() for topic in existing_topics}
+                
+                merged_topics = existing_topics.copy()  # Start with existing topics
+                for new_topic in session_topics:
+                    new_topic_name = new_topic.get("topic_name", "").lower()
+                    # Only add if we don't already have a topic with the same name
+                    if new_topic_name not in existing_topic_names:
+                        merged_topics.append(new_topic)
+                        existing_topic_names.add(new_topic_name)  # Track it to avoid duplicates within new topics too
+                
+                # Store merged topics for this session
+                topics_data["sessions"][session_id] = merged_topics
                 
                 # Update metadata
                 topics_data["metadata"]["total_topics"] = sum(

@@ -24,6 +24,35 @@
   font-weight: 600;
 }
 
+.session-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 0.25rem;
+  font-size: 0.875rem;
+  color: #666;
+}
+
+.user-name {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  font-weight: 500;
+  color: #007bff;
+}
+
+.session-indicator {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #f8f9ff;
+  padding: 0.25rem 0.5rem;
+  border-radius: 4px;
+  border: 1px solid #e7f3ff;
+  font-family: monospace;
+  font-size: 0.8rem;
+}
+
 .nav-links {
   display: flex;
   gap: 2rem;
@@ -66,6 +95,16 @@
   
   .nav-brand h2 {
     font-size: 1.25rem;
+  }
+
+  .session-info {
+    flex-direction: column;
+    gap: 0.5rem;
+    text-align: center;
+  }
+
+  .session-indicator {
+    font-size: 0.75rem;
   }
   
   .nav-links {

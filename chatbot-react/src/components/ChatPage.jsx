@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { useSession } from '../context/SessionContext';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
 import ModelSelector from './ModelSelector';
@@ -12,94 +13,36 @@ import { generateDisplayName } from '../utils/userUtils';
 import '../App.css';
 
 const ChatPage = () => {
-  const [messages, setMessages] = useState([
-    { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
-  ]);
+  // Use SessionContext for shared state
+  const {
+    userId,
+    sessionId,
+    messages,
+    userDisplayName,
+    personality,
+    conversationTopics,
+    updateUserId,
+    updateSessionId,
+    updateMessages,
+    addMessage,
+    updatePersonality,
+    updateUserDisplayName,
+    updateConversationTopics,
+  } = useSession();
+
+  // Local state for UI components
   const [models, setModels] = useState({});
   const [selectedModel, setSelectedModel] = useState('gpt-4o-mini');
   const [isTyping, setIsTyping] = useState(false);
-  const [userId, setUserId] = useState(localStorage.getItem('user_id') || '');
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const [personality, setPersonality] = useState(null);
   const [isLoading, setIsLoading] = useState(false);
-  const [userDisplayName, setUserDisplayName] = useState('');
   const [profileUpdateTime, setProfileUpdateTime] = useState(0);
-  const [sessionId, setSessionId] = useState(null); // Track current conversation session
   
   // Topics sidebar state
   const [isTopicsSidebarCollapsed, setIsTopicsSidebarCollapsed] = useState(false);
-  const [conversationTopics, setConversationTopics] = useState([]);
   
   const messagesEndRef = useRef(null);
-
-  // Load stored conversation when user changes
-  useEffect(() => {
-    if (!userId) {
-      setMessages([
-        { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
-      ]);
-      setSessionId(null);
-      return;
-    }
-
-    const storedMessages = localStorage.getItem(`chat_messages_${userId}`);
-    if (storedMessages) {
-      try {
-        setMessages(JSON.parse(storedMessages));
-      } catch {
-        // ignore parse errors
-      }
-    }
-
-    const storedSession = localStorage.getItem(`session_id_${userId}`);
-    if (storedSession) {
-      setSessionId(storedSession);
-    }
-  }, [userId]);
-
-  // Persist conversation to localStorage
-  useEffect(() => {
-    if (userId) {
-      localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(messages));
-    }
-  }, [messages, userId]);
-
-  // Persist session ID
-  useEffect(() => {
-    if (userId && sessionId) {
-      localStorage.setItem(`session_id_${userId}`, sessionId);
-    }
-  }, [sessionId, userId]);
-
-  // Validate stored user ID on app startup
-  useEffect(() => {
-    const validateStoredUserId = async () => {
-      const storedUserId = localStorage.getItem('user_id');
-      if (!storedUserId) return;
-      
-      try {
-        // Try to fetch the user data to see if it exists
-        const response = await fetch('http://localhost:8000/user', {
-          headers: {
-            'user-id': storedUserId
-          }
-        });
-        
-        if (response.status === 404) {
-          console.log('Stored user ID is invalid, clearing localStorage');
-          localStorage.removeItem('user_id');
-          setUserId('');
-          setUserDisplayName('');
-        }
-      } catch (error) {
-        console.error('Error validating stored user ID:', error);
-        // If there's a network error, don't clear the user ID
-      }
-    };
-    
-    validateStoredUserId();
-  }, []); // Run only once on mount
 
   // Load available models on component mount
   useEffect(() => {
@@ -122,8 +65,8 @@ const ChatPage = () => {
       
       if (!userId) {
         console.log('No userId, resetting personality and display name');
-        setPersonality(null);
-        setUserDisplayName('');
+        updatePersonality(null);
+        updateUserDisplayName('');
         return;
       }
       
@@ -133,7 +76,7 @@ const ChatPage = () => {
         console.log('User data loaded:', userData);
         
         // Set personality with fallback to default values
-        setPersonality(userData?.personality || {
+        updatePersonality(userData?.personality || {
           style: 'helpful',
           tone: 'friendly'
         });
@@ -141,11 +84,11 @@ const ChatPage = () => {
         // Set display name with fallback to user ID
         if (userData?.display_name) {
           console.log('Setting display name:', userData.display_name);
-          setUserDisplayName(userData.display_name);
+          updateUserDisplayName(userData.display_name);
         } else {
           const fallbackDisplayName = generateDisplayName(userId);
           console.log('No display name found, using generated name:', fallbackDisplayName);
-          setUserDisplayName(fallbackDisplayName);
+          updateUserDisplayName(fallbackDisplayName);
         }
       } catch (error) {
         console.error('Error loading user data:', error);
@@ -154,27 +97,27 @@ const ChatPage = () => {
         if (error.response && error.response.status === 404) {
           console.log('User no longer exists, clearing localStorage and resetting state');
           localStorage.removeItem('user_id');
-          setUserId('');
-          setUserDisplayName('');
-          setPersonality(null);
+          updateUserId('');
+          updateUserDisplayName('');
+          updatePersonality(null);
           return;
         }
         
         // For other errors, set default values
-        setPersonality({
+        updatePersonality({
           style: 'helpful',
           tone: 'friendly'
         });
         
         const fallbackDisplayName = generateDisplayName(userId);
-        setUserDisplayName(fallbackDisplayName);
+        updateUserDisplayName(fallbackDisplayName);
       } finally {
         setIsLoading(false);
       }
     };
     
     loadUserData();
-  }, [userId]);
+  }, [userId, updateUserId, updateUserDisplayName, updatePersonality]);
 
   // Generate a system message based on personality
   const getSystemMessage = useCallback(() => {
@@ -202,7 +145,7 @@ const ChatPage = () => {
     
     // Add user message to chat
     const updatedMessages = [...messages, { role: 'user', content: message }];
-    setMessages(updatedMessages);
+    updateMessages(updatedMessages);
     
     // Show typing indicator
     setIsTyping(true);
@@ -240,7 +183,7 @@ const ChatPage = () => {
       
       // Store session ID for conversation continuity
       if (response.session_id) {
-        setSessionId(response.session_id);
+        updateSessionId(response.session_id);
       }
       
       // Add assistant response to messages
@@ -250,7 +193,7 @@ const ChatPage = () => {
         routingInfo: response.routing_info
       };
       
-      setMessages(prev => [...prev, assistantMessage]);
+      updateMessages(prev => [...prev, assistantMessage]);
       
     } catch (error) {
       console.error('Error sending message:', error);
@@ -260,7 +203,7 @@ const ChatPage = () => {
         role: 'assistant', 
         content: 'Sorry, I encountered an error while processing your message. Please try again.' 
       };
-      setMessages(prev => [...prev, errorMessage]);
+      updateMessages(prev => [...prev, errorMessage]);
     } finally {
       setIsTyping(false);
       setIsLoading(false);
@@ -271,28 +214,14 @@ const ChatPage = () => {
     console.log('User selected:', selectedUserId);
 
     if (selectedUserId) {
-      setUserId(selectedUserId);
-      localStorage.setItem('user_id', selectedUserId);
+      updateUserId(selectedUserId);
     } else {
-      if (userId) {
-        localStorage.removeItem(`chat_messages_${userId}`);
-        localStorage.removeItem(`session_id_${userId}`);
-      }
-      setUserId('');
-      localStorage.removeItem('user_id');
-      setUserDisplayName('');
-      setPersonality(null);
+      updateUserId('');
     }
-
-    // Reset conversation when switching users
-    setMessages([
-      { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
-    ]);
-    setSessionId(null);
     
     // Hide the user selector after selection
     setShowUserSelector(false);
-  }, []);
+  }, [updateUserId]);
 
   const handleToggleUserSelector = useCallback(() => {
     setShowUserSelector(prevState => {
@@ -318,7 +247,7 @@ const ChatPage = () => {
     console.log('Profile updated with new personality:', updatedPersonality);
     
     // Update personality in state
-    setPersonality(updatedPersonality);
+    updatePersonality(updatedPersonality);
     
     // Trigger UserDropdown reload
     setProfileUpdateTime(Date.now());
@@ -330,13 +259,13 @@ const ChatPage = () => {
     };
     
     // Update the first message if it's a system message
-    setMessages(prevMessages => {
+    updateMessages(prevMessages => {
       if (prevMessages.length > 0 && prevMessages[0].role === 'system') {
         return [systemMessage, ...prevMessages.slice(1)];
       }
       return [systemMessage, ...prevMessages];
     });
-  }, []);
+  }, [updatePersonality, updateMessages]);
 
   // Add a ref to track user scroll position
   const chatContainerRef = useRef(null);
@@ -429,8 +358,8 @@ const ChatPage = () => {
   }, []);
 
   const handleTopicUpdate = useCallback((topics) => {
-    setConversationTopics(topics);
-  }, []);
+    updateConversationTopics(topics);
+  }, [updateConversationTopics]);
 
   return (
     <div className="chat-container">
