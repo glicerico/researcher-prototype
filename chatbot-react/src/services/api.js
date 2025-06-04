@@ -234,34 +234,27 @@ export const deleteTopicById = async (topicId) => {
   }
 };
 
-// DEPRECATED: Index-based deletion (has sorting bug - use deleteTopicById instead)
-export const deleteIndividualTopic = async (sessionId, topicIndex) => {
-  console.warn('⚠️ deleteIndividualTopic is deprecated due to index mismatch bug. Use deleteTopicById instead.');
+// NEW: ID-based topic research functions (SAFE - no index mismatch)
+export const enableTopicResearchById = async (topicId) => {
   try {
-    const response = await api.delete(`/topics/session/${sessionId}/topic/${topicIndex}`);
+    const response = await api.put(`/topics/topic/${topicId}/research`, null, {
+      params: { enable: true }
+    });
     return response.data;
   } catch (error) {
-    console.error('Error deleting individual topic:', error);
+    console.error('Error enabling topic research by ID:', error);
     throw error;
   }
 };
 
-export const enableTopicResearch = async (sessionId, topicIndex) => {
+export const disableTopicResearchById = async (topicId) => {
   try {
-    const response = await api.post(`/topics/session/${sessionId}/topic/${topicIndex}/enable-research`);
+    const response = await api.put(`/topics/topic/${topicId}/research`, null, {
+      params: { enable: false }
+    });
     return response.data;
   } catch (error) {
-    console.error('Error enabling topic research:', error);
-    throw error;
-  }
-};
-
-export const disableTopicResearch = async (sessionId, topicIndex) => {
-  try {
-    const response = await api.delete(`/topics/session/${sessionId}/topic/${topicIndex}/disable-research`);
-    return response.data;
-  } catch (error) {
-    console.error('Error disabling topic research:', error);
+    console.error('Error disabling topic research by ID:', error);
     throw error;
   }
 };

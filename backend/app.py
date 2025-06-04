@@ -5,6 +5,7 @@ from typing import Optional, List
 import os
 import traceback
 import time
+from contextlib import asynccontextmanager
 from langchain_core.messages import HumanMessage, AIMessage, SystemMessage
 
 # Import and configure logging first, before other imports
@@ -17,9 +18,41 @@ logger = configure_logging()
 from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile, TopicSuggestion
 from storage import StorageManager, UserManager, ZepManager
 from graph_builder import create_chat_graph
+from autonomous_research_engine import initialize_autonomous_researcher
 import config
 
-app = FastAPI(title="AI Chatbot API", version="1.0.0")
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    """Manage the lifespan of the FastAPI application."""
+    # Startup
+    logger.info("🚀 Starting AI Chatbot API...")
+    
+    # Initialize and start the autonomous researcher
+    try:
+        logger.info("🔬 Initializing Autonomous Research Engine...")
+        app.state.autonomous_researcher = initialize_autonomous_researcher(user_manager)
+        await app.state.autonomous_researcher.start()
+        logger.info("🔬 Autonomous Research Engine started successfully")
+    except Exception as e:
+        logger.error(f"🔬 Failed to start Autonomous Research Engine: {str(e)}", exc_info=True)
+        # Don't fail the app startup if research engine fails
+        app.state.autonomous_researcher = None
+    
+    yield
+    
+    # Shutdown
+    logger.info("🛑 Shutting down AI Chatbot API...")
+    
+    # Stop the autonomous researcher
+    if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
+        try:
+            logger.info("🔬 Stopping Autonomous Research Engine...")
+            await app.state.autonomous_researcher.stop()
+            logger.info("🔬 Autonomous Research Engine stopped successfully")
+        except Exception as e:
+            logger.error(f"🔬 Error stopping Autonomous Research Engine: {str(e)}")
+
+app = FastAPI(title="AI Chatbot API", version="1.0.0", lifespan=lifespan)
 
 # Add CORS middleware
 app.add_middleware(
@@ -346,7 +379,31 @@ async def create_user(display_name: Optional[str] = None):
 @app.get("/health")
 async def health_check():
     """Health check endpoint."""
-    return {"status": "healthy", "message": "AI Chatbot API is running"}
+    health_status = {
+        "status": "healthy", 
+        "message": "AI Chatbot API is running",
+        "autonomous_researcher": {
+            "available": False,
+            "enabled": False,
+            "running": False
+        }
+    }
+    
+    # Check autonomous researcher status
+    if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
+        try:
+            researcher_status = app.state.autonomous_researcher.get_status()
+            health_status["autonomous_researcher"] = {
+                "available": True,
+                "enabled": researcher_status.get("enabled", False),
+                "running": researcher_status.get("running", False),
+                "interval_hours": researcher_status.get("research_interval_hours", 0),
+                "engine_type": researcher_status.get("engine_type", "unknown")
+            }
+        except Exception as e:
+            health_status["autonomous_researcher"]["error"] = str(e)
+    
+    return health_status
 
 
 @app.get("/zep/status")
@@ -720,162 +777,6 @@ async def delete_topic_by_id(
         raise HTTPException(status_code=500, detail=f"Error deleting topic: {str(e)}")
 
 
-@app.delete("/topics/session/{session_id}/topic/{topic_index}")
-async def delete_individual_topic(
-    session_id: str,
-    topic_index: int,
-    user_id: str = Depends(get_or_create_user_id)
-):
-    """Delete an individual topic from a session using safe deletion method."""
-    try:
-        # Use the new safe deletion method
-        result = user_manager.delete_topic_by_index_safe(user_id, session_id, topic_index)
-        
-        if result["success"]:
-            deleted_topic = result["deleted_topic"]
-            return {
-                "success": True,
-                "message": f"Deleted topic: {deleted_topic['topic_name']}",
-                "deleted_topic": {
-                    "name": deleted_topic["topic_name"],
-                    "description": deleted_topic["description"],
-                    "topic_id": deleted_topic["topic_id"]
-                }
-            }
-        else:
-            # Map specific errors to appropriate HTTP status codes
-            if "out of bounds" in result["error"] or "not found" in result["error"]:
-                raise HTTPException(status_code=404, detail=result["error"])
-            else:
-                raise HTTPException(status_code=500, detail=result["error"])
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error deleting topic {topic_index} from session {session_id}, user {user_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error deleting topic: {str(e)}")
-
-
-@app.post("/topics/session/{session_id}/topic/{topic_index}/enable-research")
-async def enable_topic_research(
-    session_id: str,
-    topic_index: int,
-    user_id: str = Depends(get_or_create_user_id)
-):
-    """Mark a topic as active research."""
-    try:
-        # Ensure migration from profile.json if needed
-        user_manager.migrate_topics_from_profile(user_id)
-        
-        # Load topics data
-        topics_data = user_manager.get_user_topics(user_id)
-        
-        # Get session topics
-        session_topics = topics_data.get("sessions", {}).get(session_id, [])
-        
-        # Check if topic index is valid
-        if topic_index < 0 or topic_index >= len(session_topics):
-            raise HTTPException(status_code=404, detail="Topic not found")
-        
-        # Mark topic as active research
-        session_topics[topic_index]["is_active_research"] = True
-        session_topics[topic_index]["research_enabled_at"] = time.time()
-        
-        # Update the topics data
-        topics_data["sessions"][session_id] = session_topics
-        
-        # Update metadata
-        topics_data["metadata"]["active_research_topics"] = sum(
-            1 for session_topics in topics_data["sessions"].values()
-            for topic in session_topics
-            if topic.get("is_active_research", False)
-        )
-        
-        # Save updated topics
-        success = user_manager.save_user_topics(user_id, topics_data)
-        
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to enable research for topic")
-        
-        topic_name = session_topics[topic_index].get("topic_name", "Unknown")
-        
-        return {
-            "success": True,
-            "message": f"Enabled research for topic: {topic_name}",
-            "topic": {
-                "name": topic_name,
-                "description": session_topics[topic_index].get("description", ""),
-                "is_active_research": True
-            }
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error enabling research for topic {topic_index} in session {session_id}, user {user_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error enabling research: {str(e)}")
-
-
-@app.delete("/topics/session/{session_id}/topic/{topic_index}/disable-research")
-async def disable_topic_research(
-    session_id: str,
-    topic_index: int,
-    user_id: str = Depends(get_or_create_user_id)
-):
-    """Remove a topic from active research."""
-    try:
-        # Ensure migration from profile.json if needed
-        user_manager.migrate_topics_from_profile(user_id)
-        
-        # Load topics data
-        topics_data = user_manager.get_user_topics(user_id)
-        
-        # Get session topics
-        session_topics = topics_data.get("sessions", {}).get(session_id, [])
-        
-        # Check if topic index is valid
-        if topic_index < 0 or topic_index >= len(session_topics):
-            raise HTTPException(status_code=404, detail="Topic not found")
-        
-        # Remove from active research
-        session_topics[topic_index]["is_active_research"] = False
-        session_topics[topic_index]["research_disabled_at"] = time.time()
-        
-        # Update the topics data
-        topics_data["sessions"][session_id] = session_topics
-        
-        # Update metadata
-        topics_data["metadata"]["active_research_topics"] = sum(
-            1 for session_topics in topics_data["sessions"].values()
-            for topic in session_topics
-            if topic.get("is_active_research", False)
-        )
-        
-        # Save updated topics
-        success = user_manager.save_user_topics(user_id, topics_data)
-        
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to disable research for topic")
-        
-        topic_name = session_topics[topic_index].get("topic_name", "Unknown")
-        
-        return {
-            "success": True,
-            "message": f"Disabled research for topic: {topic_name}",
-            "topic": {
-                "name": topic_name,
-                "description": session_topics[topic_index].get("description", ""),
-                "is_active_research": False
-            }
-        }
-        
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error disabling research for topic {topic_index} in session {session_id}, user {user_id}: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error disabling research: {str(e)}")
-
-
 # =================== RESEARCH FINDINGS API ENDPOINTS ===================
 
 @app.get("/research/findings/{user_id}")
@@ -949,6 +850,53 @@ async def get_research_engine_status():
         raise HTTPException(status_code=500, detail=f"Error getting research status: {str(e)}")
 
 
+@app.get("/research/debug/active-topics")
+async def get_debug_active_topics():
+    """Debug endpoint to show all active research topics across all users."""
+    try:
+        all_users = user_manager.list_users()
+        debug_info = {
+            "total_users": len(all_users),
+            "users_with_active_topics": 0,
+            "total_active_topics": 0,
+            "user_details": []
+        }
+        
+        for user_id in all_users:
+            try:
+                active_topics = user_manager.get_active_research_topics(user_id)
+                if active_topics:
+                    debug_info["users_with_active_topics"] += 1
+                    debug_info["total_active_topics"] += len(active_topics)
+                    
+                    user_detail = {
+                        "user_id": user_id,
+                        "active_topics_count": len(active_topics),
+                        "topics": []
+                    }
+                    
+                    for topic in active_topics:
+                        user_detail["topics"].append({
+                            "topic_name": topic.get("topic_name", "Unknown"),
+                            "description": topic.get("description", "")[:100] + "..." if len(topic.get("description", "")) > 100 else topic.get("description", ""),
+                            "last_researched": topic.get("last_researched"),
+                            "research_count": topic.get("research_count", 0),
+                            "confidence_score": topic.get("confidence_score", 0.0)
+                        })
+                    
+                    debug_info["user_details"].append(user_detail)
+                    
+            except Exception as e:
+                logger.error(f"Error getting active topics for user {user_id}: {str(e)}")
+                continue
+        
+        return debug_info
+        
+    except Exception as e:
+        logger.error(f"Error getting debug active topics: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting debug info: {str(e)}")
+
+
 @app.post("/research/trigger/{user_id}")
 async def trigger_research_for_user(user_id: str):
     """Manually trigger research for a specific user (for testing/debugging)."""
@@ -997,60 +945,42 @@ async def get_active_research_topics(user_id: str):
         raise HTTPException(status_code=500, detail=f"Error getting active research topics: {str(e)}")
 
 
-@app.put("/topics/user/{user_id}/topic/{topic_name}/research")
-async def enable_research_by_topic_name(
-    user_id: str,
-    topic_name: str,
-    enable: bool = Query(True, description="True to enable, False to disable")
+@app.put("/topics/topic/{topic_id}/research")
+async def enable_disable_research_by_topic_id(
+    topic_id: str,
+    enable: bool = Query(True, description="True to enable, False to disable"),
+    user_id: str = Depends(get_or_create_user_id)
 ):
-    """Enable or disable research for a topic by name (alternative to index-based API)."""
+    """Enable or disable research for a topic by its unique ID (safer than index-based operations)."""
     try:
-        # Load topics data
-        topics_data = user_manager.get_user_topics(user_id)
+        # Use the safe ID-based method to update research status
+        result = user_manager.update_topic_research_status_by_id(user_id, topic_id, enable)
         
-        # Find the topic by name
-        found = False
-        for session_id, session_topics in topics_data.get("sessions", {}).items():
-            for topic in session_topics:
-                if topic.get("topic_name") == topic_name:
-                    topic["is_active_research"] = enable
-                    if enable:
-                        topic["research_enabled_at"] = time.time()
-                    else:
-                        topic["research_disabled_at"] = time.time()
-                    found = True
-                    break
-            if found:
-                break
-        
-        if not found:
-            raise HTTPException(status_code=404, detail=f"Topic '{topic_name}' not found")
-        
-        # Update metadata
-        topics_data["metadata"]["active_research_topics"] = sum(
-            1 for session_topics in topics_data["sessions"].values()
-            for topic in session_topics
-            if topic.get("is_active_research", False)
-        )
-        
-        # Save updated topics
-        success = user_manager.save_user_topics(user_id, topics_data)
-        
-        if not success:
-            raise HTTPException(status_code=500, detail="Failed to update topic research status")
-        
-        action = "enabled" if enable else "disabled"
-        return {
-            "success": True,
-            "message": f"Research {action} for topic: {topic_name}",
-            "topic_name": topic_name,
-            "is_active_research": enable
-        }
+        if result["success"]:
+            updated_topic = result["updated_topic"]
+            action = "enabled" if enable else "disabled"
+            return {
+                "success": True,
+                "message": f"Research {action} for topic: {updated_topic['topic_name']}",
+                "topic": {
+                    "topic_id": updated_topic["topic_id"],
+                    "name": updated_topic["topic_name"],
+                    "description": updated_topic["description"],
+                    "session_id": updated_topic["session_id"],
+                    "is_active_research": enable
+                }
+            }
+        else:
+            # Map specific errors to appropriate HTTP status codes
+            if "not found" in result["error"]:
+                raise HTTPException(status_code=404, detail=result["error"])
+            else:
+                raise HTTPException(status_code=500, detail=result["error"])
         
     except HTTPException:
         raise
     except Exception as e:
-        logger.error(f"Error updating research status for topic '{topic_name}', user {user_id}: {str(e)}")
+        logger.error(f"Error updating research status for topic ID {topic_id}, user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error updating research status: {str(e)}")
 
 

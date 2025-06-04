@@ -463,6 +463,93 @@ class UserManager:
         logger.warning(f"Topic '{topic_name}' not found for user {user_id}")
         return False
     
+    def update_topic_research_status_by_id(self, user_id: str, topic_id: str, enable: bool) -> Dict[str, Any]:
+        """
+        Safely update research status for a topic by its unique ID instead of index.
+        
+        Args:
+            user_id: The ID of the user
+            topic_id: The unique topic ID
+            enable: True to enable research, False to disable
+            
+        Returns:
+            Dictionary with success status and updated topic info
+        """
+        with self._get_user_lock(user_id):
+            try:
+                # Ensure migration from profile.json if needed
+                self.migrate_topics_from_profile(user_id)
+                
+                # Load topics data
+                topics_data = self.get_user_topics(user_id)
+                
+                # Find the topic by ID
+                updated_topic = None
+                session_id = None
+                
+                for sid, session_topics in topics_data.get("sessions", {}).items():
+                    for topic in session_topics:
+                        if topic.get("topic_id") == topic_id:
+                            # Update research status
+                            topic["is_active_research"] = enable
+                            current_time = time.time()
+                            
+                            if enable:
+                                topic["research_enabled_at"] = current_time
+                                if "research_disabled_at" in topic:
+                                    del topic["research_disabled_at"]
+                            else:
+                                topic["research_disabled_at"] = current_time
+                                if "research_enabled_at" in topic:
+                                    del topic["research_enabled_at"]
+                            
+                            updated_topic = topic.copy()
+                            updated_topic["session_id"] = sid
+                            session_id = sid
+                            break
+                    
+                    if updated_topic:
+                        break
+                
+                if not updated_topic:
+                    return {
+                        "success": False,
+                        "error": f"Topic with ID {topic_id} not found",
+                        "updated_topic": None
+                    }
+                
+                # Update metadata
+                topics_data["metadata"]["active_research_topics"] = sum(
+                    1 for session_topics in topics_data["sessions"].values()
+                    for topic in session_topics
+                    if topic.get("is_active_research", False)
+                )
+                
+                # Save updated topics
+                success = self.save_user_topics(user_id, topics_data)
+                
+                if success:
+                    action = "enabled" if enable else "disabled"
+                    logger.info(f"Research {action} for topic '{updated_topic['topic_name']}' (ID: {topic_id}) for user {user_id}")
+                    return {
+                        "success": True,
+                        "updated_topic": updated_topic
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": "Failed to save after updating research status",
+                        "updated_topic": None
+                    }
+                
+            except Exception as e:
+                logger.error(f"Error updating research status for topic ID {topic_id}, user {user_id}: {str(e)}")
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "updated_topic": None
+                }
+    
     # =================== RESEARCH FINDINGS METHODS ===================
     
     def get_research_findings(self, user_id: str, topic_name: Optional[str] = None) -> Dict[str, List[Dict[str, Any]]]:
@@ -790,61 +877,6 @@ class UserManager:
                 
             except Exception as e:
                 logger.error(f"Error deleting topic by ID {topic_id} for user {user_id}: {str(e)}")
-                return {
-                    "success": False,
-                    "error": str(e),
-                    "deleted_topic": None
-                }
-    
-    def delete_topic_by_index_safe(self, user_id: str, session_id: str, topic_index: int) -> Dict[str, Any]:
-        """
-        Safely delete a topic by session and index with proper validation.
-        This is a wrapper around delete_topic_by_id for API compatibility.
-        
-        Args:
-            user_id: The ID of the user
-            session_id: The session ID
-            topic_index: The topic index
-            
-        Returns:
-            Dictionary with success status and deleted topic info
-        """
-        with self._get_user_lock(user_id):
-            try:
-                # Ensure migration from profile.json if needed
-                self.migrate_topics_from_profile(user_id)
-                
-                # Load topics data
-                topics_data = self.get_user_topics(user_id)
-                
-                # Get session topics
-                session_topics = topics_data.get("sessions", {}).get(session_id, [])
-                
-                # Validate index
-                if topic_index < 0 or topic_index >= len(session_topics):
-                    return {
-                        "success": False,
-                        "error": f"Topic index {topic_index} is out of bounds (session has {len(session_topics)} topics)",
-                        "deleted_topic": None
-                    }
-                
-                # Get the topic ID and use the safe ID-based deletion
-                topic_to_delete = session_topics[topic_index]
-                topic_id = topic_to_delete.get("topic_id")
-                
-                if not topic_id:
-                    # Fallback for topics without IDs (old data)
-                    # Add an ID and proceed with index-based deletion
-                    topic_to_delete["topic_id"] = str(uuid.uuid4())
-                    topics_data["sessions"][session_id] = session_topics
-                    self.save_user_topics(user_id, topics_data)
-                    topic_id = topic_to_delete["topic_id"]
-                
-                # Use ID-based deletion for safety
-                return self.delete_topic_by_id(user_id, topic_id)
-                
-            except Exception as e:
-                logger.error(f"Error in safe index deletion for user {user_id}, session {session_id}, index {topic_index}: {str(e)}")
                 return {
                     "success": False,
                     "error": str(e),

@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getTopSessionTopics, deleteTopicById, enableTopicResearch, disableTopicResearch } from '../services/api';
+import { getTopSessionTopics, deleteTopicById, enableTopicResearchById, disableTopicResearchById } from '../services/api';
 import TopicSidebarItem from './TopicSidebarItem';
 import '../styles/ConversationTopics.css';
 
@@ -53,16 +53,17 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
   }, [sessionId, fetchTopics]);
 
   // Handle enabling research for a topic
-  const handleEnableResearch = async (topicIndex) => {
+  const handleEnableResearch = async (topic) => {
     try {
-      await enableTopicResearch(sessionId, topicIndex);
+      // Use the new safe ID-based API instead of index-based
+      await enableTopicResearchById(topic.topic_id);
       
       // Optimistically update the UI
       setTopics(prevTopics => 
-        prevTopics.map((topic, index) => 
-          index === topicIndex 
-            ? { ...topic, is_active_research: true }
-            : topic
+        prevTopics.map(t => 
+          t.topic_id === topic.topic_id
+            ? { ...t, is_active_research: true }
+            : t
         )
       );
     } catch (error) {
@@ -73,16 +74,17 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
   };
 
   // Handle disabling research for a topic
-  const handleDisableResearch = async (topicIndex) => {
+  const handleDisableResearch = async (topic) => {
     try {
-      await disableTopicResearch(sessionId, topicIndex);
+      // Use the new safe ID-based API instead of index-based
+      await disableTopicResearchById(topic.topic_id);
       
       // Optimistically update the UI
       setTopics(prevTopics => 
-        prevTopics.map((topic, index) => 
-          index === topicIndex 
-            ? { ...topic, is_active_research: false }
-            : topic
+        prevTopics.map(t => 
+          t.topic_id === topic.topic_id
+            ? { ...t, is_active_research: false }
+            : t
         )
       );
     } catch (error) {
@@ -182,8 +184,8 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
                 key={`${topic.session_id}-${index}`}
                 topic={topic}
                 index={index}
-                onEnableResearch={() => handleEnableResearch(index)}
-                onDisableResearch={() => handleDisableResearch(index)}
+                onEnableResearch={() => handleEnableResearch(topic)}
+                onDisableResearch={() => handleDisableResearch(topic)}
                 onDelete={() => handleDeleteTopic(topic.topic_id)}
               />
             ))}

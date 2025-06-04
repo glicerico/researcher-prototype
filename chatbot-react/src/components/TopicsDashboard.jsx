@@ -5,8 +5,8 @@ import {
   deleteSessionTopics, 
   deleteTopicById,
   cleanupTopics,
-  enableTopicResearch,
-  disableTopicResearch
+  enableTopicResearchById,
+  disableTopicResearchById
 } from '../services/api';
 import TopicCard from './TopicCard';
 import TopicsHeader from './TopicsHeader';
@@ -218,15 +218,8 @@ const TopicsDashboard = () => {
   // Handle enabling research for a topic
   const handleEnableResearch = async (topic) => {
     try {
-      // Find the index of this topic within its session
-      const sessionTopics = topics.filter(t => t.session_id === topic.session_id);
-      const topicIndex = sessionTopics.findIndex(t => t.topic_id === topic.topic_id);
-      
-      if (topicIndex === -1) {
-        throw new Error('Topic not found in session');
-      }
-      
-      await enableTopicResearch(topic.session_id, topicIndex);
+      // Use the new safe ID-based API instead of index-based
+      await enableTopicResearchById(topic.topic_id);
       
       // Optimistically update the UI
       setTopics(prevTopics => 
@@ -247,15 +240,8 @@ const TopicsDashboard = () => {
   // Handle disabling research for a topic
   const handleDisableResearch = async (topic) => {
     try {
-      // Find the index of this topic within its session
-      const sessionTopics = topics.filter(t => t.session_id === topic.session_id);
-      const topicIndex = sessionTopics.findIndex(t => t.topic_id === topic.topic_id);
-      
-      if (topicIndex === -1) {
-        throw new Error('Topic not found in session');
-      }
-      
-      await disableTopicResearch(topic.session_id, topicIndex);
+      // Use the new safe ID-based API instead of index-based
+      await disableTopicResearchById(topic.topic_id);
       
       // Optimistically update the UI
       setTopics(prevTopics => 
