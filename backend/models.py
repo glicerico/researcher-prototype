@@ -15,6 +15,13 @@ class Message(BaseModel):
     content: str
 
 
+class TopicSuggestion(BaseModel):
+    """A suggested research topic extracted from conversation."""
+    name: str
+    description: str
+    confidence_score: float
+
+
 class ChatRequest(BaseModel):
     """Request model for chat endpoint."""
     messages: List[Message]
@@ -34,6 +41,7 @@ class ChatResponse(BaseModel):
     routing_analysis: Optional[Dict[str, Any]] = None
     user_id: Optional[str] = None
     session_id: Optional[str] = None  # Return the session ID used
+    suggested_topics: List[TopicSuggestion] = []  # Research-worthy topics from conversation
 
 
 class UserSummary(BaseModel):

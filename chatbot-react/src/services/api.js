@@ -149,4 +149,169 @@ export const getPersonalityPresets = async () => {
   }
 };
 
+// Topic management functions
+export const getAllTopicSuggestions = async () => {
+  try {
+    const response = await api.get('/topics/suggestions');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching topic suggestions:', error);
+    throw error;
+  }
+};
+
+export const getSessionTopicSuggestions = async (sessionId) => {
+  try {
+    const response = await api.get(`/topics/suggestions/${sessionId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching session topic suggestions:', error);
+    throw error;
+  }
+};
+
+export const getTopicStatistics = async () => {
+  try {
+    const response = await api.get('/topics/stats');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching topic statistics:', error);
+    throw error;
+  }
+};
+
+export const deleteSessionTopics = async (sessionId) => {
+  try {
+    const response = await api.delete(`/topics/session/${sessionId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting session topics:', error);
+    throw error;
+  }
+};
+
+export const cleanupTopics = async () => {
+  try {
+    const response = await api.delete('/topics/cleanup');
+    return response.data;
+  } catch (error) {
+    console.error('Error cleaning up topics:', error);
+    throw error;
+  }
+};
+
+export const getTopicProcessingStatus = async (sessionId) => {
+  try {
+    const response = await api.get(`/topics/status/${sessionId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error checking topic processing status:', error);
+    throw error;
+  }
+};
+
+// Conversation topics sidebar functions
+export const getTopSessionTopics = async (sessionId, limit = 3) => {
+  try {
+    const response = await api.get(`/topics/session/${sessionId}/top`, {
+      params: { limit }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching top session topics:', error);
+    throw error;
+  }
+};
+
+// NEW: ID-based topic deletion (SAFE - no index mismatch)
+export const deleteTopicById = async (topicId) => {
+  try {
+    const response = await api.delete(`/topics/topic/${topicId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting topic by ID:', error);
+    throw error;
+  }
+};
+
+// NEW: ID-based topic research functions (SAFE - no index mismatch)
+export const enableTopicResearchById = async (topicId) => {
+  try {
+    const response = await api.put(`/topics/topic/${topicId}/research`, null, {
+      params: { enable: true }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error enabling topic research by ID:', error);
+    throw error;
+  }
+};
+
+export const disableTopicResearchById = async (topicId) => {
+  try {
+    const response = await api.put(`/topics/topic/${topicId}/research`, null, {
+      params: { enable: false }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error disabling topic research by ID:', error);
+    throw error;
+  }
+};
+
+// Research findings functions
+export const getResearchFindings = async (userId, topicName = null, unreadOnly = false) => {
+  try {
+    const params = {};
+    if (topicName) params.topic_name = topicName;
+    if (unreadOnly) params.unread_only = unreadOnly;
+
+    const response = await api.get(`/research/findings/${userId}`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching research findings:', error);
+    throw error;
+  }
+};
+
+export const markFindingAsRead = async (findingId) => {
+  try {
+    const response = await api.post(`/research/findings/${findingId}/mark_read`);
+    return response.data;
+  } catch (error) {
+    console.error('Error marking finding as read:', error);
+    throw error;
+  }
+};
+
+export const getResearchEngineStatus = async () => {
+  try {
+    const response = await api.get('/research/status');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching research engine status:', error);
+    throw error;
+  }
+};
+
+export const getActiveResearchTopics = async (userId) => {
+  try {
+    const response = await api.get(`/topics/user/${userId}/research`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching active research topics:', error);
+    throw error;
+  }
+};
+
+export const triggerManualResearch = async (userId) => {
+  try {
+    const response = await api.post(`/research/trigger/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error triggering manual research:', error);
+    throw error;
+  }
+};
+
 export default api; 

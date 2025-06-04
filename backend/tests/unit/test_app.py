@@ -83,7 +83,9 @@ def test_invalid_request(client):
 
 @patch('nodes.integrator_node.ChatOpenAI')
 @patch('nodes.response_renderer_node.ChatOpenAI')
-def test_chat_graph(mock_renderer_openai, mock_integrator_openai, chat_graph, test_chat_state):
+@pytest.mark.anyio
+@pytest.mark.parametrize("anyio_backend", ["asyncio"])
+async def test_chat_graph(mock_renderer_openai, mock_integrator_openai, chat_graph, test_chat_state):
     """Test the chat node in the graph."""
     # Mock the integrator LLM response
     mock_integrator_instance = MagicMock()
@@ -97,8 +99,8 @@ def test_chat_graph(mock_renderer_openai, mock_integrator_openai, chat_graph, te
     mock_renderer_instance.invoke.return_value.follow_up_questions = None
     mock_renderer_openai.return_value = mock_renderer_instance
     
-    # Run the graph
-    result = chat_graph.invoke(test_chat_state)
+    # Run the graph using async invoke
+    result = await chat_graph.ainvoke(test_chat_state)
     
     # Check the result
     assert "messages" in result

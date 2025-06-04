@@ -25,7 +25,7 @@ def router_node(state: ChatState) -> ChatState:
     # Get the last user message
     last_message = None
     logger.debug(f"🔀 Router: Length of messages in router: {len(state["messages"])}")
-    for msg in reversed(state["messages"]):
+    for msg in reversed(state['messages']):
         if isinstance(msg, HumanMessage):
             last_message = msg.content
             break
