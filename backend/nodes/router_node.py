@@ -13,6 +13,7 @@ from nodes.base import (
     config,
     get_current_datetime_str
 )
+from utils import get_last_user_message
 
 # Import the memory context template
 from prompts import MEMORY_CONTEXT_TEMPLATE
@@ -23,12 +24,8 @@ def router_node(state: ChatState) -> ChatState:
     logger.info("🔀 Router: Analyzing message to determine processing path")
     
     # Get the last user message
-    last_message = None
     logger.debug(f"🔀 Router: Length of messages in router: {len(state["messages"])}")
-    for msg in reversed(state['messages']):
-        if isinstance(msg, HumanMessage):
-            last_message = msg.content
-            break
+    last_message = get_last_user_message(state.get("messages", []))
             
     if not last_message:
         state["current_module"] = "chat"  # Default to chat module if no user message found

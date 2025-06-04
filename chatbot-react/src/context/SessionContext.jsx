@@ -1,6 +1,9 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import { getCurrentUser } from '../services/api';
 
+// Get API URL from environment variables with fallback for development
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+
 const SessionContext = createContext();
 
 export const useSession = () => {
@@ -70,7 +73,7 @@ export const SessionProvider = ({ children }) => {
       if (!storedUserId) return;
       
       try {
-        const response = await fetch('http://localhost:8000/user', {
+        const response = await fetch(`${API_URL}/user`, {
           headers: {
             'user-id': storedUserId
           }

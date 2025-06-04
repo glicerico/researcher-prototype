@@ -2,6 +2,33 @@
 
 This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
 
+## Configuration
+
+### Environment Variables
+
+The application uses environment variables for configuration. Create a `.env.local` file in the root directory to customize settings:
+
+```bash
+# Copy the example file and customize
+cp .env.example .env.local
+```
+
+#### Required Environment Variables
+
+- `REACT_APP_API_URL`: Backend API URL (default: `http://localhost:8000`)
+- `REACT_APP_DEBUG`: Enable debug logging (default: `true`)
+
+#### Environment Files
+
+- `.env.development`: Development-specific settings (already configured)
+- `.env.production`: Production-specific settings (update the API URL for your deployment)
+- `.env.local`: Local overrides (create this file for custom settings)
+- `.env.example`: Example configuration file
+
+### Backend Setup
+
+Make sure the backend API is running on the configured URL (default: `http://localhost:8000`) before starting the React development server.
+
 ## Available Scripts
 
 In the project directory, you can run:

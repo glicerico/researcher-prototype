@@ -10,9 +10,9 @@ from typing import Dict, Any, List, Optional
 
 # Import the centralized logging configuration
 from logging_config import get_logger
-logger = get_logger(__name__)
-
 from .storage_manager import StorageManager
+
+logger = get_logger(__name__)
 
 class UserManager:
     """
