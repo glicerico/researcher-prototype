@@ -38,12 +38,10 @@ const UserSelector = ({ onUserSelected }) => {
           const savedUserId = localStorage.getItem('user_id');
           if (savedUserId && userData.some(user => user.user_id === savedUserId)) {
             setSelectedUserId(savedUserId);
-            onUserSelected(savedUserId);
+            handleUserSelect(savedUserId);
           } else if (userData.length > 0) {
             // Select the first user if none is saved
-            setSelectedUserId(userData[0].user_id);
-            localStorage.setItem('user_id', userData[0].user_id);
-            onUserSelected(userData[0].user_id);
+            handleUserSelect(userData[0].user_id);
           }
         }
       } catch (error) {
@@ -64,7 +62,7 @@ const UserSelector = ({ onUserSelected }) => {
     return () => {
       isMounted = false;
     };
-  }, []); // Empty dependency array to ensure it runs only once
+  }, [handleUserSelect]); // Include handleUserSelect in dependency array
 
   const handleCreateUser = async () => {
     if (!newUserName.trim()) {
