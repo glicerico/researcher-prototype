@@ -4,6 +4,7 @@ import { SessionProvider } from './context/SessionContext';
 import Navigation from './components/Navigation';
 import ChatPage from './components/ChatPage';
 import TopicsDashboard from './components/TopicsDashboard';
+import ResearchResultsDashboard from './components/ResearchResultsDashboard';
 import './App.css';
 
 function App() {
@@ -16,6 +17,7 @@ function App() {
             <Routes>
               <Route path="/" element={<ChatPage />} />
               <Route path="/topics" element={<TopicsDashboard />} />
+              <Route path="/research-results" element={<ResearchResultsDashboard />} />
             </Routes>
           </main>
         </div>

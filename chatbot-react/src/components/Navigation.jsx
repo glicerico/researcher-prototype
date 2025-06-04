@@ -41,6 +41,12 @@ const Navigation = () => {
           >
             🔍 Research Topics
           </Link>
+          <Link 
+            to="/research-results" 
+            className={`nav-link ${location.pathname === '/research-results' ? 'active' : ''}`}
+          >
+            📊 Research Results
+          </Link>
         </div>
       </div>
     </nav>

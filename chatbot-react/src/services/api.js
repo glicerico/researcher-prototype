@@ -259,4 +259,59 @@ export const disableTopicResearchById = async (topicId) => {
   }
 };
 
+// Research findings functions
+export const getResearchFindings = async (userId, topicName = null, unreadOnly = false) => {
+  try {
+    const params = {};
+    if (topicName) params.topic_name = topicName;
+    if (unreadOnly) params.unread_only = unreadOnly;
+
+    const response = await api.get(`/research/findings/${userId}`, { params });
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching research findings:', error);
+    throw error;
+  }
+};
+
+export const markFindingAsRead = async (findingId) => {
+  try {
+    const response = await api.post(`/research/findings/${findingId}/mark_read`);
+    return response.data;
+  } catch (error) {
+    console.error('Error marking finding as read:', error);
+    throw error;
+  }
+};
+
+export const getResearchEngineStatus = async () => {
+  try {
+    const response = await api.get('/research/status');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching research engine status:', error);
+    throw error;
+  }
+};
+
+export const getActiveResearchTopics = async (userId) => {
+  try {
+    const response = await api.get(`/topics/user/${userId}/research`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching active research topics:', error);
+    throw error;
+  }
+};
+
+export const triggerManualResearch = async (userId) => {
+  try {
+    const response = await api.post(`/research/trigger/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error triggering manual research:', error);
+    throw error;
+  }
+};
+
 export default api; 
