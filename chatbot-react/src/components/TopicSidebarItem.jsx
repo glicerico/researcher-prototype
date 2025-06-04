@@ -39,11 +39,6 @@ const TopicSidebarItem = ({ topic, index, onEnableResearch, onDisableResearch, o
     topic.confidence_score >= 0.8 ? 'high' :
     topic.confidence_score >= 0.6 ? 'medium' : 'low';
 
-  const formatContext = (context) => {
-    if (!context) return '';
-    return context.length > 80 ? context.substring(0, 80) + '...' : context;
-  };
-
   return (
     <div className={`topic-list-item ${topic.is_active_research ? 'active-research' : ''}`}>
       <div className="topic-main-content">
