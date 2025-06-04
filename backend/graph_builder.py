@@ -11,6 +11,7 @@ from config import (
     LANGCHAIN_ENDPOINT,
     LANGCHAIN_PROJECT
 )
+from utils import visualize_langgraph
 
 # Import all node functions
 from nodes.initializer_node import initializer_node
@@ -99,7 +100,7 @@ chat_graph = create_chat_graph()
 
 def visualize_graph(output_file="graph.png"):
     """
-    Generate a PNG visualization of the LangGraph using built-in functionality.
+    Generate a PNG visualization of the main chat LangGraph.
     
     Args:
         output_file: Path where to save the PNG file.
@@ -107,78 +108,7 @@ def visualize_graph(output_file="graph.png"):
     Returns:
         bool: True if visualization was successful, False otherwise.
     """
-    try:
-        import os
-        import subprocess
-        
-        # First, check if graphviz is installed
-        try:
-            subprocess.run(["dot", "-V"], check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        except (subprocess.SubprocessError, FileNotFoundError):
-            print("Warning: Graphviz not found. Install it with: sudo apt-get install graphviz")
-            return False
-            
-        # Create a DOT file from the graph
-        dot_file = output_file.replace('.png', '.dot')
-        
-        print(f"Generating visualization of LangGraph...")
-        
-        # Try using the built-in visualization methods
-        try:
-            # Method 1: Try using draw_png if available (most direct method)
-            png_data = chat_graph.get_graph().draw_png()
-            with open(output_file, 'wb') as f:
-                f.write(png_data)
-            print(f"Visualization saved to {output_file}")
-            return True
-        except (AttributeError, ImportError) as e:
-            print(f"draw_png method not available: {str(e)}")
-            
-            # Method 2: Fall back to DOT format
-            try:
-                dot_data = chat_graph.get_graph().draw_graphviz()
-                with open(dot_file, 'w') as f:
-                    f.write(dot_data)
-                # Use graphviz to convert to PNG
-                subprocess.run(["dot", "-Tpng", dot_file, "-o", output_file], check=True)
-                print(f"Visualization saved to {output_file}")
-                # Clean up the DOT file
-                os.remove(dot_file)
-                return True
-            except (AttributeError, ImportError) as e:
-                print(f"draw_graphviz method not available: {str(e)}")
-                
-                # Method 3: If all else fails, use any available method
-                if hasattr(chat_graph, 'get_graph'):
-                    graph_obj = chat_graph.get_graph()
-                    for method_name in ['draw_png', 'draw_graphviz', 'to_dot']:
-                        if hasattr(graph_obj, method_name):
-                            try:
-                                method = getattr(graph_obj, method_name)
-                                result = method()
-                                if method_name == 'draw_png':
-                                    with open(output_file, 'wb') as f:
-                                        f.write(result)
-                                    print(f"Visualization saved to {output_file} using {method_name}")
-                                    return True
-                                elif method_name in ['draw_graphviz', 'to_dot']:
-                                    with open(dot_file, 'w') as f:
-                                        f.write(result)
-                                    subprocess.run(["dot", "-Tpng", dot_file, "-o", output_file], check=True)
-                                    print(f"Visualization saved to {output_file} using {method_name}")
-                                    os.remove(dot_file)
-                                    return True
-                            except Exception as e:
-                                print(f"Method {method_name} failed: {str(e)}")
-                                continue
-                    else:
-                        print("Could not generate visualization: No suitable method found in graph object")
-                else:
-                    print("Could not generate visualization: Graph object not accessible")
-    except Exception as e:
-        print(f"Error generating visualization: {str(e)}")
-    
-    return False
+    return visualize_langgraph(chat_graph, output_file, "Main Chat LangGraph")
 
 
 def get_langsmith_client():
