@@ -16,7 +16,7 @@ logger = configure_logging()
 # Now import other modules that might use logging
 from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile, TopicSuggestion
 from storage import StorageManager, UserManager, ZepManager
-from graph_builder import create_chat_graph
+from graph_builder import chat_graph
 from autonomous_research_engine import initialize_autonomous_researcher
 import config
 
@@ -73,8 +73,6 @@ user_manager = UserManager(storage_manager)
 # Initialize Zep manager
 zep_manager = ZepManager()
 
-# Build the chat graph
-chat_graph = create_chat_graph()
 
 async def extract_and_store_topics_async(state: dict, user_id: str, session_id: str, conversation_context: str):
     """Background function to extract and store topic suggestions."""
