@@ -1,5 +1,4 @@
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react';
-import { getCurrentUser } from '../services/api';
 
 // Get API URL from environment variables with fallback for development
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';

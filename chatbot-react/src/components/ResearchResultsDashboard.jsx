@@ -3,8 +3,7 @@ import { useSession } from '../context/SessionContext';
 import { 
   getResearchFindings,
   markFindingAsRead,
-  getResearchEngineStatus,
-  getActiveResearchTopics
+  getResearchEngineStatus
 } from '../services/api';
 import '../styles/ResearchResultsDashboard.css';
 
@@ -22,7 +21,6 @@ const ResearchResultsDashboard = () => {
     sortBy: 'date', // date, quality, topic
     sortOrder: 'desc'
   });
-  const [researchStatus, setResearchStatus] = useState({});
 
   // Load research data
   const loadResearchData = useCallback(async () => {
@@ -45,7 +43,7 @@ const ResearchResultsDashboard = () => {
       
       console.log('Making API calls for user:', userId);
 
-      const [findingsResponse, statusResponse] = await Promise.all([
+      const [findingsResponse] = await Promise.all([
         getResearchFindings(userId, null, filters.unreadOnly).catch(err => {
           console.error('getResearchFindings error:', err);
           throw err;
@@ -58,7 +56,6 @@ const ResearchResultsDashboard = () => {
 
       console.log('API responses received');
       console.log('findingsResponse:', findingsResponse);
-      console.log('statusResponse:', statusResponse);
 
       // Group findings by topic
       const groupedFindings = {};
@@ -81,7 +78,6 @@ const ResearchResultsDashboard = () => {
 
       console.log('Grouped findings:', groupedFindings);
       setResearchData(groupedFindings);
-      setResearchStatus(statusResponse);
 
     } catch (err) {
       console.error('Error loading research data:', err);
@@ -89,7 +85,7 @@ const ResearchResultsDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.user_id, filters.unreadOnly]);
+  }, [currentUser, filters.unreadOnly]);
 
   useEffect(() => {
     loadResearchData();
