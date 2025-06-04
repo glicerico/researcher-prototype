@@ -13,6 +13,7 @@ from nodes.base import (
     config,
     get_current_datetime_str
 )
+from utils import get_last_user_message
 
 # Import the memory context template
 from prompts import MEMORY_CONTEXT_TEMPLATE
@@ -24,11 +25,7 @@ def analysis_task_refiner_node(state: ChatState) -> ChatState:
     logger.debug("Analysis Task Refiner node refining task with context")
     current_time_str = get_current_datetime_str()
     raw_messages = state.get("messages", [])
-    last_user_message_content = None
-    for msg in reversed(raw_messages):
-        if isinstance(msg, HumanMessage):
-            last_user_message_content = msg.content
-            break
+    last_user_message_content = get_last_user_message(raw_messages)
     
     if not last_user_message_content:
         logger.warning("No user message found in analysis_task_refiner_node. Cannot refine.")

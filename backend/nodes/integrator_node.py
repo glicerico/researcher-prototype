@@ -12,6 +12,7 @@ from nodes.base import (
     config,
     get_current_datetime_str
 )
+from utils import get_last_user_message
 
 # Import the context templates
 from prompts import SEARCH_CONTEXT_TEMPLATE, ANALYSIS_CONTEXT_TEMPLATE, MEMORY_CONTEXT_TEMPLATE
@@ -26,11 +27,7 @@ def integrator_node(state: ChatState) -> ChatState:
     max_tokens = state.get("max_tokens", 1000)
     
     # Get last user message for logging
-    last_message = None
-    for msg in reversed(state["messages"]):
-        if isinstance(msg, HumanMessage):
-            last_message = msg.content
-            break
+    last_message = get_last_user_message(state.get("messages", []))
             
     if last_message:
         display_msg = last_message[:75] + "..." if len(last_message) > 75 else last_message

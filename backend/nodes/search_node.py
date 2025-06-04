@@ -9,6 +9,7 @@ from nodes.base import (
     config,
     get_current_datetime_str
 )
+from utils import get_last_user_message
 import requests
 
 
@@ -19,12 +20,8 @@ def search_node(state: ChatState) -> ChatState:
     
     # Use the refined query if available, otherwise get the last user message
     refined_query = state.get("workflow_context", {}).get("refined_search_query")
-    original_user_query = None
-    for msg in reversed(state["messages"]):
-        if isinstance(msg, HumanMessage):
-            original_user_query = msg.content
-            break
-    
+    original_user_query = get_last_user_message(state.get("messages", []))
+
     query_to_search = refined_query if refined_query else original_user_query
 
     if not query_to_search:
