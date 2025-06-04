@@ -16,10 +16,23 @@ import config
 class ZepManager:
     """
     Simple Zep manager for storing user messages and AI responses in knowledge graph.
+    Uses singleton pattern to prevent multiple instantiations and duplicate log messages.
     """
     
+    _instance = None
+    _initialized = False
+    
+    def __new__(cls):
+        """Implement singleton pattern to ensure only one instance exists."""
+        if cls._instance is None:
+            cls._instance = super().__new__(cls)
+        return cls._instance
+    
     def __init__(self):
-        """Initialize the Zep manager."""
+        """Initialize the Zep manager (only runs once due to singleton pattern)."""
+        if self._initialized:
+            return
+            
         self.enabled = config.ZEP_ENABLED
         self.client = None
         
@@ -32,6 +45,8 @@ class ZepManager:
                 self.enabled = False
         else:
             logger.info("Zep is disabled or API key not provided")
+        
+        self._initialized = True
     
     def is_enabled(self) -> bool:
         """Check if Zep is enabled and properly configured."""
