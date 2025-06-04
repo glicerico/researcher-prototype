@@ -20,11 +20,9 @@ const ChatPage = () => {
     messages,
     userDisplayName,
     personality,
-    conversationTopics,
     updateUserId,
     updateSessionId,
     updateMessages,
-    addMessage,
     updatePersonality,
     updateUserDisplayName,
     updateConversationTopics,
@@ -223,17 +221,6 @@ const ChatPage = () => {
     setShowUserSelector(false);
   }, [updateUserId]);
 
-  const handleToggleUserSelector = useCallback(() => {
-    setShowUserSelector(prevState => {
-      const newState = !prevState;
-      
-      // If we're showing the user selector, hide the profile
-      if (newState) setShowUserProfile(false);
-      
-      return newState;
-    });
-  }, [isLoading]);
-
   const handleToggleUserProfile = useCallback(() => {
     setShowUserProfile(prevState => {
       // If we're showing the profile, hide the user selector
@@ -279,7 +266,6 @@ const ChatPage = () => {
     if (!chatContainer) return;
     
     // Scroll tracking variables
-    let isUserScrolling = false;
     let userScrollingTimeout = null;
     
     const handleScroll = () => {
@@ -288,7 +274,6 @@ const ChatPage = () => {
       
       // If user scrolls up (away from bottom), mark as user scrolling
       if (!isAtBottom) {
-        isUserScrolling = true;
         setUserScrolling(true);
         
         // Clear existing timeout if any
@@ -304,13 +289,11 @@ const ChatPage = () => {
           
           // Only reset if user has scrolled back to bottom
           if (currentIsAtBottom) {
-            isUserScrolling = false;
             setUserScrolling(false);
           }
         }, 3000);
       } else {
         // User manually scrolled to bottom, reset the tracking
-        isUserScrolling = false;
         setUserScrolling(false);
         
         if (userScrollingTimeout) {

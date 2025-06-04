@@ -89,7 +89,7 @@ const ResearchResultsDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUser?.user_id, filters.unreadOnly]);
+  }, [currentUser, filters.unreadOnly]);
 
   useEffect(() => {
     loadResearchData();
