@@ -74,12 +74,17 @@ class AutonomousResearcher:
         """Main research loop that runs at configured intervals."""
         while self.is_running:
             try:
+                # Sleep for the configured interval before conducting research
+                # This ensures research doesn't trigger immediately at startup
+                logger.info(f"🔬 Autonomous Research Engine waiting {config.RESEARCH_INTERVAL_HOURS} hours before next research cycle...")
+                await asyncio.sleep(self.research_interval)
+                
+                if not self.is_running:  # Check if we should still be running after sleep
+                    break
+                    
                 logger.info("🔬 Starting LangGraph research cycle...")
                 await self._conduct_research_cycle()
-                logger.info(f"🔬 LangGraph research cycle completed. Sleeping for {config.RESEARCH_INTERVAL_HOURS} hours...")
-                
-                # Sleep for the configured interval
-                await asyncio.sleep(self.research_interval)
+                logger.info("🔬 LangGraph research cycle completed.")
                 
             except asyncio.CancelledError:
                 logger.info("🔬 Research loop cancelled")
