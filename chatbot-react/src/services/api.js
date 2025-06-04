@@ -320,4 +320,35 @@ export const triggerManualResearch = async (userId) => {
   }
 };
 
+// Research engine control functions
+export const startResearchEngine = async () => {
+  try {
+    const response = await api.post('/research/control/start');
+    return response.data;
+  } catch (error) {
+    console.error('Error starting research engine:', error);
+    throw error;
+  }
+};
+
+export const stopResearchEngine = async () => {
+  try {
+    const response = await api.post('/research/control/stop');
+    return response.data;
+  } catch (error) {
+    console.error('Error stopping research engine:', error);
+    throw error;
+  }
+};
+
+export const restartResearchEngine = async () => {
+  try {
+    const response = await api.post('/research/control/restart');
+    return response.data;
+  } catch (error) {
+    console.error('Error restarting research engine:', error);
+    throw error;
+  }
+};
+
 export default api; 
