@@ -16,6 +16,7 @@ export const useSession = () => {
 export const SessionProvider = ({ children }) => {
   const [userId, setUserId] = useState(localStorage.getItem('user_id') || '');
   const [sessionId, setSessionId] = useState(null);
+  const [sessionHistory, setSessionHistory] = useState([]);
   const [messages, setMessages] = useState([
     { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
   ]);
@@ -31,11 +32,19 @@ export const SessionProvider = ({ children }) => {
       ]);
       setSessionId(null);
       setConversationTopics([]);
+      setSessionHistory([]);
       return;
     }
 
     // Load stored messages
-    const storedMessages = localStorage.getItem(`chat_messages_${userId}`);
+    const storedSession = localStorage.getItem(`session_id_${userId}`);
+    if (storedSession) {
+      setSessionId(storedSession);
+    }
+
+    const storedMessages = storedSession
+      ? localStorage.getItem(`chat_messages_${userId}_${storedSession}`)
+      : null;
     if (storedMessages) {
       try {
         setMessages(JSON.parse(storedMessages));
@@ -44,19 +53,27 @@ export const SessionProvider = ({ children }) => {
       }
     }
 
-    // Load stored session ID
-    const storedSession = localStorage.getItem(`session_id_${userId}`);
-    if (storedSession) {
-      setSessionId(storedSession);
+    const history = localStorage.getItem(`session_history_${userId}`);
+    if (history) {
+      try {
+        setSessionHistory(JSON.parse(history));
+      } catch {
+        setSessionHistory([]);
+      }
+    } else {
+      setSessionHistory([]);
     }
   }, [userId]);
 
   // Persist conversation to localStorage
   useEffect(() => {
-    if (userId && messages.length > 1) { // Only persist if there are actual messages
-      localStorage.setItem(`chat_messages_${userId}`, JSON.stringify(messages));
+    if (userId && sessionId && messages.length > 1) {
+      localStorage.setItem(
+        `chat_messages_${userId}_${sessionId}`,
+        JSON.stringify(messages)
+      );
     }
-  }, [messages, userId]);
+  }, [messages, userId, sessionId]);
 
   // Persist session ID
   useEffect(() => {
@@ -99,7 +116,14 @@ export const SessionProvider = ({ children }) => {
     } else {
       // Clear user data when switching to no user
       if (userId) {
-        localStorage.removeItem(`chat_messages_${userId}`);
+        const history = localStorage.getItem(`session_history_${userId}`);
+        if (history) {
+          const sessions = JSON.parse(history);
+          sessions.forEach((sid) => {
+            localStorage.removeItem(`chat_messages_${userId}_${sid}`);
+          });
+        }
+        localStorage.removeItem(`session_history_${userId}`);
         localStorage.removeItem(`session_id_${userId}`);
       }
       setUserId('');
@@ -114,9 +138,25 @@ export const SessionProvider = ({ children }) => {
     }
   }, [userId]);
 
-  const updateSessionId = useCallback((newSessionId) => {
-    setSessionId(newSessionId);
-  }, []);
+  const updateSessionId = useCallback(
+    (newSessionId) => {
+      setSessionId(newSessionId);
+      if (newSessionId) {
+        setSessionHistory((prev) => {
+          if (prev.includes(newSessionId)) return prev;
+          const updated = [...prev, newSessionId];
+          if (userId) {
+            localStorage.setItem(
+              `session_history_${userId}`,
+              JSON.stringify(updated)
+            );
+          }
+          return updated;
+        });
+      }
+    },
+    [userId]
+  );
 
   const updateMessages = useCallback((newMessages) => {
     setMessages(newMessages);
@@ -144,12 +184,36 @@ export const SessionProvider = ({ children }) => {
     ]);
     setSessionId(null);
     setConversationTopics([]);
-    
-    if (userId) {
-      localStorage.removeItem(`chat_messages_${userId}`);
-      localStorage.removeItem(`session_id_${userId}`);
-    }
-  }, [userId]);
+  }, []);
+
+  const switchSession = useCallback(
+    (sid) => {
+      if (!userId) return;
+      const stored = localStorage.getItem(`chat_messages_${userId}_${sid}`);
+      if (stored) {
+        try {
+          setMessages(JSON.parse(stored));
+        } catch {
+          setMessages([
+            { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
+          ]);
+        }
+      } else {
+        setMessages([
+          { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
+        ]);
+      }
+      setSessionId(sid);
+    },
+    [userId]
+  );
+
+  const startNewSession = useCallback(() => {
+    setMessages([
+      { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
+    ]);
+    setSessionId(null);
+  }, []);
 
   const value = {
     // State
@@ -159,7 +223,8 @@ export const SessionProvider = ({ children }) => {
     userDisplayName,
     personality,
     conversationTopics,
-    
+    sessionHistory,
+
     // Actions
     updateUserId,
     updateSessionId,
@@ -169,6 +234,8 @@ export const SessionProvider = ({ children }) => {
     updateUserDisplayName,
     updateConversationTopics,
     resetSession,
+    switchSession,
+    startNewSession,
   };
 
   return (

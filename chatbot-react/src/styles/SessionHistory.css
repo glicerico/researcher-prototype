@@ -1,0 +1,64 @@
+.session-history {
+  width: 200px;
+  height: calc(100vh - 120px);
+  background: #f9fafb;
+  border-right: 1px solid #e5e7eb;
+  position: fixed;
+  top: 120px;
+  left: 0;
+  overflow-y: auto;
+  z-index: 1000;
+  display: flex;
+  flex-direction: column;
+}
+
+.session-history h3 {
+  margin: 1rem;
+  font-size: 1rem;
+  font-weight: 600;
+  color: #374151;
+}
+
+.session-history ul {
+  list-style: none;
+  padding: 0 1rem;
+  margin: 0;
+  flex: 1;
+}
+
+.session-history li {
+  margin-bottom: 0.5rem;
+}
+
+.session-history li button {
+  width: 100%;
+  background: transparent;
+  border: none;
+  text-align: left;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  border-radius: 4px;
+  color: #374151;
+}
+
+.session-history li.active button {
+  background: #e7f3ff;
+  font-weight: bold;
+  color: #1a202c;
+}
+
+.new-session {
+  margin: 1rem;
+  padding: 0.5rem;
+  border: none;
+  background: #3182ce;
+  color: white;
+  border-radius: 4px;
+  cursor: pointer;
+}
+
+@media (max-width: 1024px) {
+  .session-history {
+    display: none;
+  }
+}

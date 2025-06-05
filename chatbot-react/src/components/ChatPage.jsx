@@ -8,6 +8,7 @@ import UserSelector from './UserSelector';
 import UserProfile from './UserProfile';
 import UserDropdown from './UserDropdown';
 import ConversationTopics from './ConversationTopics';
+import SessionHistory from './SessionHistory';
 import { getModels, sendChatMessage, getCurrentUser } from '../services/api';
 import { generateDisplayName } from '../utils/userUtils';
 import '../App.css';
@@ -386,8 +387,10 @@ const ChatPage = () => {
         </div>
       )}
       
-      <div 
-        className={`chat-content ${!isTopicsSidebarCollapsed ? 'with-sidebar' : ''}`}
+      <SessionHistory />
+
+      <div
+        className={`chat-content ${!isTopicsSidebarCollapsed ? 'with-sidebar' : ''} with-left-panel`}
       >
         <div className="chat-messages" id="chat-messages" ref={chatContainerRef}>
           {messages.map((msg, index) => (

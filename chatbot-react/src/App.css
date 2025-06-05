@@ -70,6 +70,10 @@
   margin-right: 350px;
 }
 
+.chat-content.with-left-panel {
+  margin-left: 200px;
+}
+
 /* Header styling */
 .chat-header {
   background: #f8fafc;
@@ -178,11 +182,17 @@
   .chat-content.with-sidebar {
     margin-right: 300px;
   }
+  .chat-content.with-left-panel {
+    margin-left: 180px;
+  }
 }
 
 @media (max-width: 1024px) {
   .chat-content.with-sidebar {
     margin-right: 0;
+  }
+  .chat-content.with-left-panel {
+    margin-left: 0;
   }
   
   .scroll-to-latest-button {
