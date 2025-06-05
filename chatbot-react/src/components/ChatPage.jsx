@@ -8,6 +8,7 @@ import UserSelector from './UserSelector';
 import UserProfile from './UserProfile';
 import UserDropdown from './UserDropdown';
 import ConversationTopics from './ConversationTopics';
+import SessionHistorySidebar from './SessionHistorySidebar';
 import { getModels, sendChatMessage, getCurrentUser } from '../services/api';
 import { generateDisplayName } from '../utils/userUtils';
 import '../App.css';
@@ -346,6 +347,7 @@ const ChatPage = () => {
 
   return (
     <div className="chat-container">
+      <SessionHistorySidebar />
       <div className="chat-header">
         <h1>AI Chatbot</h1>
         <div className="header-controls">
@@ -386,8 +388,8 @@ const ChatPage = () => {
         </div>
       )}
       
-      <div 
-        className={`chat-content ${!isTopicsSidebarCollapsed ? 'with-sidebar' : ''}`}
+      <div
+        className={`chat-content with-left-sidebar ${!isTopicsSidebarCollapsed ? 'with-sidebar' : ''}`}
       >
         <div className="chat-messages" id="chat-messages" ref={chatContainerRef}>
           {messages.map((msg, index) => (

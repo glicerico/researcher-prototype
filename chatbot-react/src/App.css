@@ -66,6 +66,10 @@
   transition: margin-right 0.3s ease;
 }
 
+.chat-content.with-left-sidebar {
+  margin-left: 220px;
+}
+
 .chat-content.with-sidebar {
   margin-right: 350px;
 }
@@ -178,11 +182,17 @@
   .chat-content.with-sidebar {
     margin-right: 300px;
   }
+  .chat-content.with-left-sidebar {
+    margin-left: 200px;
+  }
 }
 
 @media (max-width: 1024px) {
   .chat-content.with-sidebar {
     margin-right: 0;
+  }
+  .chat-content.with-left-sidebar {
+    margin-left: 0;
   }
   
   .scroll-to-latest-button {
