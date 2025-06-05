@@ -146,5 +146,3 @@ The React app reads `chatbot-react/.env.*` – `REACT_APP_API_URL` should point 
 • If you are uncertain (≤ 95 % confidence), ask clarifying questions rather than guessing.
 
 ---
-
-_This document supersedes the original `AGENTS.md.template`. Keep it up to date as the project evolves._ 
