@@ -16,3 +16,7 @@ requests
 pytest
 pytest-cov
 httpx  # For TestClient
+
+# Code quality tools
+black
+flake8
