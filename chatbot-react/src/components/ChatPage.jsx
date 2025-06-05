@@ -209,18 +209,23 @@ const ChatPage = () => {
     }
   };
 
-  const handleUserSelected = useCallback((selectedUserId) => {
-    console.log('User selected:', selectedUserId);
+  const handleUserSelected = useCallback((selectedUserId, displayName) => {
+    console.log('User selected:', selectedUserId, 'Display name:', displayName);
 
     if (selectedUserId) {
       updateUserId(selectedUserId);
+      // Update display name if provided
+      if (displayName) {
+        updateUserDisplayName(displayName);
+      }
     } else {
       updateUserId('');
+      updateUserDisplayName('');
     }
     
     // Hide the user selector after selection
     setShowUserSelector(false);
-  }, [updateUserId]);
+  }, [updateUserId, updateUserDisplayName]);
 
   const handleToggleUserProfile = useCallback(() => {
     setShowUserProfile(prevState => {
