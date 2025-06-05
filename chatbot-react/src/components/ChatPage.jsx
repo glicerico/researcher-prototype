@@ -384,11 +384,13 @@ const ChatPage = () => {
       )}
       
       {showUserProfile && userId && (
-        <div className="profile-container">
-          <UserProfile 
-            userId={userId} 
-            onProfileUpdated={handleProfileUpdated} 
-          />
+        <div className="profile-modal-overlay" onClick={handleToggleUserProfile}>
+          <div className="profile-modal-content" onClick={(e) => e.stopPropagation()}>
+            <UserProfile 
+              userId={userId} 
+              onProfileUpdated={handleProfileUpdated} 
+            />
+          </div>
         </div>
       )}
       
