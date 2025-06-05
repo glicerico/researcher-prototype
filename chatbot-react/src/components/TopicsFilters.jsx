@@ -9,36 +9,15 @@ const TopicsFilters = ({ filters, onFiltersChange, topicsCount }) => {
     }));
   };
 
-  const handleConfidenceChange = (type, value) => {
-    const numValue = parseFloat(value);
-    if (type === 'min') {
-      onFiltersChange(prev => ({
-        ...prev,
-        minConfidence: numValue,
-        maxConfidence: Math.max(numValue, prev.maxConfidence)
-      }));
-    } else {
-      onFiltersChange(prev => ({
-        ...prev,
-        maxConfidence: numValue,
-        minConfidence: Math.min(numValue, prev.minConfidence)
-      }));
-    }
-  };
-
   const clearFilters = () => {
     onFiltersChange({
       searchTerm: '',
-      minConfidence: 0,
-      maxConfidence: 1,
       sortBy: 'confidence',
       sortOrder: 'desc'
     });
   };
 
-  const hasActiveFilters = filters.searchTerm || 
-                          filters.minConfidence > 0 || 
-                          filters.maxConfidence < 1;
+  const hasActiveFilters = filters.searchTerm;
 
   return (
     <div className="topics-filters">
@@ -64,38 +43,6 @@ const TopicsFilters = ({ filters, onFiltersChange, topicsCount }) => {
                 ✕
               </button>
             )}
-          </div>
-        </div>
-
-        {/* Confidence Range */}
-        <div className="filter-group confidence-group">
-          <label>Confidence Range</label>
-          <div className="confidence-inputs">
-            <div className="confidence-input">
-              <label htmlFor="min-confidence">Min</label>
-              <input
-                id="min-confidence"
-                type="number"
-                min="0"
-                max="1"
-                step="0.1"
-                value={filters.minConfidence}
-                onChange={(e) => handleConfidenceChange('min', e.target.value)}
-              />
-            </div>
-            <span className="confidence-separator">to</span>
-            <div className="confidence-input">
-              <label htmlFor="max-confidence">Max</label>
-              <input
-                id="max-confidence"
-                type="number"
-                min="0"
-                max="1"
-                step="0.1"
-                value={filters.maxConfidence}
-                onChange={(e) => handleConfidenceChange('max', e.target.value)}
-              />
-            </div>
           </div>
         </div>
 
@@ -126,7 +73,7 @@ const TopicsFilters = ({ filters, onFiltersChange, topicsCount }) => {
         {hasActiveFilters && (
           <div className="filter-group clear-group">
             <button className="clear-filters-btn" onClick={clearFilters}>
-              Clear Filters
+              Clear Search
             </button>
           </div>
         )}

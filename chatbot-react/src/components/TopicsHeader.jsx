@@ -8,7 +8,11 @@ const TopicsHeader = ({
   onCleanup, 
   onBulkDelete, 
   onSelectAll, 
-  loading 
+  loading,
+  researchEngineStatus,
+  onToggleGlobalResearch,
+  researchEngineLoading,
+  activeTopicsCount
 }) => {
   const formatDate = (days) => {
     if (days === 0) return 'today';
@@ -18,6 +22,7 @@ const TopicsHeader = ({
 
   return (
     <div className="topics-header">
+      {/* Header Content */}
       <div className="header-content">
         <h1>Research Topics</h1>
         <p className="header-subtitle">
@@ -27,6 +32,10 @@ const TopicsHeader = ({
 
       {/* Stats Overview */}
       <div className="stats-overview">
+        <div className="stat-card highlight">
+          <div className="stat-number">{activeTopicsCount}</div>
+          <div className="stat-label">Active Research</div>
+        </div>
         <div className="stat-card">
           <div className="stat-number">{stats.total_topics || 0}</div>
           <div className="stat-label">Total Topics</div>
@@ -37,17 +46,34 @@ const TopicsHeader = ({
         </div>
         <div className="stat-card">
           <div className="stat-number">
-            {stats.average_confidence_score ? stats.average_confidence_score.toFixed(2) : '0.00'}
+            {stats.average_confidence_score ? stats.average_confidence_score.toFixed(1) : '0.0'}
           </div>
           <div className="stat-label">Avg Confidence</div>
         </div>
-        <div className="stat-card">
-          <div className="stat-number">
-            {stats.oldest_topic_age_days !== undefined ? formatDate(stats.oldest_topic_age_days) : 'N/A'}
-          </div>
-          <div className="stat-label">Oldest Topic</div>
-        </div>
       </div>
+
+      {/* Research Engine Status */}
+      {researchEngineStatus && (
+        <div className="research-engine-status">
+          <div className="status-indicator">
+            <div className={`status-dot ${researchEngineStatus.running ? 'active' : 'inactive'}`}></div>
+            <span className="status-text">
+              Research Engine: {researchEngineStatus.running ? 'Active' : 'Inactive'}
+            </span>
+          </div>
+          <button 
+            className={`engine-toggle-btn ${researchEngineStatus.running ? 'stop' : 'start'}`}
+            onClick={onToggleGlobalResearch}
+            disabled={researchEngineLoading || loading}
+          >
+            {researchEngineLoading ? (
+              researchEngineStatus.running ? 'Stopping...' : 'Starting...'
+            ) : (
+              researchEngineStatus.running ? 'Stop Research' : 'Start Research'
+            )}
+          </button>
+        </div>
+      )}
 
       {/* Action Controls */}
       <div className="action-controls">
@@ -58,7 +84,7 @@ const TopicsHeader = ({
             </span>
           ) : (
             <span className="total-count">
-              {totalCount} topics shown
+              {totalCount} topic{totalCount !== 1 ? 's' : ''} shown
             </span>
           )}
         </div>
@@ -78,7 +104,7 @@ const TopicsHeader = ({
           {/* Bulk Actions */}
           {selectedCount > 0 && (
             <button 
-              className="bulk-delete-btn danger"
+              className="bulk-delete-btn"
               onClick={onBulkDelete}
               disabled={loading}
             >
@@ -88,12 +114,12 @@ const TopicsHeader = ({
 
           {/* Cleanup */}
           <button 
-            className="cleanup-btn secondary"
+            className="cleanup-btn"
             onClick={onCleanup}
             disabled={loading}
             title="Remove old topics and duplicates"
           >
-            🧹 Cleanup Topics
+            🧹 Cleanup
           </button>
         </div>
       </div>

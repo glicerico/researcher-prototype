@@ -3,7 +3,8 @@ import { useSession } from '../context/SessionContext';
 import { 
   getResearchFindings,
   markFindingAsRead,
-  getResearchEngineStatus
+  getResearchEngineStatus,
+  getActiveResearchTopics
 } from '../services/api';
 import '../styles/ResearchResultsDashboard.css';
 
@@ -16,23 +17,17 @@ const ResearchResultsDashboard = () => {
   const [bookmarkedFindings, setBookmarkedFindings] = useState(new Set());
   const [filters, setFilters] = useState({
     searchTerm: '',
-    dateRange: 'all', // all, week, month, quarter
+    dateRange: 'all',
     unreadOnly: false,
-    sortBy: 'date', // date, quality, topic
+    sortBy: 'date',
     sortOrder: 'desc'
   });
 
   // Load research data
   const loadResearchData = useCallback(async () => {
-    console.log('=== loadResearchData called ===');
-    console.log('currentUser:', currentUser);
-    
-    // Temporary fallback for testing - use a known user ID if currentUser isn't available
     const userId = currentUser?.user_id || 'user-swift-foal-81';
-    console.log('Using userId:', userId);
     
     if (!userId) {
-      console.log('No userId available, exiting early');
       setLoading(false);
       return;
     }
@@ -41,22 +36,8 @@ const ResearchResultsDashboard = () => {
       setLoading(true);
       setError(null);
       
-      console.log('Making API calls for user:', userId);
-
-      const [findingsResponse] = await Promise.all([
-        getResearchFindings(userId, null, filters.unreadOnly).catch(err => {
-          console.error('getResearchFindings error:', err);
-          throw err;
-        }),
-        getResearchEngineStatus().catch(err => {
-          console.error('getResearchEngineStatus error:', err);
-          throw err;
-        })
-      ]);
-
-      console.log('API responses received');
-      console.log('findingsResponse:', findingsResponse);
-
+      const findingsResponse = await getResearchFindings(userId, null, filters.unreadOnly);
+      
       // Group findings by topic
       const groupedFindings = {};
       const findings = findingsResponse.findings || [];
@@ -76,7 +57,6 @@ const ResearchResultsDashboard = () => {
         );
       });
 
-      console.log('Grouped findings:', groupedFindings);
       setResearchData(groupedFindings);
 
     } catch (err) {
@@ -172,7 +152,6 @@ const ResearchResultsDashboard = () => {
     }
     setBookmarkedFindings(newBookmarked);
     
-    // Save to localStorage
     localStorage.setItem('bookmarkedFindings', JSON.stringify([...newBookmarked]));
   };
 
@@ -180,7 +159,7 @@ const ResearchResultsDashboard = () => {
   const handleMarkAsRead = async (findingId) => {
     try {
       await markFindingAsRead(findingId);
-      await loadResearchData(); // Refresh data
+      await loadResearchData();
     } catch (err) {
       console.error('Error marking finding as read:', err);
     }
@@ -214,7 +193,6 @@ const ResearchResultsDashboard = () => {
         content += '\n';
       });
 
-      // Download as text file
       const blob = new Blob([content], { type: 'text/plain' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
@@ -223,6 +201,17 @@ const ResearchResultsDashboard = () => {
       a.click();
       URL.revokeObjectURL(url);
     }
+  };
+
+  // Clear filters
+  const clearFilters = () => {
+    setFilters({
+      searchTerm: '',
+      dateRange: 'all',
+      unreadOnly: false,
+      sortBy: 'date',
+      sortOrder: 'desc'
+    });
   };
 
   // Load bookmarks from localStorage on mount
@@ -253,29 +242,36 @@ const ResearchResultsDashboard = () => {
   const unreadCount = Object.values(researchData).reduce((sum, findings) => 
     sum + findings.filter(f => !f.read).length, 0
   );
+  const hasActiveFilters = filters.searchTerm || filters.dateRange !== 'all' || filters.unreadOnly;
 
   return (
     <div className="research-dashboard">
       {/* Header */}
-      <div className="dashboard-header">
+      <div className="research-header">
         <div className="header-content">
           <h1>Research Results</h1>
-          <div className="stats-summary">
-            <div className="stat-item">
-              <span className="stat-number">{totalTopics}</span>
-              <span className="stat-label">Topics</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">{totalFindings}</span>
-              <span className="stat-label">Findings</span>
-            </div>
-            <div className="stat-item">
-              <span className="stat-number">{unreadCount}</span>
-              <span className="stat-label">Unread</span>
-            </div>
-          </div>
+          <p className="header-subtitle">
+            Explore and manage AI-generated research findings from your active topics
+          </p>
         </div>
         
+        {/* Stats Overview */}
+        <div className="stats-overview">
+          <div className="stat-card highlight">
+            <div className="stat-number">{unreadCount}</div>
+            <div className="stat-label">Unread</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-number">{totalTopics}</div>
+            <div className="stat-label">Topics</div>
+          </div>
+          <div className="stat-card">
+            <div className="stat-number">{totalFindings}</div>
+            <div className="stat-label">Total Findings</div>
+          </div>
+        </div>
+
+        {/* Header Actions */}
         <div className="header-actions">
           <button 
             className="export-btn"
@@ -296,59 +292,79 @@ const ResearchResultsDashboard = () => {
       )}
 
       {/* Filters */}
-      <div className="filters-section">
-        <div className="filter-row">
-          <div className="search-filter">
-            <input
-              type="text"
-              placeholder="Search topics and findings..."
-              value={filters.searchTerm}
-              onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
-              className="search-input"
-            />
+      <div className="research-filters">
+        <div className="filters-row">
+          {/* Search */}
+          <div className="filter-group search-group">
+            <label htmlFor="search">Search Results</label>
+            <div className="search-input-wrapper">
+              <input
+                id="search"
+                type="text"
+                placeholder="Search topics and findings..."
+                value={filters.searchTerm}
+                onChange={(e) => setFilters(prev => ({ ...prev, searchTerm: e.target.value }))}
+                className="search-input"
+              />
+              {filters.searchTerm && (
+                <button 
+                  className="clear-search"
+                  onClick={() => setFilters(prev => ({ ...prev, searchTerm: '' }))}
+                  title="Clear search"
+                >
+                  ✕
+                </button>
+              )}
+            </div>
           </div>
           
+          {/* Date Range */}
           <div className="filter-group">
+            <label htmlFor="date-range">Time Period</label>
             <select
+              id="date-range"
               value={filters.dateRange}
               onChange={(e) => setFilters(prev => ({ ...prev, dateRange: e.target.value }))}
-              className="filter-select"
             >
               <option value="all">All Time</option>
               <option value="week">Past Week</option>
               <option value="month">Past Month</option>
               <option value="quarter">Past Quarter</option>
             </select>
-            
-            <select
-              value={filters.sortBy}
-              onChange={(e) => setFilters(prev => ({ ...prev, sortBy: e.target.value }))}
-              className="filter-select"
-            >
-              <option value="date">Sort by Date</option>
-              <option value="quality">Sort by Quality</option>
-              <option value="topic">Sort by Topic</option>
-            </select>
-            
-            <button
-              className={`sort-order-btn ${filters.sortOrder}`}
-              onClick={() => setFilters(prev => ({ 
-                ...prev, 
-                sortOrder: prev.sortOrder === 'desc' ? 'asc' : 'desc' 
-              }))}
-            >
-              {filters.sortOrder === 'desc' ? '↓' : '↑'}
-            </button>
           </div>
-          
-          <label className="checkbox-filter">
-            <input
-              type="checkbox"
-              checked={filters.unreadOnly}
-              onChange={(e) => setFilters(prev => ({ ...prev, unreadOnly: e.target.checked }))}
-            />
-            Unread only
-          </label>
+
+          {/* Unread Filter */}
+          <div className="filter-group checkbox-group">
+            <label className="checkbox-filter">
+              <input
+                type="checkbox"
+                checked={filters.unreadOnly}
+                onChange={(e) => setFilters(prev => ({ ...prev, unreadOnly: e.target.checked }))}
+              />
+              <span>Unread only</span>
+            </label>
+          </div>
+
+          {/* Clear Filters */}
+          {hasActiveFilters && (
+            <div className="filter-group clear-group">
+              <button className="clear-filters-btn" onClick={clearFilters}>
+                Clear Filters
+              </button>
+            </div>
+          )}
+        </div>
+
+        {/* Results Summary */}
+        <div className="results-summary">
+          <span className="results-count">
+            {totalTopics} topic{totalTopics !== 1 ? 's' : ''} with {totalFindings} finding{totalFindings !== 1 ? 's' : ''}
+          </span>
+          {hasActiveFilters && (
+            <span className="filter-indicator">
+              (filtered)
+            </span>
+          )}
         </div>
       </div>
 
@@ -356,6 +372,7 @@ const ResearchResultsDashboard = () => {
       <div className="results-content">
         {filteredTopics.length === 0 ? (
           <div className="empty-state">
+            <div className="empty-icon">🔍</div>
             <h3>No Research Results Found</h3>
             <p>
               {totalFindings === 0 
@@ -374,23 +391,23 @@ const ResearchResultsDashboard = () => {
               const avgQuality = findings.reduce((sum, f) => sum + (f.quality_score || 0), 0) / findings.length;
 
               return (
-                <div key={topicName} className="topic-section">
+                <div key={topicName} className="topic-card">
                   <div 
                     className="topic-header"
                     onClick={() => toggleTopic(topicName)}
                   >
                     <div className="topic-info">
                       <h3 className="topic-name">{topicName}</h3>
-                      <div className="topic-meta">
+                      <div className="topic-stats">
                         <span className="findings-count">{findings.length} findings</span>
                         {unreadInTopic > 0 && (
-                          <span className="unread-badge">{unreadInTopic} unread</span>
+                          <span className="unread-badge">{unreadInTopic} new</span>
                         )}
                         <span className="quality-score">
-                          Avg Quality: {avgQuality.toFixed(2)}
+                          Quality: {avgQuality.toFixed(1)}
                         </span>
                         <span className="last-updated">
-                          Last: {new Date(latestFinding.research_time * 1000).toLocaleDateString()}
+                          {new Date(latestFinding.research_time * 1000).toLocaleDateString()}
                         </span>
                       </div>
                     </div>
@@ -406,7 +423,7 @@ const ResearchResultsDashboard = () => {
                       {findings.map((finding, index) => (
                         <div 
                           key={finding.finding_id || index} 
-                          className={`finding-card ${!finding.read ? 'unread' : ''}`}
+                          className={`finding-item ${!finding.read ? 'unread' : ''}`}
                         >
                           <div className="finding-header">
                             <div className="finding-meta">
@@ -414,12 +431,13 @@ const ResearchResultsDashboard = () => {
                                 {new Date(finding.research_time * 1000).toLocaleDateString()}
                               </span>
                               <span className="quality-badge">
-                                Quality: {finding.quality_score?.toFixed(2) || 'N/A'}
+                                {finding.quality_score?.toFixed(1) || 'N/A'}
                               </span>
                               {!finding.read && (
-                                <span className="unread-indicator">New</span>
+                                <span className="new-indicator">New</span>
                               )}
                             </div>
+                            
                             <div className="finding-actions">
                               <button
                                 className={`bookmark-btn ${bookmarkedFindings.has(finding.finding_id) ? 'bookmarked' : ''}`}
@@ -427,10 +445,11 @@ const ResearchResultsDashboard = () => {
                                   e.stopPropagation();
                                   toggleBookmark(finding.finding_id);
                                 }}
-                                title="Bookmark this finding"
+                                title={bookmarkedFindings.has(finding.finding_id) ? 'Remove bookmark' : 'Bookmark'}
                               >
-                                ⭐
+                                {bookmarkedFindings.has(finding.finding_id) ? '⭐' : '☆'}
                               </button>
+                              
                               {!finding.read && (
                                 <button
                                   className="mark-read-btn"
@@ -447,13 +466,15 @@ const ResearchResultsDashboard = () => {
                           </div>
 
                           <div className="finding-content">
-                            <div className="finding-summary">
-                              <p>{finding.findings_summary || 'No summary available'}</p>
-                            </div>
+                            {finding.findings_summary && (
+                              <div className="finding-summary">
+                                <p>{finding.findings_summary}</p>
+                              </div>
+                            )}
 
                             {finding.key_insights && finding.key_insights.length > 0 && (
                               <div className="key-insights">
-                                <h4>Key Insights:</h4>
+                                <h4>Key Insights</h4>
                                 <ul>
                                   {finding.key_insights.map((insight, i) => (
                                     <li key={i}>{insight}</li>
@@ -464,7 +485,7 @@ const ResearchResultsDashboard = () => {
 
                             {finding.source_urls && finding.source_urls.length > 0 && (
                               <div className="source-urls">
-                                <h4>Sources:</h4>
+                                <h4>Sources</h4>
                                 <div className="urls-list">
                                   {finding.source_urls.map((url, i) => (
                                     <a key={i} href={url} target="_blank" rel="noopener noreferrer">

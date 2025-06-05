@@ -1,31 +1,56 @@
-import React, { useState, useEffect, useCallback } from 'react';
-import { 
-  getAllTopicSuggestions, 
-  getTopicStatistics, 
-  deleteSessionTopics, 
-  deleteTopicById,
-  cleanupTopics,
-  enableTopicResearchById,
-  disableTopicResearchById
-} from '../services/api';
-import TopicCard from './TopicCard';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { useSession } from '../context/SessionContext';
 import TopicsHeader from './TopicsHeader';
 import TopicsFilters from './TopicsFilters';
+import { 
+  getAllTopicSuggestions,
+  getTopicStatistics,
+  deleteSessionTopics, 
+  deleteTopicById, 
+  cleanupTopics,
+  enableTopicResearchById,
+  disableTopicResearchById,
+  getResearchEngineStatus,
+  startResearchEngine,
+  stopResearchEngine
+} from '../services/api';
 import '../styles/TopicsDashboard.css';
 
 const TopicsDashboard = () => {
+  const { currentUser } = useSession();
   const [topics, setTopics] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedTopics, setSelectedTopics] = useState(new Set());
+  const [researchEngineStatus, setResearchEngineStatus] = useState(null);
+  const [researchEngineLoading, setResearchEngineLoading] = useState(false);
+  const [activeTopicsCount, setActiveTopicsCount] = useState(0);
   const [filters, setFilters] = useState({
     searchTerm: '',
-    minConfidence: 0,
-    maxConfidence: 1,
-    sortBy: 'confidence', // confidence, date, name
+    sessionFilter: 'all',
+    confidenceFilter: 'all',
+    researchStatus: 'all',
+    sortBy: 'date',
     sortOrder: 'desc' // asc, desc
   });
+  const [expandedTopics, setExpandedTopics] = useState(new Set());
+
+  // Helper function to format dates
+  const formatDate = (timestamp) => {
+    if (!timestamp) return 'Unknown date';
+    
+    const date = new Date(timestamp * 1000);
+    const now = new Date();
+    const diffTime = now - date;
+    const diffDays = Math.floor(diffTime / (1000 * 60 * 60 * 24));
+    
+    if (diffDays === 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
+    if (diffDays < 30) return `${Math.floor(diffDays / 7)} weeks ago`;
+    return date.toLocaleDateString();
+  };
 
   // Load topics and stats
   const loadData = useCallback(async () => {
@@ -33,13 +58,20 @@ const TopicsDashboard = () => {
       setLoading(true);
       setError(null);
       
-      const [topicsResponse, statsResponse] = await Promise.all([
+      const [topicsResponse, statsResponse, engineStatus] = await Promise.all([
         getAllTopicSuggestions(),
-        getTopicStatistics()
+        getTopicStatistics(),
+        getResearchEngineStatus().catch(() => ({ available: false, enabled: false, running: false }))
       ]);
       
-      setTopics(topicsResponse.topic_suggestions || []);
-      setStats(statsResponse);
+      const topicsData = topicsResponse.topic_suggestions || [];
+      setTopics(topicsData);
+      setStats(statsResponse || {});
+      setActiveTopicsCount(
+        topicsData.filter(topic => topic.is_active_research).length
+      );
+      setResearchEngineStatus(engineStatus);
+      
     } catch (err) {
       console.error('Error loading topics data:', err);
       setError('Failed to load topics. Please try again.');
@@ -52,6 +84,31 @@ const TopicsDashboard = () => {
     loadData();
   }, [loadData]);
 
+  // Handle global research engine toggle
+  const handleToggleGlobalResearch = async () => {
+    if (!researchEngineStatus) return;
+    
+    try {
+      setResearchEngineLoading(true);
+      
+      if (researchEngineStatus.running) {
+        await stopResearchEngine();
+        setResearchEngineStatus(prev => ({ ...prev, running: false }));
+      } else {
+        await startResearchEngine();
+        setResearchEngineStatus(prev => ({ ...prev, running: true }));
+      }
+      
+    } catch (err) {
+      console.error('Error toggling research engine:', err);
+      setError('Failed to toggle research engine. Please try again.');
+      // Refresh status to get correct state
+      loadData();
+    } finally {
+      setResearchEngineLoading(false);
+    }
+  };
+
   // Filter and sort topics
   const filteredAndSortedTopics = React.useMemo(() => {
     let filtered = topics.filter(topic => {
@@ -62,12 +119,6 @@ const TopicsDashboard = () => {
             !topic.description.toLowerCase().includes(searchLower)) {
           return false;
         }
-      }
-      
-      // Confidence filter
-      if (topic.confidence_score < filters.minConfidence || 
-          topic.confidence_score > filters.maxConfidence) {
-        return false;
       }
       
       return true;
@@ -221,7 +272,7 @@ const TopicsDashboard = () => {
       // Use the new safe ID-based API instead of index-based
       await enableTopicResearchById(topic.topic_id);
       
-      // Optimistically update the UI
+      // Optimistically update the UI and active count
       setTopics(prevTopics => 
         prevTopics.map(t => 
           t.topic_id === topic.topic_id
@@ -229,6 +280,7 @@ const TopicsDashboard = () => {
             : t
         )
       );
+      setActiveTopicsCount(prev => prev + 1);
     } catch (error) {
       console.error('Error enabling research:', error);
       setError('Failed to enable research. Please try again.');
@@ -243,7 +295,7 @@ const TopicsDashboard = () => {
       // Use the new safe ID-based API instead of index-based
       await disableTopicResearchById(topic.topic_id);
       
-      // Optimistically update the UI
+      // Optimistically update the UI and active count
       setTopics(prevTopics => 
         prevTopics.map(t => 
           t.topic_id === topic.topic_id
@@ -251,12 +303,24 @@ const TopicsDashboard = () => {
             : t
         )
       );
+      setActiveTopicsCount(prev => prev - 1);
     } catch (error) {
       console.error('Error disabling research:', error);
       setError('Failed to disable research. Please try again.');
       // Refresh topics to get correct state
       loadData();
     }
+  };
+
+  // Handle topic expansion
+  const toggleTopic = (topicKey) => {
+    const newExpandedTopics = new Set(expandedTopics);
+    if (newExpandedTopics.has(topicKey)) {
+      newExpandedTopics.delete(topicKey);
+    } else {
+      newExpandedTopics.add(topicKey);
+    }
+    setExpandedTopics(newExpandedTopics);
   };
 
   if (loading && topics.length === 0) {
@@ -280,6 +344,10 @@ const TopicsDashboard = () => {
         onBulkDelete={handleBulkDelete}
         onSelectAll={handleSelectAll}
         loading={loading}
+        researchEngineStatus={researchEngineStatus}
+        onToggleGlobalResearch={handleToggleGlobalResearch}
+        researchEngineLoading={researchEngineLoading}
+        activeTopicsCount={activeTopicsCount}
       />
       
       {error && (
@@ -298,6 +366,7 @@ const TopicsDashboard = () => {
       <div className="topics-content">
         {filteredAndSortedTopics.length === 0 ? (
           <div className="empty-state">
+            <div className="empty-icon">📚</div>
             <h3>No Topics Found</h3>
             <p>
               {topics.length === 0 
@@ -307,19 +376,116 @@ const TopicsDashboard = () => {
             </p>
           </div>
         ) : (
-          <div className="topics-grid">
-            {filteredAndSortedTopics.map((topic, index) => (
-              <TopicCard
-                key={`${topic.session_id}-${index}`}
-                topic={topic}
-                index={index}
-                isSelected={selectedTopics.has(`${topic.session_id}-${index}`)}
-                onSelect={(selected) => handleTopicSelect(topic.session_id, index, selected)}
-                onDelete={() => handleDeleteTopic(topic.topic_id, topic.name)}
-                onEnableResearch={() => handleEnableResearch(topic)}
-                onDisableResearch={() => handleDisableResearch(topic)}
-              />
-            ))}
+          <div className="topics-list">
+            {filteredAndSortedTopics.map((topic, index) => {
+              const topicKey = `${topic.session_id}-${index}`;
+              const isSelected = selectedTopics.has(topicKey);
+              const isExpanded = expandedTopics.has(topicKey);
+              
+              return (
+                <div key={topicKey} className={`topic-item ${isSelected ? 'selected' : ''} ${topic.is_active_research ? 'active-research' : ''}`}>
+                  <div 
+                    className="topic-header"
+                    onClick={() => toggleTopic(topicKey)}
+                  >
+                    <div className="topic-info">
+                      <div className="topic-title-row">
+                        <input
+                          type="checkbox"
+                          checked={isSelected}
+                          onChange={(e) => {
+                            e.stopPropagation();
+                            handleTopicSelect(topic.session_id, index, e.target.checked);
+                          }}
+                          className="topic-checkbox"
+                        />
+                        <h3 className="topic-name">{topic.name}</h3>
+                        {topic.is_active_research && (
+                          <span className="research-status-badge">
+                            <span className="badge-icon">🔬</span>
+                            <span className="badge-text">RESEARCHING</span>
+                          </span>
+                        )}
+                      </div>
+                      <div className="topic-stats">
+                        <span className="confidence-score">
+                          Confidence: {(topic.confidence_score * 100).toFixed(0)}%
+                        </span>
+                        <span className="topic-date">
+                          {formatDate(topic.suggested_at)}
+                        </span>
+                        {topic.session_id && (
+                          <span className="session-info">
+                            Session: {topic.session_id.substring(0, 8)}...
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                    <div className="topic-toggle">
+                      <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>
+                        ▼
+                      </span>
+                    </div>
+                  </div>
+
+                  {isExpanded && (
+                    <div className="topic-details">
+                      <div className="topic-description">
+                        <h4>Description</h4>
+                        <p>{topic.description}</p>
+                      </div>
+                      
+                      {topic.conversation_context && (
+                        <div className="topic-context">
+                          <h4>Context</h4>
+                          <p className="context-text">"{topic.conversation_context}"</p>
+                        </div>
+                      )}
+                      
+                      <div className="topic-actions">
+                        {!topic.is_active_research ? (
+                          <button
+                            className="research-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleEnableResearch(topic);
+                            }}
+                            title="Start researching this topic"
+                          >
+                            <span className="btn-icon">🔬</span>
+                            <span className="btn-text">Start Research</span>
+                          </button>
+                        ) : (
+                          <button
+                            className="stop-research-btn"
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDisableResearch(topic);
+                            }}
+                            title="Stop researching this topic"
+                          >
+                            <span className="btn-icon">⏹️</span>
+                            <span className="btn-text">Stop Research</span>
+                          </button>
+                        )}
+                        
+                        <button
+                          className="delete-btn"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleDeleteTopic(topic.topic_id, topic.name);
+                          }}
+                          title="Delete this topic"
+                        >
+                          <span className="btn-icon">🗑️</span>
+                          <span className="btn-text">Delete</span>
+                        </button>
+                      </div>
+                    </div>
+                  )}
+                </div>
+              );
+            })}
           </div>
         )}
       </div>
