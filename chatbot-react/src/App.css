@@ -70,6 +70,10 @@
   margin-right: 350px;
 }
 
+.chat-content.with-left-panel {
+  margin-left: 200px;
+}
+
 /* Header styling */
 .chat-header {
   background: #f8fafc;
@@ -79,7 +83,8 @@
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
-  z-index: 100;
+  position: relative;
+  z-index: 1100;
 }
 
 .chat-header h1 {
@@ -178,11 +183,17 @@
   .chat-content.with-sidebar {
     margin-right: 300px;
   }
+  .chat-content.with-left-panel {
+    margin-left: 180px;
+  }
 }
 
 @media (max-width: 1024px) {
   .chat-content.with-sidebar {
     margin-right: 0;
+  }
+  .chat-content.with-left-panel {
+    margin-left: 0;
   }
   
   .scroll-to-latest-button {
@@ -288,5 +299,51 @@
   }
   40% {
     opacity: 1;
+  }
+}
+
+/* Profile Modal Overlay */
+.profile-modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2000;
+  animation: fadeInOverlay 0.2s ease-out;
+}
+
+.profile-modal-content {
+  background: white;
+  border-radius: 8px;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+  max-width: 500px;
+  width: 90%;
+  max-height: 80vh;
+  overflow-y: auto;
+  animation: slideInModal 0.2s ease-out;
+}
+
+@keyframes fadeInOverlay {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes slideInModal {
+  from {
+    opacity: 0;
+    transform: translateY(-20px) scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
   }
 }

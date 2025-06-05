@@ -8,6 +8,7 @@ import UserSelector from './UserSelector';
 import UserProfile from './UserProfile';
 import UserDropdown from './UserDropdown';
 import ConversationTopics from './ConversationTopics';
+import SessionHistory from './SessionHistory';
 import { getModels, sendChatMessage, getCurrentUser } from '../services/api';
 import { generateDisplayName } from '../utils/userUtils';
 import '../App.css';
@@ -208,18 +209,23 @@ const ChatPage = () => {
     }
   };
 
-  const handleUserSelected = useCallback((selectedUserId) => {
-    console.log('User selected:', selectedUserId);
+  const handleUserSelected = useCallback((selectedUserId, displayName) => {
+    console.log('User selected:', selectedUserId, 'Display name:', displayName);
 
     if (selectedUserId) {
       updateUserId(selectedUserId);
+      // Update display name if provided
+      if (displayName) {
+        updateUserDisplayName(displayName);
+      }
     } else {
       updateUserId('');
+      updateUserDisplayName('');
     }
     
     // Hide the user selector after selection
     setShowUserSelector(false);
-  }, [updateUserId]);
+  }, [updateUserId, updateUserDisplayName]);
 
   const handleToggleUserProfile = useCallback(() => {
     setShowUserProfile(prevState => {
@@ -378,16 +384,20 @@ const ChatPage = () => {
       )}
       
       {showUserProfile && userId && (
-        <div className="profile-container">
-          <UserProfile 
-            userId={userId} 
-            onProfileUpdated={handleProfileUpdated} 
-          />
+        <div className="profile-modal-overlay" onClick={handleToggleUserProfile}>
+          <div className="profile-modal-content" onClick={(e) => e.stopPropagation()}>
+            <UserProfile 
+              userId={userId} 
+              onProfileUpdated={handleProfileUpdated} 
+            />
+          </div>
         </div>
       )}
       
-      <div 
-        className={`chat-content ${!isTopicsSidebarCollapsed ? 'with-sidebar' : ''}`}
+      <SessionHistory />
+
+      <div
+        className={`chat-content ${!isTopicsSidebarCollapsed ? 'with-sidebar' : ''} with-left-panel`}
       >
         <div className="chat-messages" id="chat-messages" ref={chatContainerRef}>
           {messages.map((msg, index) => (

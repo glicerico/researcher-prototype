@@ -1,6 +1,6 @@
 .conversation-topics {
   width: 350px;
-  height: 100vh;
+  height: calc(100vh - 120px);
   border-left: 1px solid #e5e7eb;
   background: #f9fafb;
   display: flex;
@@ -8,7 +8,7 @@
   overflow: hidden;
   position: fixed;
   right: 0;
-  top: 0;
+  top: 120px;
   z-index: 1000;
 }
 
@@ -16,6 +16,10 @@
   width: 50px;
   background: #f3f4f6;
   border-left: 1px solid #e5e7eb;
+  position: fixed;
+  right: 0;
+  top: 120px;
+  height: calc(100vh - 120px);
 }
 
 .expand-button {

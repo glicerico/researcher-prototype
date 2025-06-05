@@ -212,7 +212,7 @@ const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName, profi
               <div className="dropdown-item-empty">No users found</div>
             )}
             
-            {!isCreatingUser ? (
+            {!isCreatingUser && (
               <div 
                 className="dropdown-item create-new-item"
                 onClick={() => setIsCreatingUser(true)}
@@ -221,7 +221,9 @@ const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName, profi
                   <span className="dropdown-item-name">+ Create New User</span>
                 </div>
               </div>
-            ) : (
+            )}
+            
+            {isCreatingUser && (
               <div className="create-user-form">
                 <input
                   type="text"

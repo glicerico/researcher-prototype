@@ -1,6 +1,8 @@
 .user-dropdown {
   position: relative;
   display: inline-block;
+  z-index: 1040;
+  transform: translateZ(0);
 }
 
 .selected-user-button {
@@ -45,10 +47,11 @@
   border-radius: 4px;
   margin-top: 4px;
   box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-  z-index: 100;
+  z-index: 1050;
   max-height: 400px;
   overflow-y: auto;
   animation: fadeIn 0.2s ease-in-out;
+  transform: translateZ(0);
 }
 
 .dropdown-menu-header {
@@ -176,6 +179,16 @@
   padding: 8px 12px;
   color: #6c757d;
   font-size: 0.9rem;
+}
+
+.user-dropdown-error {
+  padding: 8px 12px;
+  color: #dc3545;
+  font-size: 0.9rem;
+  background-color: #f8d7da;
+  border: 1px solid #f5c6cb;
+  border-radius: 4px;
+  margin: 5px 10px;
 }
 
 .dropdown-item-empty {
