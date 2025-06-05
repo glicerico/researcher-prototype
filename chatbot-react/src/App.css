@@ -83,7 +83,8 @@
   justify-content: space-between;
   align-items: center;
   flex-shrink: 0;
-  z-index: 100;
+  position: relative;
+  z-index: 1100;
 }
 
 .chat-header h1 {
