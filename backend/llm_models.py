@@ -34,7 +34,7 @@ class TopicSuggestions(BaseModel):
     """Collection of research-worthy topics extracted from conversation."""
     topics: List[TopicSuggestionItem] = Field(
         description="List of research-worthy topics extracted from the conversation",
-        max_length=5  # Limit to max 5 topics as specified in config
+        json_schema_extra={"max_length": 5}  # Limit to max 5 topics as specified in config
     )
     
     @field_validator('topics')
@@ -68,8 +68,8 @@ class ResearchQualityAssessment(BaseModel):
     depth_score: float = Field(description="How comprehensive and detailed the information is from 0.0 to 1.0", ge=0.0, le=1.0)
     credibility_score: float = Field(description="How trustworthy and authoritative the sources are from 0.0 to 1.0", ge=0.0, le=1.0)
     novelty_score: float = Field(description="How new or unique the information is compared to common knowledge from 0.0 to 1.0", ge=0.0, le=1.0)
-    key_insights: List[str] = Field(description="List of key insights extracted from the research findings", max_length=5)
-    source_urls: List[str] = Field(description="List of source URLs mentioned in the findings", default_factory=list, max_length=10)
+    key_insights: List[str] = Field(description="List of key insights extracted from the research findings", json_schema_extra={"max_length": 5})
+    source_urls: List[str] = Field(description="List of source URLs mentioned in the findings", default_factory=list, json_schema_extra={"max_length": 10})
     findings_summary: str = Field(description="Brief summary of the key findings (1-3 sentences)")
     
     @field_validator('key_insights')
@@ -89,7 +89,7 @@ class ResearchDeduplicationResult(BaseModel):
     """Result of research findings deduplication analysis."""
     is_duplicate: bool = Field(description="True if the new findings are substantially similar to existing ones")
     similarity_score: float = Field(description="Similarity score from 0.0 (completely different) to 1.0 (identical)", ge=0.0, le=1.0)
-    unique_aspects: List[str] = Field(description="List of unique elements in the new findings that add value", max_length=5)
+    unique_aspects: List[str] = Field(description="List of unique elements in the new findings that add value", json_schema_extra={"max_length": 5})
     recommendation: str = Field(description="Recommendation: 'keep' if findings add value, 'discard' if too similar")
     
     @field_validator('recommendation')

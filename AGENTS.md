@@ -84,7 +84,12 @@ flake8 .
 ```bash
 cd chatbot-react
 npm run lint
-npm test -- --watchAll=false
+
+# Frontend Testing - Use appropriate command for your scenario:
+npm run test:unit         # Daily development (fast, mocked APIs)
+npm run test:integration  # When backend is running (real API tests)
+npm run test:all         # Full test suite (CI/CD, releases)
+
 npm run build   # ensure prod build succeeds
 ```
 
