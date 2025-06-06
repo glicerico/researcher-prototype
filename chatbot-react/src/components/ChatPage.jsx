@@ -9,7 +9,7 @@ import UserProfile from './UserProfile';
 import UserDropdown from './UserDropdown';
 import ConversationTopics from './ConversationTopics';
 import SessionHistory from './SessionHistory';
-import { getModels, sendChatMessage, getCurrentUser } from '../services/api';
+import { getModels, sendChatMessage, getCurrentUser, triggerUserActivity } from '../services/api';
 import { generateDisplayName } from '../utils/userUtils';
 import '../App.css';
 
@@ -151,6 +151,11 @@ const ChatPage = () => {
     setIsLoading(true);
     
     try {
+      // Trigger user activity for motivation system (fire and forget)
+      triggerUserActivity().catch(err => {
+        console.warn('Failed to trigger user activity for motivation system:', err);
+      });
+
       // Prepare messages for API
       const apiMessages = updatedMessages.map(msg => ({
         role: msg.role,
@@ -194,6 +199,10 @@ const ChatPage = () => {
       
       updateMessages(prev => [...prev, assistantMessage]);
       
+      // Update conversation topics if they exist in the response
+      if (response.topics && response.topics.length > 0) {
+        updateConversationTopics(response.topics);
+      }
     } catch (error) {
       console.error('Error sending message:', error);
       

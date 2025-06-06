@@ -330,6 +330,28 @@ export const updateMotivationConfig = async (config) => {
   }
 };
 
+export const triggerUserActivity = async () => {
+  try {
+    const response = await api.post('/research/debug/trigger-user-activity');
+    return response.data;
+  } catch (error) {
+    console.error('Error triggering user activity:', error);
+    throw error;
+  }
+};
+
+export const simulateResearchCompletion = async (qualityScore = 0.7) => {
+  try {
+    const response = await api.post('/research/debug/simulate-research-completion', null, {
+      params: { quality_score: qualityScore }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error simulating research completion:', error);
+    throw error;
+  }
+};
+
 export const getActiveResearchTopics = async (userId) => {
   try {
     const response = await api.get(`/topics/user/${userId}/research`);

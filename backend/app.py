@@ -205,6 +205,14 @@ async def chat(
         if request.personality:
             user_manager.update_personality(user_id, request.personality.model_dump())
         
+        # Trigger user activity for motivation system (if available)
+        try:
+            if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
+                app.state.autonomous_researcher.motivation.on_user_activity()
+                logger.debug("User activity triggered for motivation system")
+        except Exception as e:
+            logger.warning(f"Failed to trigger user activity for motivation system: {str(e)}")
+        
         # Run the graph
         result = await chat_graph.ainvoke(state)
         

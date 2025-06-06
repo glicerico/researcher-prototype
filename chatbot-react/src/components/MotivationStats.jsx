@@ -5,23 +5,40 @@ import '../styles/MotivationStats.css';
 const MotivationStats = ({ onClose }) => {
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [refreshing, setRefreshing] = useState(false);
 
-  useEffect(() => {
-    const fetchStatus = async () => {
-      try {
-        const response = await getMotivationStatus();
-        setData({
-          ...response.motivation_system,
-          engine_running: response.research_engine?.running || false
-        });
-      } catch (err) {
-        console.error('Error loading motivation status:', err);
-      } finally {
+  const fetchStatus = async (isRefresh = false) => {
+    try {
+      if (isRefresh) {
+        setRefreshing(true);
+      } else {
+        setLoading(true);
+      }
+      const response = await getMotivationStatus();
+      setData({
+        ...response.motivation_system,
+        engine_running: response.research_engine?.running || false
+      });
+    } catch (err) {
+      console.error('Error loading motivation status:', err);
+    } finally {
+      if (isRefresh) {
+        setRefreshing(false);
+      } else {
         setLoading(false);
       }
-    };
+    }
+  };
 
+  useEffect(() => {
     fetchStatus();
+    
+    // Set up auto-refresh every 5 seconds
+    const interval = setInterval(() => {
+      fetchStatus(true);
+    }, 5000);
+
+    return () => clearInterval(interval);
   }, []);
 
   // Drive configuration with icons, colors, and descriptions
@@ -67,7 +84,10 @@ const MotivationStats = ({ onClose }) => {
       <div className="motivation-modal-content" onClick={(e) => e.stopPropagation()}>
         <div className="motivation-header">
           <h3>🧠 AI Motivation Drives</h3>
-          <button className="close-btn" onClick={onClose}>✕</button>
+          <div className="header-controls">
+            {refreshing && <div className="refresh-indicator">🔄</div>}
+            <button className="close-btn" onClick={onClose}>✕</button>
+          </div>
         </div>
         
         {loading && (
