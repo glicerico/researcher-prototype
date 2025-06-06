@@ -57,7 +57,7 @@ class ZepManager:
         Create a user in Zep.
         
         Args:
-            user_id: The ID of the user (e.g., "user-happy-cat-42")
+            user_id: The ID of the user (e.g., "happy-cat-42")
             display_name: Optional display name, will generate from user_id if not provided
             
         Returns:
@@ -148,7 +148,7 @@ class ZepManager:
         Parse first and last name from user_id or display_name.
         
         Args:
-            user_id: The user ID (e.g., "user-happy-cat-42")
+            user_id: The user ID (e.g., "happy-cat-42")
             display_name: Optional display name (e.g., "Happy Cat 42")
             
         Returns:
@@ -164,12 +164,12 @@ class ZepManager:
                 first_name = display_name
                 last_name = ""
         else:
-            # Parse from user_id (e.g., "user-happy-cat-42")
-            if user_id.startswith('user-') and len(user_id.split('-')) == 4:
+            # Parse from user_id (adjective-noun-number)
+            if len(user_id.split('-')) == 3 and not user_id.startswith('user-'):
                 parts = user_id.split('-')
-                adjective = parts[1].capitalize()
-                noun = parts[2].capitalize()
-                number = parts[3]
+                adjective = parts[0].capitalize()
+                noun = parts[1].capitalize()
+                number = parts[2]
                 first_name = adjective
                 last_name = f"{noun} {number}"
             else:

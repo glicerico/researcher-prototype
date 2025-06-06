@@ -116,12 +116,12 @@ def generate_display_name_from_user_id(user_id: str) -> str:
     if not user_id:
         return "User"
     
-    # Check if it's a friendly ID format (user-adjective-noun-number)
-    if user_id.startswith('user-') and len(user_id.split('-')) == 4:
+    # Check if it's a friendly ID format (adjective-noun-number) - new format
+    if len(user_id.split('-')) == 3 and not user_id.startswith('user-'):
         parts = user_id.split('-')
-        adjective = parts[1]
-        noun = parts[2]
-        number = parts[3]
+        adjective = parts[0]
+        noun = parts[1]
+        number = parts[2]
         
         # Capitalize first letters and create a nice display name
         capitalized_adjective = adjective.capitalize()
