@@ -24,13 +24,24 @@ class AutonomousResearcher:
     LangGraph-based autonomous research engine that conducts background research on subscribed topics.
     """
 
-    def __init__(self, user_manager: UserManager):
+    def __init__(self, user_manager: UserManager, motivation_config_override: dict = None):
         """Initialize the autonomous researcher."""
         self.user_manager = user_manager
         self.research_graph = research_graph
         self.is_running = False
         self.research_task = None
-        self.motivation = MotivationSystem()
+        
+        # Create motivation system with config overrides if provided
+        if motivation_config_override:
+            from motivation import DriveConfig
+            drives_config = DriveConfig()
+            for key, value in motivation_config_override.items():
+                if hasattr(drives_config, key):
+                    setattr(drives_config, key, value)
+            self.motivation = MotivationSystem(drives_config)
+        else:
+            self.motivation = MotivationSystem()
+            
         self.check_interval = config.MOTIVATION_CHECK_INTERVAL
 
         # Configure research parameters from config
@@ -420,8 +431,8 @@ def get_autonomous_researcher() -> Optional[AutonomousResearcher]:
     return autonomous_researcher
 
 
-def initialize_autonomous_researcher(user_manager: UserManager) -> AutonomousResearcher:
+def initialize_autonomous_researcher(user_manager: UserManager, motivation_config_override: dict = None) -> AutonomousResearcher:
     """Initialize the global LangGraph autonomous researcher instance."""
     global autonomous_researcher
-    autonomous_researcher = AutonomousResearcher(user_manager)
+    autonomous_researcher = AutonomousResearcher(user_manager, motivation_config_override)
     return autonomous_researcher

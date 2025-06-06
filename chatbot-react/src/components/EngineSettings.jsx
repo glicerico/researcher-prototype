@@ -1,13 +1,9 @@
 import React, { useState, useEffect } from 'react';
-import { getMotivationStatus, adjustMotivationDrives, updateMotivationConfig } from '../services/api';
+import { getMotivationStatus, updateMotivationConfig } from '../services/api';
 import '../styles/EngineSettings.css';
 
 const EngineSettings = ({ onClose }) => {
   const [settings, setSettings] = useState({
-    boredom: 0,
-    curiosity: 0,
-    tiredness: 0,
-    satisfaction: 0,
     threshold: 1.0,
     boredom_rate: 0.001,
     curiosity_decay: 0.0005,
@@ -22,7 +18,11 @@ const EngineSettings = ({ onClose }) => {
   // Calculate estimated research frequency
   const calculateResearchFrequency = () => {
     const { boredom_rate, threshold } = settings;
-    if (boredom_rate <= 0) return { timeMinutes: '∞', frequency: 'never', color: '#6b7280' };
+    
+    // Return loading state if values aren't loaded yet
+    if (!boredom_rate || !threshold || boredom_rate <= 0) {
+      return { timeMinutes: '...', frequency: 'loading', color: '#6b7280' };
+    }
     
     // Simplified estimation: time for boredom alone to reach threshold
     const timeSeconds = threshold / boredom_rate;
@@ -58,57 +58,83 @@ const EngineSettings = ({ onClose }) => {
     aggressive: {
       name: 'Aggressive Research',
       description: 'Research every 1-2 minutes',
-      settings: {
-        threshold: 0.3,
-        boredom_rate: 0.01,
-        curiosity_decay: 0.005,
-        tiredness_decay: 0.01,
-        satisfaction_decay: 0.005
-      }
+      threshold: 0.3,
+      boredom_rate: 0.01,
+      curiosity_decay: 0.005,
+      tiredness_decay: 0.01,
+      satisfaction_decay: 0.005
     },
     balanced: {
       name: 'Balanced Research',
       description: 'Research every 10-15 minutes',
-      settings: {
-        threshold: 1.0,
-        boredom_rate: 0.001,
-        curiosity_decay: 0.0005,
-        tiredness_decay: 0.0005,
-        satisfaction_decay: 0.0005
-      }
+      threshold: 1.0,
+      boredom_rate: 0.001,
+      curiosity_decay: 0.0005,
+      tiredness_decay: 0.0005,
+      satisfaction_decay: 0.0005
     },
     conservative: {
       name: 'Conservative Research',
       description: 'Research every 30-60 minutes',
-      settings: {
-        threshold: 2.0,
-        boredom_rate: 0.0005,
-        curiosity_decay: 0.0002,
-        tiredness_decay: 0.0002,
-        satisfaction_decay: 0.0002
-      }
+      threshold: 2.0,
+      boredom_rate: 0.0005,
+      curiosity_decay: 0.0002,
+      tiredness_decay: 0.0002,
+      satisfaction_decay: 0.0002
     },
     patient: {
       name: 'Very Patient',
       description: 'Research only when highly motivated',
-      settings: {
-        threshold: 5.0,
-        boredom_rate: 0.0002,
-        curiosity_decay: 0.0001,
-        tiredness_decay: 0.0001,
-        satisfaction_decay: 0.0001
-      }
+      threshold: 5.0,
+      boredom_rate: 0.0002,
+      curiosity_decay: 0.0001,
+      tiredness_decay: 0.0001,
+      satisfaction_decay: 0.0001
     }
   };
 
-  const applyPreset = (presetKey) => {
+  const applyPreset = async (presetKey) => {
     const preset = presets[presetKey];
-    setSettings(prev => ({
-      ...prev,
-      ...preset.settings
-    }));
-    setSuccess(false);
-    setError(null);
+    try {
+      setSaving(true);
+      setError(null);
+      
+      // Apply the preset configuration directly (send all parameters to completely replace config)
+      console.log('Applying preset:', presetKey, preset);
+      const configResponse = await updateMotivationConfig(preset);
+      console.log('Config update response:', configResponse);
+      
+      // Restart the research engine to ensure the new config takes effect
+      try {
+        const restartResponse = await fetch('/api/research/control/restart', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' }
+        });
+        console.log('Engine restart response:', await restartResponse.json());
+      } catch (restartErr) {
+        console.warn('Failed to restart engine, but config was updated:', restartErr);
+      }
+      
+      // Update local state for frequency calculation
+      const newSettings = {
+        threshold: preset.threshold,
+        boredom_rate: preset.boredom_rate,
+        curiosity_decay: preset.curiosity_decay,
+        tiredness_decay: preset.tiredness_decay,
+        satisfaction_decay: preset.satisfaction_decay
+      };
+      console.log('Setting new local state:', newSettings);
+      setSettings(newSettings);
+      
+      setSuccess(true);
+      setTimeout(() => setSuccess(false), 3000);
+    } catch (err) {
+      console.error('Error applying preset:', err);
+      console.log('Full error details:', err.response?.data || err);
+      setError('Failed to apply preset. Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   useEffect(() => {
@@ -119,17 +145,16 @@ const EngineSettings = ({ onClose }) => {
         const motivation = response.motivation_system;
         const driveRates = response.drive_rates;
         
-        setSettings({
-          boredom: motivation.boredom,
-          curiosity: motivation.curiosity,
-          tiredness: motivation.tiredness,
-          satisfaction: motivation.satisfaction,
+        const loadedSettings = {
           threshold: motivation.threshold,
           boredom_rate: driveRates.boredom_rate,
           curiosity_decay: driveRates.curiosity_decay,
           tiredness_decay: driveRates.tiredness_decay,
           satisfaction_decay: driveRates.satisfaction_decay
-        });
+        };
+        console.log('Loaded settings from API:', loadedSettings);
+        console.log('Raw API response:', { motivation, driveRates });
+        setSettings(loadedSettings);
       } catch (err) {
         console.error('Error loading settings:', err);
         setError('Failed to load settings. Please try again.');
@@ -141,69 +166,7 @@ const EngineSettings = ({ onClose }) => {
     fetchSettings();
   }, []);
 
-  const handleInputChange = (field, value) => {
-    setSettings(prev => ({
-      ...prev,
-      [field]: parseFloat(value) || 0
-    }));
-    setSuccess(false);
-    setError(null);
-  };
 
-  const handleSave = async () => {
-    try {
-      setSaving(true);
-      setError(null);
-      
-      // Update configuration parameters
-      await updateMotivationConfig({
-        threshold: settings.threshold,
-        boredom_rate: settings.boredom_rate,
-        curiosity_decay: settings.curiosity_decay,
-        tiredness_decay: settings.tiredness_decay,
-        satisfaction_decay: settings.satisfaction_decay
-      });
-      
-      // Adjust current drive values
-      await adjustMotivationDrives({
-        boredom: settings.boredom,
-        curiosity: settings.curiosity,
-        tiredness: settings.tiredness,
-        satisfaction: settings.satisfaction
-      });
-      
-      setSuccess(true);
-      setTimeout(() => setSuccess(false), 3000);
-    } catch (err) {
-      console.error('Error saving settings:', err);
-      setError('Failed to save settings. Please try again.');
-    } finally {
-      setSaving(false);
-    }
-  };
-
-  const handleReset = async () => {
-    try {
-      setLoading(true);
-      const response = await getMotivationStatus();
-      const motivation = response.motivation_system;
-      
-      setSettings(prev => ({
-        ...prev,
-        boredom: motivation.boredom,
-        curiosity: motivation.curiosity,
-        tiredness: motivation.tiredness,
-        satisfaction: motivation.satisfaction
-      }));
-      setSuccess(false);
-      setError(null);
-    } catch (err) {
-      console.error('Error resetting values:', err);
-      setError('Failed to reset values. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   if (loading) {
     return (
@@ -286,207 +249,20 @@ const EngineSettings = ({ onClose }) => {
                   <button
                     className="preset-btn"
                     onClick={() => applyPreset(key)}
+                    disabled={saving}
                   >
-                    Apply
+                    {saving ? 'Applying...' : 'Apply'}
                   </button>
                 </div>
               ))}
             </div>
           </div>
-
-          <div className="settings-section">
-            <h4>Current Motivation Drives</h4>
-            <p className="section-description">
-              Adjust the current motivation levels (0.0 - 1.0)
-            </p>
-            
-            <div className="setting-group">
-              <label>
-                Boredom (drives autonomous research)
-                <input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={settings.boredom.toFixed(2)}
-                  onChange={(e) => handleInputChange('boredom', e.target.value)}
-                />
-                <div className="drive-bar">
-                  <div 
-                    className="drive-fill boredom"
-                    style={{ width: `${settings.boredom * 100}%` }}
-                  ></div>
-                </div>
-              </label>
-            </div>
-
-            <div className="setting-group">
-              <label>
-                Curiosity (increases with user activity)
-                <input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={settings.curiosity.toFixed(2)}
-                  onChange={(e) => handleInputChange('curiosity', e.target.value)}
-                />
-                <div className="drive-bar">
-                  <div 
-                    className="drive-fill curiosity"
-                    style={{ width: `${settings.curiosity * 100}%` }}
-                  ></div>
-                </div>
-              </label>
-            </div>
-
-            <div className="setting-group">
-              <label>
-                Tiredness (reduces after research)
-                <input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={settings.tiredness.toFixed(2)}
-                  onChange={(e) => handleInputChange('tiredness', e.target.value)}
-                />
-                <div className="drive-bar">
-                  <div 
-                    className="drive-fill tiredness"
-                    style={{ width: `${settings.tiredness * 100}%` }}
-                  ></div>
-                </div>
-              </label>
-            </div>
-
-            <div className="setting-group">
-              <label>
-                Satisfaction (gained from good research)
-                <input
-                  type="number"
-                  min="0"
-                  max="1"
-                  step="0.1"
-                  value={settings.satisfaction.toFixed(2)}
-                  onChange={(e) => handleInputChange('satisfaction', e.target.value)}
-                />
-                <div className="drive-bar">
-                  <div 
-                    className="drive-fill satisfaction"
-                    style={{ width: `${settings.satisfaction * 100}%` }}
-                  ></div>
-                </div>
-              </label>
-            </div>
-          </div>
-
-          <div className="settings-section">
-            <h4>System Configuration</h4>
-            <p className="section-description">
-              Adjust system parameters that control motivation behavior
-            </p>
-            
-            <div className="setting-group">
-              <label>
-                Research Threshold
-                <input
-                  type="number"
-                  min="0.1"
-                  max="10.0"
-                  step="0.1"
-                  value={settings.threshold.toFixed(2)}
-                  onChange={(e) => handleInputChange('threshold', e.target.value)}
-                />
-                <small>Research triggers when impetus exceeds this value</small>
-              </label>
-            </div>
-
-            <div className="config-grid">
-              <div className="config-item editable">
-                <label>
-                  Boredom Rate (/sec)
-                  <input
-                    type="number"
-                    min="0"
-                    max="0.1"
-                    step="0.001"
-                    value={settings.boredom_rate.toFixed(4)}
-                    onChange={(e) => handleInputChange('boredom_rate', e.target.value)}
-                  />
-                  <small>How fast boredom increases over time</small>
-                </label>
-              </div>
-              <div className="config-item editable">
-                <label>
-                  Curiosity Decay (/sec)
-                  <input
-                    type="number"
-                    min="0"
-                    max="0.1"
-                    step="0.001"
-                    value={settings.curiosity_decay.toFixed(4)}
-                    onChange={(e) => handleInputChange('curiosity_decay', e.target.value)}
-                  />
-                  <small>How fast curiosity decreases over time</small>
-                </label>
-              </div>
-              <div className="config-item editable">
-                <label>
-                  Tiredness Decay (/sec)
-                  <input
-                    type="number"
-                    min="0"
-                    max="0.1"
-                    step="0.001"
-                    value={settings.tiredness_decay.toFixed(4)}
-                    onChange={(e) => handleInputChange('tiredness_decay', e.target.value)}
-                  />
-                  <small>How fast tiredness decreases over time</small>
-                </label>
-              </div>
-              <div className="config-item editable">
-                <label>
-                  Satisfaction Decay (/sec)
-                  <input
-                    type="number"
-                    min="0"
-                    max="0.1"
-                    step="0.001"
-                    value={settings.satisfaction_decay.toFixed(4)}
-                    onChange={(e) => handleInputChange('satisfaction_decay', e.target.value)}
-                  />
-                  <small>How fast satisfaction decreases over time</small>
-                </label>
-              </div>
-            </div>
-          </div>
-
-          <div className="impetus-section">
-            <h4>Current Impetus</h4>
-            <div className="impetus-value">
-              {(settings.boredom + settings.curiosity + 0.5 * settings.satisfaction - settings.tiredness).toFixed(2)} / {settings.threshold}
-            </div>
-            <small>
-              Formula: Boredom + Curiosity + (0.5 × Satisfaction) - Tiredness
-            </small>
-          </div>
+        
         </div>
 
         <div className="settings-footer">
-          <button 
-            className="reset-btn" 
-            onClick={handleReset}
-            disabled={saving}
-          >
-            Reset to Current
-          </button>
-          <button 
-            className="save-btn" 
-            onClick={handleSave}
-            disabled={saving}
-          >
-            {saving ? 'Saving...' : 'Apply Changes'}
+          <button className="close-btn-alt" onClick={onClose}>
+            Close
           </button>
         </div>
       </div>
