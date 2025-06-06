@@ -238,6 +238,19 @@
   font-size: 0.8rem;
 }
 
+.behavior-note {
+  margin-top: 0.75rem;
+  padding: 0.5rem;
+  background: rgba(13, 110, 253, 0.1);
+  border-left: 3px solid #0d6efd;
+  border-radius: 4px;
+}
+
+.behavior-note small {
+  color: #495057;
+  line-height: 1.4;
+}
+
 .presets-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));

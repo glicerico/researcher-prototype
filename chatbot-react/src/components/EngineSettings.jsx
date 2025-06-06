@@ -263,6 +263,13 @@ const EngineSettings = ({ onClose }) => {
                 </div>
               );
             })()}
+            
+            <div className="behavior-note">
+              <small>
+                📌 <strong>Note:</strong> Motivation only evolves when the research engine is running. 
+                When stopped, all motivation parameters freeze at their current values.
+              </small>
+            </div>
           </div>
 
           {/* Quick Presets */}

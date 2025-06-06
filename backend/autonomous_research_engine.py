@@ -56,6 +56,10 @@ class AutonomousResearcher:
         self.is_running = True
         logger.info("🔬 Starting LangGraph Autonomous Research Engine...")
 
+        # Reset motivation timer to prevent huge time deltas from accumulated server uptime
+        self.motivation.last_tick = time.time()
+        logger.info(f"🔬 Reset motivation timer - Current drives: B:{self.motivation.boredom:.2f} C:{self.motivation.curiosity:.2f} T:{self.motivation.tiredness:.2f} S:{self.motivation.satisfaction:.2f}")
+
         # Start the research loop
         self.research_task = asyncio.create_task(self._research_loop())
 
