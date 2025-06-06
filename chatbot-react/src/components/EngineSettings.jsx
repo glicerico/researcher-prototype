@@ -100,37 +100,21 @@ const EngineSettings = ({ onClose }) => {
       setError(null);
       
       // Apply the preset configuration directly (send all parameters to completely replace config)
-      console.log('Applying preset:', presetKey, preset);
-      const configResponse = await updateMotivationConfig(preset);
-      console.log('Config update response:', configResponse);
-      
-      // Restart the research engine to ensure the new config takes effect
-      try {
-        const restartResponse = await fetch('/api/research/control/restart', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' }
-        });
-        console.log('Engine restart response:', await restartResponse.json());
-      } catch (restartErr) {
-        console.warn('Failed to restart engine, but config was updated:', restartErr);
-      }
+      await updateMotivationConfig(preset);
       
       // Update local state for frequency calculation
-      const newSettings = {
+      setSettings({
         threshold: preset.threshold,
         boredom_rate: preset.boredom_rate,
         curiosity_decay: preset.curiosity_decay,
         tiredness_decay: preset.tiredness_decay,
         satisfaction_decay: preset.satisfaction_decay
-      };
-      console.log('Setting new local state:', newSettings);
-      setSettings(newSettings);
+      });
       
       setSuccess(true);
       setTimeout(() => setSuccess(false), 3000);
     } catch (err) {
       console.error('Error applying preset:', err);
-      console.log('Full error details:', err.response?.data || err);
       setError('Failed to apply preset. Please try again.');
     } finally {
       setSaving(false);
@@ -145,16 +129,13 @@ const EngineSettings = ({ onClose }) => {
         const motivation = response.motivation_system;
         const driveRates = response.drive_rates;
         
-        const loadedSettings = {
+        setSettings({
           threshold: motivation.threshold,
           boredom_rate: driveRates.boredom_rate,
           curiosity_decay: driveRates.curiosity_decay,
           tiredness_decay: driveRates.tiredness_decay,
           satisfaction_decay: driveRates.satisfaction_decay
-        };
-        console.log('Loaded settings from API:', loadedSettings);
-        console.log('Raw API response:', { motivation, driveRates });
-        setSettings(loadedSettings);
+        });
       } catch (err) {
         console.error('Error loading settings:', err);
         setError('Failed to load settings. Please try again.');

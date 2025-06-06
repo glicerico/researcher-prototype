@@ -1048,20 +1048,10 @@ async def adjust_motivation_drives(
 async def update_motivation_config(config: MotivationConfigUpdate):
     """Debug endpoint to update motivation system configuration parameters."""
     try:
-        logger.info(f"Received config update request: {config.model_dump()}")
-        logger.info(f"Individual values - threshold: {config.threshold}, boredom_rate: {config.boredom_rate}, curiosity_decay: {config.curiosity_decay}, tiredness_decay: {config.tiredness_decay}, satisfaction_decay: {config.satisfaction_decay}")
         if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
             researcher = app.state.autonomous_researcher
             motivation = researcher.motivation
             drives_config = motivation.drives
-            
-            old_config = {
-                "threshold": drives_config.threshold,
-                "boredom_rate": drives_config.boredom_rate,
-                "curiosity_decay": drives_config.curiosity_decay,
-                "tiredness_decay": drives_config.tiredness_decay,
-                "satisfaction_decay": drives_config.satisfaction_decay
-            }
             
             # Check if this is a complete config replacement (all parameters provided)
             all_params_provided = all(getattr(config, param) is not None for param in ['threshold', 'boredom_rate', 'curiosity_decay', 'tiredness_decay', 'satisfaction_decay'])
@@ -1070,7 +1060,6 @@ async def update_motivation_config(config: MotivationConfigUpdate):
                 # Complete replacement - clear override and set new values
                 global _motivation_config_override
                 _motivation_config_override = {}
-                logger.info("Complete config replacement - clearing override")
             
             # Update provided values
             if config.threshold is not None:
@@ -1094,22 +1083,9 @@ async def update_motivation_config(config: MotivationConfigUpdate):
                 drives_config.satisfaction_decay = value
                 _motivation_config_override['satisfaction_decay'] = value
             
-            new_config = {
-                "threshold": drives_config.threshold,
-                "boredom_rate": drives_config.boredom_rate,
-                "curiosity_decay": drives_config.curiosity_decay,
-                "tiredness_decay": drives_config.tiredness_decay,
-                "satisfaction_decay": drives_config.satisfaction_decay
-            }
-            
-            logger.info(f"Motivation config updated: {old_config} -> {new_config}")
-            logger.info(f"Global override state: {_motivation_config_override}")
-            
             return {
                 "success": True,
                 "message": "Motivation configuration updated",
-                "old_config": old_config,
-                "new_config": new_config,
                 "impetus": round(motivation.impetus(), 4),
                 "should_research": motivation.should_research()
             }

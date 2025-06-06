@@ -18,11 +18,7 @@ const TopicsHeader = ({
   onShowMotivation,
   onShowEngineSettings
 }) => {
-  const formatDate = (days) => {
-    if (days === 0) return 'today';
-    if (days === 1) return '1 day ago';
-    return `${days} days ago`;
-  };
+
 
   // Determine immediate research button state
   const isResearchEngineRunning = researchEngineStatus?.running || false;
