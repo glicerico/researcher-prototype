@@ -37,8 +37,8 @@ class UserManager:
     def _generate_friendly_user_id(self) -> str:
         """
         Generate a friendly, human-readable user ID.
-        Format: user-{adjective}-{noun}-{number}
-        Example: user-happy-cat-42
+        Format: {adjective}-{noun}-{number}
+        Example: happy-cat-42
         """
         adjectives = [
             "happy", "clever", "bright", "swift", "calm", "bold", "wise", "kind",
@@ -59,15 +59,15 @@ class UserManager:
         adjective = random.choice(adjectives)
         noun = random.choice(nouns)
         
-        # Create the friendly ID
-        friendly_id = f"user-{adjective}-{noun}-{number}"
+        # Create the friendly ID (removed "user-" prefix)
+        friendly_id = f"{adjective}-{noun}-{number}"
         
         # Check if this ID already exists, if so, try again with a different number
         max_attempts = 10
         attempt = 0
         while self.user_exists(friendly_id) and attempt < max_attempts:
             number = random.randint(10, 99)
-            friendly_id = f"user-{adjective}-{noun}-{number}"
+            friendly_id = f"{adjective}-{noun}-{number}"
             attempt += 1
         
         # If we still have a collision after max attempts, fall back to UUID

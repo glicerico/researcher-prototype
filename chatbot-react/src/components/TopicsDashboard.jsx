@@ -12,12 +12,13 @@ import {
   disableTopicResearchById,
   getResearchEngineStatus,
   startResearchEngine,
-  stopResearchEngine
+  stopResearchEngine,
+  triggerManualResearch
 } from '../services/api';
 import '../styles/TopicsDashboard.css';
 
 const TopicsDashboard = () => {
-  const { currentUser } = useSession();
+  const { userId } = useSession();
   const [topics, setTopics] = useState([]);
   const [stats, setStats] = useState({});
   const [loading, setLoading] = useState(true);
@@ -25,6 +26,7 @@ const TopicsDashboard = () => {
   const [selectedTopics, setSelectedTopics] = useState(new Set());
   const [researchEngineStatus, setResearchEngineStatus] = useState(null);
   const [researchEngineLoading, setResearchEngineLoading] = useState(false);
+  const [immediateResearchLoading, setImmediateResearchLoading] = useState(false);
   const [activeTopicsCount, setActiveTopicsCount] = useState(0);
   const [filters, setFilters] = useState({
     searchTerm: '',
@@ -106,6 +108,35 @@ const TopicsDashboard = () => {
       loadData();
     } finally {
       setResearchEngineLoading(false);
+    }
+  };
+
+  // Handle immediate research trigger
+  const handleImmediateResearch = async () => {
+    if (!userId || immediateResearchLoading) return;
+    
+    try {
+      setImmediateResearchLoading(true);
+      setError(null);
+      
+      const result = await triggerManualResearch(userId);
+      
+      if (result.success) {
+        const topicsResearched = result.topics_researched || 0;
+        if (topicsResearched > 0) {
+          // Refresh data to show any updates
+          await loadData();
+        } else {
+          setError('No active research topics found to research');
+        }
+      } else {
+        setError('Research trigger failed: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error triggering immediate research:', error);
+      setError('Failed to trigger research. Please try again.');
+    } finally {
+      setImmediateResearchLoading(false);
     }
   };
 
@@ -348,6 +379,8 @@ const TopicsDashboard = () => {
         onToggleGlobalResearch={handleToggleGlobalResearch}
         researchEngineLoading={researchEngineLoading}
         activeTopicsCount={activeTopicsCount}
+        onImmediateResearch={handleImmediateResearch}
+        immediateResearchLoading={immediateResearchLoading}
       />
       
       {error && (

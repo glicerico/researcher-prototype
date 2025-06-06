@@ -12,12 +12,29 @@ const TopicsHeader = ({
   researchEngineStatus,
   onToggleGlobalResearch,
   researchEngineLoading,
-  activeTopicsCount
+  activeTopicsCount,
+  onImmediateResearch,
+  immediateResearchLoading
 }) => {
   const formatDate = (days) => {
     if (days === 0) return 'today';
     if (days === 1) return '1 day ago';
     return `${days} days ago`;
+  };
+
+  // Determine immediate research button state
+  const isResearchEngineRunning = researchEngineStatus?.running || false;
+  const hasActiveTopics = activeTopicsCount > 0;
+  const isImmediateResearchDisabled = immediateResearchLoading || loading || !isResearchEngineRunning || !hasActiveTopics;
+  
+  const getImmediateResearchTooltip = () => {
+    if (!isResearchEngineRunning) {
+      return 'Research engine is not running. Enable it first.';
+    }
+    if (!hasActiveTopics) {
+      return 'No active research topics. Enable research on topics first.';
+    }
+    return `Research ${activeTopicsCount} active topic${activeTopicsCount > 1 ? 's' : ''} immediately`;
   };
 
   return (
@@ -61,17 +78,32 @@ const TopicsHeader = ({
               Research Engine: {researchEngineStatus.running ? 'Active' : 'Inactive'}
             </span>
           </div>
-          <button 
-            className={`engine-toggle-btn ${researchEngineStatus.running ? 'stop' : 'start'}`}
-            onClick={onToggleGlobalResearch}
-            disabled={researchEngineLoading || loading}
-          >
-            {researchEngineLoading ? (
-              researchEngineStatus.running ? 'Stopping...' : 'Starting...'
-            ) : (
-              researchEngineStatus.running ? 'Stop Research' : 'Start Research'
-            )}
-          </button>
+          <div className="engine-controls">
+            <button 
+              className={`engine-toggle-btn ${researchEngineStatus.running ? 'stop' : 'start'}`}
+              onClick={onToggleGlobalResearch}
+              disabled={researchEngineLoading || loading}
+            >
+              {researchEngineLoading ? (
+                researchEngineStatus.running ? 'Stopping...' : 'Starting...'
+              ) : (
+                researchEngineStatus.running ? 'Stop Research' : 'Enable Autonomous Research'
+              )}
+            </button>
+            
+            <button 
+              className="immediate-research-button"
+              onClick={onImmediateResearch}
+              disabled={isImmediateResearchDisabled}
+              title={getImmediateResearchTooltip()}
+            >
+              {immediateResearchLoading ? (
+                <>🔄 Researching...</>
+              ) : (
+                <>🚀 Research Now</>
+              )}
+            </button>
+          </div>
         </div>
       )}
 
