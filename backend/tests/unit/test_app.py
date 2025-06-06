@@ -1,18 +1,12 @@
 import pytest
 from unittest.mock import patch, MagicMock
-import json
 import os
 import sys
-from fastapi.testclient import TestClient
-from langchain_core.messages import HumanMessage, AIMessage
 
 # Add the parent directory to the path so we can import the app
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app import app
-from models import Message, ChatRequest, ChatResponse
-from graph_builder import create_chat_graph
-from nodes.base import ChatState
+from langchain_core.messages import AIMessage  # noqa: E402
 
 
 def test_root_endpoint(client):
@@ -20,7 +14,8 @@ def test_root_endpoint(client):
     response = client.get("/health")  # Updated to use the actual health endpoint
     assert response.status_code == 200
     assert "status" in response.json()
-    
+
+
 def test_models_endpoint(client):
     """Test that the models endpoint returns the supported models."""
     response = client.get("/models")
@@ -28,80 +23,91 @@ def test_models_endpoint(client):
     assert "models" in response.json()
     models = response.json()["models"]
     assert "gpt-4o-mini" in models
-    
-@patch('nodes.integrator_node.ChatOpenAI')
-@patch('nodes.response_renderer_node.ChatOpenAI')
-def test_chat_endpoint(mock_renderer_openai, mock_integrator_openai, client, test_chat_state):
+
+
+@patch("nodes.router_node.ChatOpenAI")
+@patch("nodes.integrator_node.ChatOpenAI")
+@patch("nodes.response_renderer_node.ChatOpenAI")
+def test_chat_endpoint(mock_renderer_openai, mock_integrator_openai, mock_router_openai, client, test_chat_state):
     """Test the chat endpoint with a mocked LLM response."""
     # Mock the integrator LLM response
     mock_integrator_instance = MagicMock()
     mock_integrator_instance.invoke.return_value.content = "This is a test response"
     mock_integrator_openai.return_value = mock_integrator_instance
-    
+
     # Mock the renderer LLM response
     mock_renderer_instance = MagicMock()
     mock_renderer_instance.with_structured_output.return_value = mock_renderer_instance
     mock_renderer_instance.invoke.return_value.main_response = "This is a test response"
     mock_renderer_instance.invoke.return_value.follow_up_questions = None
     mock_renderer_openai.return_value = mock_renderer_instance
-    
+
+    # Mock the router LLM to avoid API key requirement
+    mock_router_instance = MagicMock()
+    mock_router_instance.with_structured_output.return_value.invoke.return_value.decision = "chat"
+    mock_router_instance.with_structured_output.return_value.invoke.return_value.reason = "test"
+    mock_router_instance.with_structured_output.return_value.invoke.return_value.complexity = "low"
+    mock_router_openai.return_value = mock_router_instance
+
     # Convert the test state to the format expected by the API
     api_request = {
         "messages": [{"role": "user", "content": "Hello, how are you?"}],
         "model": "gpt-4o-mini",
         "temperature": 0.7,
-        "max_tokens": 1000
+        "max_tokens": 1000,
     }
-    
+
     # Send the request to the chat endpoint
-    response = client.post(
-        "/chat",
-        json=api_request
-    )
-    
+    response = client.post("/chat", json=api_request)
+
     # Check the response
     assert response.status_code == 200
     response_data = response.json()
     assert response_data["response"] == "This is a test response"
     assert response_data["model"] == "gpt-4o-mini"
-    
+
+
 def test_invalid_request(client):
     """Test that an invalid request returns an error."""
     # Missing required field (messages)
-    request_data = {
-        "model": "gpt-4o-mini",
-        "temperature": 0.7
-    }
-    
-    response = client.post(
-        "/chat",
-        json=request_data
-    )
-    
+    request_data = {"model": "gpt-4o-mini", "temperature": 0.7}
+
+    response = client.post("/chat", json=request_data)
+
     assert response.status_code == 422  # Validation error
 
 
-@patch('nodes.integrator_node.ChatOpenAI')
-@patch('nodes.response_renderer_node.ChatOpenAI')
+@patch("nodes.router_node.ChatOpenAI")
+@patch("nodes.integrator_node.ChatOpenAI")
+@patch("nodes.response_renderer_node.ChatOpenAI")
 @pytest.mark.anyio
 @pytest.mark.parametrize("anyio_backend", ["asyncio"])
-async def test_chat_graph(mock_renderer_openai, mock_integrator_openai, chat_graph, test_chat_state):
+async def test_chat_graph(
+    mock_renderer_openai, mock_integrator_openai, mock_router_openai, chat_graph, test_chat_state
+):
     """Test the chat node in the graph."""
     # Mock the integrator LLM response
     mock_integrator_instance = MagicMock()
     mock_integrator_instance.invoke.return_value.content = "This is a test response"
     mock_integrator_openai.return_value = mock_integrator_instance
-    
+
     # Mock the renderer LLM response
     mock_renderer_instance = MagicMock()
     mock_renderer_instance.with_structured_output.return_value = mock_renderer_instance
     mock_renderer_instance.invoke.return_value.main_response = "This is a test response"
     mock_renderer_instance.invoke.return_value.follow_up_questions = None
     mock_renderer_openai.return_value = mock_renderer_instance
-    
+
+    # Mock router LLM
+    mock_router_instance = MagicMock()
+    mock_router_instance.with_structured_output.return_value.invoke.return_value.decision = "chat"
+    mock_router_instance.with_structured_output.return_value.invoke.return_value.reason = "test"
+    mock_router_instance.with_structured_output.return_value.invoke.return_value.complexity = "low"
+    mock_router_openai.return_value = mock_router_instance
+
     # Run the graph using async invoke
     result = await chat_graph.ainvoke(test_chat_state)
-    
+
     # Check the result
     assert "messages" in result
     assert len(result["messages"]) == 2  # Original message + response
@@ -110,4 +116,4 @@ async def test_chat_graph(mock_renderer_openai, mock_integrator_openai, chat_gra
 
 
 if __name__ == "__main__":
-    pytest.main() 
+    pytest.main()
