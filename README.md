@@ -92,6 +92,10 @@ After any conversation, you'll see suggested research topics in the side panel. 
 - **View Details**: See the topic description and why it was suggested
 - **Unsubscribe**: Remove topics you're no longer interested in
 
+You can also click the **💡 Motivation** button in the header to open a small modal
+showing progress bars for boredom, curiosity, tiredness and satisfaction. This
+helps you see how close the system is to launching another research cycle.
+
 Research findings include:
 - **Summary**: Key insights and main points
 - **Quality Scores**: Ratings for recency, relevance, depth, credibility, and novelty

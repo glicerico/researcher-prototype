@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getTopSessionTopics, deleteTopicById, enableTopicResearchById, disableTopicResearchById } from '../services/api';
 import TopicSidebarItem from './TopicSidebarItem';
+import MotivationStats from './MotivationStats';
 import '../styles/ConversationTopics.css';
 
 const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicUpdate }) => {
@@ -8,6 +9,7 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [showMotivation, setShowMotivation] = useState(false);
 
   // Fetch topics for the current session
   const fetchTopics = useCallback(async () => {
@@ -134,7 +136,7 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
       <div className="topics-header">
         <h3>Research Topics</h3>
         <div className="header-actions">
-          <button 
+          <button
             className="refresh-button"
             onClick={handleRefresh}
             disabled={loading}
@@ -142,7 +144,14 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
           >
             🔄
           </button>
-          <button 
+          <button
+            className="motivation-button"
+            onClick={() => setShowMotivation(true)}
+            title="Show motivation status"
+          >
+            💡
+          </button>
+          <button
             className="collapse-button"
             onClick={onToggleCollapse}
             title="Hide topics panel"
@@ -207,6 +216,9 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
           </div>
         )}
       </div>
+      {showMotivation && (
+        <MotivationStats onClose={() => setShowMotivation(false)} />
+      )}
     </div>
   );
 };

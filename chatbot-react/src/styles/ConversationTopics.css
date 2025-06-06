@@ -64,6 +64,7 @@
 }
 
 .refresh-button,
+.motivation-button,
 .collapse-button {
   width: 32px;
   height: 32px;
@@ -80,6 +81,7 @@
 }
 
 .refresh-button:hover,
+.motivation-button:hover,
 .collapse-button:hover {
   background: #f3f4f6;
   color: #374151;

@@ -300,6 +300,16 @@ export const getResearchEngineStatus = async () => {
   }
 };
 
+export const getMotivationStatus = async () => {
+  try {
+    const response = await api.get('/research/debug/motivation');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching motivation status:', error);
+    throw error;
+  }
+};
+
 export const getActiveResearchTopics = async (userId) => {
   try {
     const response = await api.get(`/topics/user/${userId}/research`);
