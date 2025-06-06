@@ -134,7 +134,7 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
       <div className="topics-header">
         <h3>Research Topics</h3>
         <div className="header-actions">
-          <button 
+          <button
             className="refresh-button"
             onClick={handleRefresh}
             disabled={loading}
@@ -142,7 +142,7 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
           >
             🔄
           </button>
-          <button 
+          <button
             className="collapse-button"
             onClick={onToggleCollapse}
             title="Hide topics panel"

@@ -15,9 +15,21 @@ logger = configure_logging()
 
 # Now import other modules that might use logging
 from models import ChatRequest, ChatResponse, Message, PersonalityConfig, UserSummary, UserProfile, TopicSuggestion
+from pydantic import BaseModel
+
+class MotivationConfigUpdate(BaseModel):
+    threshold: Optional[float] = None
+    boredom_rate: Optional[float] = None
+    curiosity_decay: Optional[float] = None
+    tiredness_decay: Optional[float] = None
+    satisfaction_decay: Optional[float] = None
 from storage import StorageManager, UserManager, ZepManager
 from graph_builder import chat_graph
 from autonomous_research_engine import initialize_autonomous_researcher
+
+# Global motivation config override (persists across reinitializations)
+_motivation_config_override = {}
+
 import config
 
 @asynccontextmanager
@@ -29,7 +41,8 @@ async def lifespan(app: FastAPI):
     # Initialize and start the autonomous researcher
     try:
         logger.info("🔬 Initializing Autonomous Research Engine...")
-        app.state.autonomous_researcher = initialize_autonomous_researcher(user_manager)
+        logger.info(f"App startup - Config override: {_motivation_config_override}")
+        app.state.autonomous_researcher = initialize_autonomous_researcher(user_manager, _motivation_config_override)
         await app.state.autonomous_researcher.start()
         logger.info("🔬 Autonomous Research Engine started successfully")
     except Exception as e:
@@ -894,6 +907,18 @@ async def get_debug_active_topics():
         raise HTTPException(status_code=500, detail=f"Error getting debug info: {str(e)}")
 
 
+@app.get("/research/debug/config-override")
+async def get_config_override():
+    """Debug endpoint to see what's in the config override."""
+    return {"override": _motivation_config_override}
+
+@app.post("/research/debug/clear-override")
+async def clear_config_override():
+    """Debug endpoint to clear the config override."""
+    global _motivation_config_override
+    _motivation_config_override = {}
+    return {"success": True, "message": "Config override cleared"}
+
 @app.get("/research/debug/motivation")
 async def get_motivation_status():
     """Debug endpoint to check motivation system status."""
@@ -902,8 +927,10 @@ async def get_motivation_status():
             researcher = app.state.autonomous_researcher
             motivation = researcher.motivation
             
-            # Force a tick to get current values
-            motivation.tick()
+            # Only tick if the research engine is actually running
+            # This ensures drives only evolve when the engine is active
+            if researcher.is_running:
+                motivation.tick()
             
             return {
                 "motivation_system": {
@@ -1017,6 +1044,61 @@ async def adjust_motivation_drives(
         raise HTTPException(status_code=500, detail=f"Error adjusting drives: {str(e)}")
 
 
+
+
+@app.post("/research/debug/update-config")
+async def update_motivation_config(config: MotivationConfigUpdate):
+    """Debug endpoint to update motivation system configuration parameters."""
+    try:
+        if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
+            researcher = app.state.autonomous_researcher
+            motivation = researcher.motivation
+            drives_config = motivation.drives
+            
+            # Check if this is a complete config replacement (all parameters provided)
+            all_params_provided = all(getattr(config, param) is not None for param in ['threshold', 'boredom_rate', 'curiosity_decay', 'tiredness_decay', 'satisfaction_decay'])
+            
+            if all_params_provided:
+                # Complete replacement - clear override and set new values
+                global _motivation_config_override
+                _motivation_config_override = {}
+            
+            # Update provided values
+            if config.threshold is not None:
+                value = max(0.1, min(10.0, config.threshold))
+                drives_config.threshold = value
+                _motivation_config_override['threshold'] = value
+            if config.boredom_rate is not None:
+                value = max(0.0, min(0.1, config.boredom_rate))
+                drives_config.boredom_rate = value
+                _motivation_config_override['boredom_rate'] = value
+            if config.curiosity_decay is not None:
+                value = max(0.0, min(0.1, config.curiosity_decay))
+                drives_config.curiosity_decay = value
+                _motivation_config_override['curiosity_decay'] = value
+            if config.tiredness_decay is not None:
+                value = max(0.0, min(0.1, config.tiredness_decay))
+                drives_config.tiredness_decay = value
+                _motivation_config_override['tiredness_decay'] = value
+            if config.satisfaction_decay is not None:
+                value = max(0.0, min(0.1, config.satisfaction_decay))
+                drives_config.satisfaction_decay = value
+                _motivation_config_override['satisfaction_decay'] = value
+            
+            return {
+                "success": True,
+                "message": "Motivation configuration updated",
+                "impetus": round(motivation.impetus(), 4),
+                "should_research": motivation.should_research()
+            }
+        else:
+            raise HTTPException(status_code=503, detail="Autonomous researcher not available")
+        
+    except Exception as e:
+        logger.error(f"Error updating motivation config: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating config: {str(e)}")
+
+
 @app.post("/research/debug/simulate-research-completion")
 async def simulate_research_completion(quality_score: float = 0.7):
     """Debug endpoint to simulate research completion with specified quality."""
@@ -1091,7 +1173,7 @@ async def start_research_engine():
             # Try to initialize if not available
             try:
                 logger.info("🔬 Re-initializing Autonomous Research Engine...")
-                app.state.autonomous_researcher = initialize_autonomous_researcher(user_manager)
+                app.state.autonomous_researcher = initialize_autonomous_researcher(user_manager, _motivation_config_override)
                 app.state.autonomous_researcher.enable()
                 await app.state.autonomous_researcher.start()
                 logger.info("🔬 Autonomous Research Engine re-initialized and started successfully")
@@ -1159,7 +1241,7 @@ async def restart_research_engine():
             # Try to initialize if not available
             try:
                 logger.info("🔬 Initializing Autonomous Research Engine for restart...")
-                app.state.autonomous_researcher = initialize_autonomous_researcher(user_manager)
+                app.state.autonomous_researcher = initialize_autonomous_researcher(user_manager, _motivation_config_override)
                 app.state.autonomous_researcher.enable()
                 await app.state.autonomous_researcher.start()
                 logger.info("🔬 Autonomous Research Engine initialized and started successfully")

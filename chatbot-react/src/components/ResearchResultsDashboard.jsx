@@ -3,9 +3,7 @@ import { Link } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { 
   getResearchFindings,
-  markFindingAsRead,
-  getResearchEngineStatus,
-  getActiveResearchTopics
+  markFindingAsRead
 } from '../services/api';
 import '../styles/ResearchResultsDashboard.css';
 

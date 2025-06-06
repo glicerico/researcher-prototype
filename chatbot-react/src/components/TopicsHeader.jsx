@@ -14,13 +14,11 @@ const TopicsHeader = ({
   researchEngineLoading,
   activeTopicsCount,
   onImmediateResearch,
-  immediateResearchLoading
+  immediateResearchLoading,
+  onShowMotivation,
+  onShowEngineSettings
 }) => {
-  const formatDate = (days) => {
-    if (days === 0) return 'today';
-    if (days === 1) return '1 day ago';
-    return `${days} days ago`;
-  };
+
 
   // Determine immediate research button state
   const isResearchEngineRunning = researchEngineStatus?.running || false;
@@ -84,11 +82,20 @@ const TopicsHeader = ({
               onClick={onToggleGlobalResearch}
               disabled={researchEngineLoading || loading}
             >
-              {researchEngineLoading ? (
-                researchEngineStatus.running ? 'Stopping...' : 'Starting...'
-              ) : (
-                researchEngineStatus.running ? 'Stop Research' : 'Enable Autonomous Research'
-              )}
+              <span className="btn-icon">
+                {researchEngineStatus.running ? '⏹️' : '▶️'}
+              </span>
+              <span className="btn-text">
+                {researchEngineLoading ? (
+                  researchEngineStatus.running ? 'Stopping...' : 'Starting...'
+                ) : (
+                  researchEngineStatus.running ? (
+                    <>Stop<br />Engine</>
+                  ) : (
+                    <>Enable<br />Engine</>
+                  )
+                )}
+              </span>
             </button>
             
             <button 
@@ -97,11 +104,38 @@ const TopicsHeader = ({
               disabled={isImmediateResearchDisabled}
               title={getImmediateResearchTooltip()}
             >
-              {immediateResearchLoading ? (
-                <>🔄 Researching...</>
-              ) : (
-                <>🚀 Research Now</>
-              )}
+              <span className="btn-icon">
+                {immediateResearchLoading ? '🔄' : '🚀'}
+              </span>
+              <span className="btn-text">
+                {immediateResearchLoading ? (
+                  <>Searching...</>
+                ) : (
+                  <>Run<br />Now</>
+                )}
+              </span>
+            </button>
+            
+            <button
+              className="motivation-button"
+              onClick={onShowMotivation}
+              title="View motivation drives and research impetus"
+            >
+              <span className="btn-icon">💡</span>
+              <span className="btn-text">
+                View<br />Drives
+              </span>
+            </button>
+            
+            <button
+              className="help-button"
+              onClick={onShowEngineSettings}
+              title="Configure research timing and frequency presets"
+            >
+              <span className="btn-icon">⏰</span>
+              <span className="btn-text">
+                Research<br />Timing
+              </span>
             </button>
           </div>
         </div>

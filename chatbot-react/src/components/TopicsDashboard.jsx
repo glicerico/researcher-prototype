@@ -1,7 +1,9 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { useSession } from '../context/SessionContext';
 import TopicsHeader from './TopicsHeader';
 import TopicsFilters from './TopicsFilters';
+import MotivationStats from './MotivationStats';
+import EngineSettings from './EngineSettings';
 import { 
   getAllTopicSuggestions,
   getTopicStatistics,
@@ -28,6 +30,8 @@ const TopicsDashboard = () => {
   const [researchEngineLoading, setResearchEngineLoading] = useState(false);
   const [immediateResearchLoading, setImmediateResearchLoading] = useState(false);
   const [activeTopicsCount, setActiveTopicsCount] = useState(0);
+  const [showMotivation, setShowMotivation] = useState(false);
+  const [showEngineSettings, setShowEngineSettings] = useState(false);
   const [filters, setFilters] = useState({
     searchTerm: '',
     sessionFilter: 'all',
@@ -381,6 +385,8 @@ const TopicsDashboard = () => {
         activeTopicsCount={activeTopicsCount}
         onImmediateResearch={handleImmediateResearch}
         immediateResearchLoading={immediateResearchLoading}
+        onShowMotivation={() => setShowMotivation(true)}
+        onShowEngineSettings={() => setShowEngineSettings(true)}
       />
       
       {error && (
@@ -522,6 +528,14 @@ const TopicsDashboard = () => {
           </div>
         )}
       </div>
+      
+      {showMotivation && (
+        <MotivationStats onClose={() => setShowMotivation(false)} />
+      )}
+      
+      {showEngineSettings && (
+        <EngineSettings onClose={() => setShowEngineSettings(false)} />
+      )}
     </div>
   );
 };
