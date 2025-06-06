@@ -134,11 +134,11 @@ const TopicsHeader = ({
             <button
               className="help-button"
               onClick={onShowEngineSettings}
-              title="Research engine settings and configuration"
+              title="Configure research timing and frequency presets"
             >
-              <span className="btn-icon">⚙️</span>
+              <span className="btn-icon">⏰</span>
               <span className="btn-text">
-                Engine<br />Info
+                Research<br />Timing
               </span>
             </button>
           </div>
