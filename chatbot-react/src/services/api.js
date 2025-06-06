@@ -310,6 +310,26 @@ export const getMotivationStatus = async () => {
   }
 };
 
+export const adjustMotivationDrives = async (drives) => {
+  try {
+    const response = await api.post('/research/debug/adjust-drives', drives);
+    return response.data;
+  } catch (error) {
+    console.error('Error adjusting motivation drives:', error);
+    throw error;
+  }
+};
+
+export const updateMotivationConfig = async (config) => {
+  try {
+    const response = await api.post('/research/debug/update-config', config);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating motivation config:', error);
+    throw error;
+  }
+};
+
 export const getActiveResearchTopics = async (userId) => {
   try {
     const response = await api.get(`/topics/user/${userId}/research`);

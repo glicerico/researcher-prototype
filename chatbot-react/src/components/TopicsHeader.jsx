@@ -15,7 +15,8 @@ const TopicsHeader = ({
   activeTopicsCount,
   onImmediateResearch,
   immediateResearchLoading,
-  onShowMotivation
+  onShowMotivation,
+  onShowEngineSettings
 }) => {
   const formatDate = (days) => {
     if (days === 0) return 'today';
@@ -132,11 +133,8 @@ const TopicsHeader = ({
             
             <button
               className="help-button"
-              onClick={() => {
-                // Could be used for help or settings in the future
-                console.log('Help/Settings placeholder');
-              }}
-              title="Research engine information and configuration"
+              onClick={onShowEngineSettings}
+              title="Research engine settings and configuration"
             >
               <span className="btn-icon">⚙️</span>
               <span className="btn-text">

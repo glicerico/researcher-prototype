@@ -1017,6 +1017,67 @@ async def adjust_motivation_drives(
         raise HTTPException(status_code=500, detail=f"Error adjusting drives: {str(e)}")
 
 
+@app.post("/research/debug/update-config")
+async def update_motivation_config(
+    threshold: Optional[float] = None,
+    boredom_rate: Optional[float] = None,
+    curiosity_decay: Optional[float] = None,
+    tiredness_decay: Optional[float] = None,
+    satisfaction_decay: Optional[float] = None
+):
+    """Debug endpoint to update motivation system configuration parameters."""
+    try:
+        if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
+            researcher = app.state.autonomous_researcher
+            motivation = researcher.motivation
+            drives_config = motivation.drives
+            
+            old_config = {
+                "threshold": drives_config.threshold,
+                "boredom_rate": drives_config.boredom_rate,
+                "curiosity_decay": drives_config.curiosity_decay,
+                "tiredness_decay": drives_config.tiredness_decay,
+                "satisfaction_decay": drives_config.satisfaction_decay
+            }
+            
+            # Update provided values
+            if threshold is not None:
+                drives_config.threshold = max(0.1, min(10.0, threshold))
+            if boredom_rate is not None:
+                drives_config.boredom_rate = max(0.0, min(0.1, boredom_rate))
+            if curiosity_decay is not None:
+                drives_config.curiosity_decay = max(0.0, min(0.1, curiosity_decay))
+            if tiredness_decay is not None:
+                drives_config.tiredness_decay = max(0.0, min(0.1, tiredness_decay))
+            if satisfaction_decay is not None:
+                drives_config.satisfaction_decay = max(0.0, min(0.1, satisfaction_decay))
+            
+            new_config = {
+                "threshold": drives_config.threshold,
+                "boredom_rate": drives_config.boredom_rate,
+                "curiosity_decay": drives_config.curiosity_decay,
+                "tiredness_decay": drives_config.tiredness_decay,
+                "satisfaction_decay": drives_config.satisfaction_decay
+            }
+            
+            logger.info(f"Motivation config updated: {old_config} -> {new_config}")
+            
+            return {
+                "success": True,
+                "message": "Motivation configuration updated",
+                "old_config": old_config,
+                "new_config": new_config,
+                "impetus": round(motivation.impetus(), 4),
+                "should_research": motivation.should_research()
+            }
+        else:
+            raise HTTPException(status_code=503, detail="Autonomous researcher not available")
+        
+    except Exception as e:
+        logger.error(f"Error updating motivation config: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating config: {str(e)}")
+
+
 @app.post("/research/debug/simulate-research-completion")
 async def simulate_research_completion(quality_score: float = 0.7):
     """Debug endpoint to simulate research completion with specified quality."""
