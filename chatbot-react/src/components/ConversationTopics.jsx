@@ -1,13 +1,16 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getTopSessionTopics, deleteTopicById, enableTopicResearchById, disableTopicResearchById } from '../services/api';
+import { getTopSessionTopics, deleteTopicById, enableTopicResearchById, disableTopicResearchById, triggerManualResearch } from '../services/api';
+import { useSession } from '../context/SessionContext';
 import TopicSidebarItem from './TopicSidebarItem';
 import '../styles/ConversationTopics.css';
 
 const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicUpdate }) => {
+  const { userId } = useSession();
   const [topics, setTopics] = useState([]);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [lastUpdate, setLastUpdate] = useState(null);
+  const [researchLoading, setResearchLoading] = useState(false);
 
   // Fetch topics for the current session
   const fetchTopics = useCallback(async () => {
@@ -115,6 +118,35 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
     fetchTopics();
   };
 
+  // Handle immediate research trigger
+  const handleImmediateResearch = async () => {
+    if (!userId || researchLoading) return;
+    
+    try {
+      setResearchLoading(true);
+      const result = await triggerManualResearch(userId);
+      
+      if (result.success) {
+        // Show success feedback
+        const topicsResearched = result.topics_researched || 0;
+        if (topicsResearched > 0) {
+          setError(null);
+          // Refresh topics to show any updates
+          await fetchTopics();
+        } else {
+          setError('No active research topics found to research');
+        }
+      } else {
+        setError('Research trigger failed: ' + (result.error || 'Unknown error'));
+      }
+    } catch (error) {
+      console.error('Error triggering immediate research:', error);
+      setError('Failed to trigger research. Please try again.');
+    } finally {
+      setResearchLoading(false);
+    }
+  };
+
   if (isCollapsed) {
     return (
       <div className="conversation-topics collapsed">
@@ -129,11 +161,28 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
     );
   }
 
+  // Count active research topics
+  const activeTopicsCount = topics.filter(topic => topic.is_active_research).length;
+
   return (
     <div className="conversation-topics">
       <div className="topics-header">
         <h3>Research Topics</h3>
         <div className="header-actions">
+          {activeTopicsCount > 0 && (
+            <button 
+              className="immediate-research-button"
+              onClick={handleImmediateResearch}
+              disabled={researchLoading || loading}
+              title={`Research ${activeTopicsCount} active topic${activeTopicsCount > 1 ? 's' : ''} now`}
+            >
+              {researchLoading ? (
+                <>🔄 Researching...</>
+              ) : (
+                <>🚀 Research Now</>
+              )}
+            </button>
+          )}
           <button 
             className="refresh-button"
             onClick={handleRefresh}

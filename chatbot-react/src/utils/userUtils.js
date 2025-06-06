@@ -11,12 +11,12 @@
 export const generateDisplayName = (userId, fallbackPrefix = 'User') => {
   if (!userId) return fallbackPrefix;
   
-  // Check if it's a friendly ID format (user-adjective-noun-number)
-  if (userId.startsWith('user-') && userId.split('-').length === 4) {
+  // Check if it's a friendly ID format (adjective-noun-number)
+  if (userId.split('-').length === 3 && !userId.startsWith('user-')) {
     const parts = userId.split('-');
-    const adjective = parts[1];
-    const noun = parts[2];
-    const number = parts[3];
+    const adjective = parts[0];
+    const noun = parts[1];
+    const number = parts[2];
     
     // Capitalize first letters and create a nice display name
     const capitalizedAdjective = adjective.charAt(0).toUpperCase() + adjective.slice(1);
@@ -40,5 +40,12 @@ export const generateDisplayName = (userId, fallbackPrefix = 'User') => {
  * @returns {boolean} True if it's a friendly format
  */
 export const isFriendlyUserId = (userId) => {
-  return userId && userId.startsWith('user-') && userId.split('-').length === 4;
+  if (!userId) return false;
+  
+  // Check new format: adjective-noun-number
+  if (userId.split('-').length === 3 && !userId.startsWith('user-')) {
+    return true;
+  }
+  
+  return false;
 }; 

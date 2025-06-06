@@ -91,6 +91,7 @@ After any conversation, you'll see suggested research topics in the side panel. 
 - **Subscribe**: Click the "🔬 Research this topic" button to enable autonomous research
 - **View Details**: See the topic description and why it was suggested
 - **Unsubscribe**: Remove topics you're no longer interested in
+- **Immediate Research**: When you have active research topics, use the "🚀 Research Now" button to trigger research immediately, bypassing the motivation system
 
 Research findings include:
 - **Summary**: Key insights and main points
