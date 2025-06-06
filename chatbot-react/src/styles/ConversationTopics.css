@@ -79,38 +79,6 @@
   transition: all 0.2s ease;
 }
 
-.immediate-research-button {
-  height: 32px;
-  padding: 0 0.75rem;
-  border: none;
-  background: linear-gradient(135deg, #10b981, #059669);
-  color: white;
-  cursor: pointer;
-  border-radius: 0.375rem;
-  font-size: 0.75rem;
-  font-weight: 600;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.25rem;
-  transition: all 0.2s ease;
-  white-space: nowrap;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
-.immediate-research-button:hover:not(:disabled) {
-  background: linear-gradient(135deg, #059669, #047857);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.15);
-}
-
-.immediate-research-button:disabled {
-  opacity: 0.7;
-  cursor: not-allowed;
-  transform: none;
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
-}
-
 .refresh-button:hover,
 .collapse-button:hover {
   background: #f3f4f6;
