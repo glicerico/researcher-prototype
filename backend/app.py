@@ -927,8 +927,10 @@ async def get_motivation_status():
             researcher = app.state.autonomous_researcher
             motivation = researcher.motivation
             
-            # Force a tick to get current values
-            motivation.tick()
+            # Only tick if the research engine is actually running
+            # This ensures drives only evolve when the engine is active
+            if researcher.is_running:
+                motivation.tick()
             
             return {
                 "motivation_system": {

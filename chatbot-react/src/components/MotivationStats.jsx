@@ -10,7 +10,10 @@ const MotivationStats = ({ onClose }) => {
     const fetchStatus = async () => {
       try {
         const response = await getMotivationStatus();
-        setData(response.motivation_system);
+        setData({
+          ...response.motivation_system,
+          engine_running: response.research_engine?.running || false
+        });
       } catch (err) {
         console.error('Error loading motivation status:', err);
       } finally {
@@ -47,6 +50,11 @@ const MotivationStats = ({ onClose }) => {
             <div className="impetus-info">
               Impetus: {data.impetus} / {data.threshold}
             </div>
+            {!data.engine_running && (
+              <div className="freeze-notice">
+                🚫 Drives frozen (engine not running)
+              </div>
+            )}
           </>
         )}
       </div>
