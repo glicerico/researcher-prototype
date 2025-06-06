@@ -73,6 +73,15 @@ The application includes a powerful autonomous research engine that automaticall
 5. **Deduplication**: The system avoids storing duplicate information by comparing against existing findings
 6. **Intelligent Storage**: Only high-quality, unique findings are stored for your review
 
+### Motivation-Driven Research
+
+Instead of relying on a fixed timer, the research engine uses a simple motivation
+model. Internal drives like **boredom** and **curiosity** grow when the system is
+idle or when you discuss new topics. **Tiredness** and **satisfaction** counter
+these drives after heavy research. When the combined motivation crosses a
+threshold, a new research cycle starts automatically. The rates and threshold can
+be adjusted via environment variables.
+
 ### Using the Research Engine
 
 #### Managing Research Topics

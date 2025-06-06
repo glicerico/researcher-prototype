@@ -849,15 +849,18 @@ async def get_research_engine_status():
 
 @app.get("/research/debug/active-topics")
 async def get_debug_active_topics():
-    """Debug endpoint to show all active research topics across all users."""
+    """Debug endpoint to see active research topics across all users."""
     try:
-        all_users = user_manager.list_users()
         debug_info = {
-            "total_users": len(all_users),
+            "total_users": 0,
             "users_with_active_topics": 0,
             "total_active_topics": 0,
-            "user_details": []
+            "user_breakdown": []
         }
+        
+        # Get all users
+        all_users = user_manager.list_users()
+        debug_info["total_users"] = len(all_users)
         
         for user_id in all_users:
             try:
@@ -866,22 +869,19 @@ async def get_debug_active_topics():
                     debug_info["users_with_active_topics"] += 1
                     debug_info["total_active_topics"] += len(active_topics)
                     
-                    user_detail = {
+                    debug_info["user_breakdown"].append({
                         "user_id": user_id,
                         "active_topics_count": len(active_topics),
-                        "topics": []
-                    }
-                    
-                    for topic in active_topics:
-                        user_detail["topics"].append({
-                            "topic_name": topic.get("topic_name", "Unknown"),
-                            "description": topic.get("description", "")[:100] + "..." if len(topic.get("description", "")) > 100 else topic.get("description", ""),
-                            "last_researched": topic.get("last_researched"),
-                            "research_count": topic.get("research_count", 0),
-                            "confidence_score": topic.get("confidence_score", 0.0)
-                        })
-                    
-                    debug_info["user_details"].append(user_detail)
+                        "topics": [
+                            {
+                                "name": topic.get("topic_name"),
+                                "description": topic.get("description", "")[:100] + "..." if len(topic.get("description", "")) > 100 else topic.get("description", ""),
+                                "last_researched": topic.get("last_researched"),
+                                "research_count": topic.get("research_count", 0)
+                            }
+                            for topic in active_topics
+                        ]
+                    })
                     
             except Exception as e:
                 logger.error(f"Error getting active topics for user {user_id}: {str(e)}")
@@ -892,6 +892,169 @@ async def get_debug_active_topics():
     except Exception as e:
         logger.error(f"Error getting debug active topics: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting debug info: {str(e)}")
+
+
+@app.get("/research/debug/motivation")
+async def get_motivation_status():
+    """Debug endpoint to check motivation system status."""
+    try:
+        if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
+            researcher = app.state.autonomous_researcher
+            motivation = researcher.motivation
+            
+            # Force a tick to get current values
+            motivation.tick()
+            
+            return {
+                "motivation_system": {
+                    "boredom": round(motivation.boredom, 4),
+                    "curiosity": round(motivation.curiosity, 4),
+                    "tiredness": round(motivation.tiredness, 4),
+                    "satisfaction": round(motivation.satisfaction, 4),
+                    "impetus": round(motivation.impetus(), 4),
+                    "threshold": motivation.drives.threshold,
+                    "should_research": motivation.should_research(),
+                    "time_since_last_tick": round(time.time() - motivation.last_tick, 2)
+                },
+                "research_engine": {
+                    "enabled": researcher.enabled,
+                    "running": researcher.is_running,
+                    "check_interval": researcher.check_interval
+                },
+                "drive_rates": {
+                    "boredom_rate": motivation.drives.boredom_rate,
+                    "curiosity_decay": motivation.drives.curiosity_decay,
+                    "tiredness_decay": motivation.drives.tiredness_decay,
+                    "satisfaction_decay": motivation.drives.satisfaction_decay
+                }
+            }
+        else:
+            return {
+                "error": "Autonomous researcher not available"
+            }
+        
+    except Exception as e:
+        logger.error(f"Error getting motivation status: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting motivation status: {str(e)}")
+
+
+@app.post("/research/debug/trigger-user-activity")
+async def trigger_user_activity():
+    """Debug endpoint to simulate user activity (increases curiosity)."""
+    try:
+        if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
+            researcher = app.state.autonomous_researcher
+            researcher.motivation.on_user_activity()
+            
+            return {
+                "success": True,
+                "message": "User activity triggered",
+                "new_motivation_state": {
+                    "boredom": round(researcher.motivation.boredom, 4),
+                    "curiosity": round(researcher.motivation.curiosity, 4),
+                    "impetus": round(researcher.motivation.impetus(), 4),
+                    "should_research": researcher.motivation.should_research()
+                }
+            }
+        else:
+            raise HTTPException(status_code=503, detail="Autonomous researcher not available")
+        
+    except Exception as e:
+        logger.error(f"Error triggering user activity: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error triggering user activity: {str(e)}")
+
+
+@app.post("/research/debug/adjust-drives")
+async def adjust_motivation_drives(
+    boredom: Optional[float] = None,
+    curiosity: Optional[float] = None,
+    tiredness: Optional[float] = None,
+    satisfaction: Optional[float] = None
+):
+    """Debug endpoint to manually set motivation drive values for testing."""
+    try:
+        if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
+            researcher = app.state.autonomous_researcher
+            motivation = researcher.motivation
+            
+            old_values = {
+                "boredom": motivation.boredom,
+                "curiosity": motivation.curiosity, 
+                "tiredness": motivation.tiredness,
+                "satisfaction": motivation.satisfaction
+            }
+            
+            # Update provided values
+            if boredom is not None:
+                motivation.boredom = max(0.0, min(1.0, boredom))
+            if curiosity is not None:
+                motivation.curiosity = max(0.0, min(1.0, curiosity))
+            if tiredness is not None:
+                motivation.tiredness = max(0.0, min(1.0, tiredness))
+            if satisfaction is not None:
+                motivation.satisfaction = max(0.0, min(1.0, satisfaction))
+            
+            new_values = {
+                "boredom": motivation.boredom,
+                "curiosity": motivation.curiosity,
+                "tiredness": motivation.tiredness,
+                "satisfaction": motivation.satisfaction
+            }
+            
+            return {
+                "success": True,
+                "message": "Motivation drives adjusted",
+                "old_values": old_values,
+                "new_values": new_values,
+                "impetus": round(motivation.impetus(), 4),
+                "should_research": motivation.should_research()
+            }
+        else:
+            raise HTTPException(status_code=503, detail="Autonomous researcher not available")
+        
+    except Exception as e:
+        logger.error(f"Error adjusting motivation drives: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error adjusting drives: {str(e)}")
+
+
+@app.post("/research/debug/simulate-research-completion")
+async def simulate_research_completion(quality_score: float = 0.7):
+    """Debug endpoint to simulate research completion with specified quality."""
+    try:
+        if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
+            researcher = app.state.autonomous_researcher
+            
+            old_state = {
+                "boredom": researcher.motivation.boredom,
+                "curiosity": researcher.motivation.curiosity,
+                "tiredness": researcher.motivation.tiredness,
+                "satisfaction": researcher.motivation.satisfaction
+            }
+            
+            researcher.motivation.on_research_completed(quality_score)
+            
+            new_state = {
+                "boredom": researcher.motivation.boredom,
+                "curiosity": researcher.motivation.curiosity,
+                "tiredness": researcher.motivation.tiredness,
+                "satisfaction": researcher.motivation.satisfaction
+            }
+            
+            return {
+                "success": True,
+                "message": f"Research completion simulated with quality {quality_score}",
+                "quality_score": quality_score,
+                "old_state": old_state,
+                "new_state": new_state,
+                "impetus": round(researcher.motivation.impetus(), 4),
+                "should_research": researcher.motivation.should_research()
+            }
+        else:
+            raise HTTPException(status_code=503, detail="Autonomous researcher not available")
+        
+    except Exception as e:
+        logger.error(f"Error simulating research completion: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error simulating research completion: {str(e)}")
 
 
 @app.post("/research/trigger/{user_id}")
@@ -916,6 +1079,8 @@ async def start_research_engine():
     """Start the autonomous research engine."""
     try:
         if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
+            # Enable and start
+            app.state.autonomous_researcher.enable()
             await app.state.autonomous_researcher.start()
             return {
                 "success": True,
@@ -927,6 +1092,7 @@ async def start_research_engine():
             try:
                 logger.info("🔬 Re-initializing Autonomous Research Engine...")
                 app.state.autonomous_researcher = initialize_autonomous_researcher(user_manager)
+                app.state.autonomous_researcher.enable()
                 await app.state.autonomous_researcher.start()
                 logger.info("🔬 Autonomous Research Engine re-initialized and started successfully")
                 return {
@@ -950,7 +1116,9 @@ async def stop_research_engine():
     """Stop the autonomous research engine."""
     try:
         if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
+            # Stop and disable
             await app.state.autonomous_researcher.stop()
+            app.state.autonomous_researcher.disable()
             return {
                 "success": True,
                 "message": "Autonomous research engine stopped successfully",
@@ -979,7 +1147,8 @@ async def restart_research_engine():
         if hasattr(app.state, 'autonomous_researcher') and app.state.autonomous_researcher:
             # Stop first
             await app.state.autonomous_researcher.stop()
-            # Then start again
+            # Then enable and start again
+            app.state.autonomous_researcher.enable()
             await app.state.autonomous_researcher.start()
             return {
                 "success": True,
@@ -991,6 +1160,7 @@ async def restart_research_engine():
             try:
                 logger.info("🔬 Initializing Autonomous Research Engine for restart...")
                 app.state.autonomous_researcher = initialize_autonomous_researcher(user_manager)
+                app.state.autonomous_researcher.enable()
                 await app.state.autonomous_researcher.start()
                 logger.info("🔬 Autonomous Research Engine initialized and started successfully")
                 return {
