@@ -76,6 +76,26 @@ class AutonomousResearcher:
 
         logger.info("🔬 LangGraph Autonomous Research Engine stopped")
 
+    def enable(self):
+        """Enable the research engine."""
+        self.enabled = True
+        logger.info("🔬 Autonomous Research Engine enabled")
+
+    def disable(self):
+        """Disable the research engine."""
+        self.enabled = False
+        logger.info("🔬 Autonomous Research Engine disabled")
+
+    def toggle_enabled(self):
+        """Toggle the enabled state of the research engine."""
+        self.enabled = not self.enabled
+        logger.info(f"🔬 Autonomous Research Engine {'enabled' if self.enabled else 'disabled'}")
+        return self.enabled
+
+    def is_enabled(self) -> bool:
+        """Check if the research engine is enabled."""
+        return self.enabled
+
     async def _research_loop(self):
         """Main loop that checks motivation and triggers research."""
         while self.is_running:
