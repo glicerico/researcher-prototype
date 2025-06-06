@@ -35,7 +35,6 @@ class StorageManager:
         dirs = [
             self.base_dir,
             self.base_dir / "users",
-            self.base_dir / "global"
         ]
         
         for directory in dirs:
