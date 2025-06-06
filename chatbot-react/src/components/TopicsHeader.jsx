@@ -14,7 +14,8 @@ const TopicsHeader = ({
   researchEngineLoading,
   activeTopicsCount,
   onImmediateResearch,
-  immediateResearchLoading
+  immediateResearchLoading,
+  onShowMotivation
 }) => {
   const formatDate = (days) => {
     if (days === 0) return 'today';
@@ -84,11 +85,20 @@ const TopicsHeader = ({
               onClick={onToggleGlobalResearch}
               disabled={researchEngineLoading || loading}
             >
-              {researchEngineLoading ? (
-                researchEngineStatus.running ? 'Stopping...' : 'Starting...'
-              ) : (
-                researchEngineStatus.running ? 'Stop Research' : 'Enable Autonomous Research'
-              )}
+              <span className="btn-icon">
+                {researchEngineStatus.running ? '⏹️' : '▶️'}
+              </span>
+              <span className="btn-text">
+                {researchEngineLoading ? (
+                  researchEngineStatus.running ? 'Stopping...' : 'Starting...'
+                ) : (
+                  researchEngineStatus.running ? (
+                    <>Stop<br />Engine</>
+                  ) : (
+                    <>Enable<br />Engine</>
+                  )
+                )}
+              </span>
             </button>
             
             <button 
@@ -97,11 +107,41 @@ const TopicsHeader = ({
               disabled={isImmediateResearchDisabled}
               title={getImmediateResearchTooltip()}
             >
-              {immediateResearchLoading ? (
-                <>🔄 Researching...</>
-              ) : (
-                <>🚀 Research Now</>
-              )}
+              <span className="btn-icon">
+                {immediateResearchLoading ? '🔄' : '🚀'}
+              </span>
+              <span className="btn-text">
+                {immediateResearchLoading ? (
+                  <>Searching...</>
+                ) : (
+                  <>Run<br />Now</>
+                )}
+              </span>
+            </button>
+            
+            <button
+              className="motivation-button"
+              onClick={onShowMotivation}
+              title="View motivation drives and research impetus"
+            >
+              <span className="btn-icon">💡</span>
+              <span className="btn-text">
+                View<br />Drives
+              </span>
+            </button>
+            
+            <button
+              className="help-button"
+              onClick={() => {
+                // Could be used for help or settings in the future
+                console.log('Help/Settings placeholder');
+              }}
+              title="Research engine information and configuration"
+            >
+              <span className="btn-icon">⚙️</span>
+              <span className="btn-text">
+                Engine<br />Info
+              </span>
             </button>
           </div>
         </div>
