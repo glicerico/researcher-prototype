@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import { Link } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { 
   getResearchFindings,
@@ -9,7 +10,7 @@ import {
 import '../styles/ResearchResultsDashboard.css';
 
 const ResearchResultsDashboard = () => {
-  const { currentUser } = useSession();
+  const { userId } = useSession();
   const [researchData, setResearchData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -25,8 +26,6 @@ const ResearchResultsDashboard = () => {
 
   // Load research data
   const loadResearchData = useCallback(async () => {
-    const userId = currentUser?.user_id || 'user-swift-foal-81';
-    
     if (!userId) {
       setLoading(false);
       return;
@@ -65,7 +64,7 @@ const ResearchResultsDashboard = () => {
     } finally {
       setLoading(false);
     }
-  }, [currentUser, filters.unreadOnly]);
+  }, [userId, filters.unreadOnly]);
 
   useEffect(() => {
     loadResearchData();
@@ -225,6 +224,24 @@ const ResearchResultsDashboard = () => {
       }
     }
   }, []);
+
+  // Show user selection prompt if no user is selected
+  if (!userId) {
+    return (
+      <div className="research-dashboard">
+        <div className="user-selection-prompt">
+          <div className="prompt-icon">👤</div>
+          <h2>No User Selected</h2>
+          <p>
+            Please select a user to view research results. You can select a user from the chat page.
+          </p>
+          <Link to="/" className="select-user-btn">
+            Go to Chat & Select User
+          </Link>
+        </div>
+      </div>
+    );
+  }
 
   if (loading) {
     return (
