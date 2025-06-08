@@ -290,6 +290,16 @@ export const markFindingAsRead = async (findingId) => {
   }
 };
 
+export const getLatestResearchTime = async (userId) => {
+  try {
+    const response = await api.get(`/research/findings/latest/${userId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching latest research time:', error);
+    throw error;
+  }
+};
+
 export const getResearchEngineStatus = async () => {
   try {
     const response = await api.get('/research/status');

@@ -115,5 +115,12 @@ async def test_chat_graph(
     assert result["messages"][1].content == "This is a test response"
 
 
+def test_latest_research_time_endpoint(client):
+    """Ensure latest research time endpoint returns a timestamp."""
+    response = client.get("/research/findings/latest/test-user")
+    assert response.status_code == 200
+    assert "latest_research_time" in response.json()
+
+
 if __name__ == "__main__":
     pytest.main()

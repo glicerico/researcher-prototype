@@ -1,9 +1,10 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { Link } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
-import { 
+import {
   getResearchFindings,
-  markFindingAsRead
+  markFindingAsRead,
+  getLatestResearchTime
 } from '../services/api';
 import '../styles/ResearchResultsDashboard.css';
 
@@ -14,6 +15,7 @@ const ResearchResultsDashboard = () => {
   const [error, setError] = useState(null);
   const [expandedTopics, setExpandedTopics] = useState(new Set());
   const [bookmarkedFindings, setBookmarkedFindings] = useState(new Set());
+  const [lastUpdate, setLastUpdate] = useState(0);
   const [filters, setFilters] = useState({
     searchTerm: '',
     dateRange: 'all',
@@ -54,7 +56,16 @@ const ResearchResultsDashboard = () => {
         );
       });
 
+      let latest = 0;
+      Object.values(groupedFindings).forEach(list => {
+        list.forEach(f => {
+          if (f.research_time && f.research_time > latest) {
+            latest = f.research_time;
+          }
+        });
+      });
       setResearchData(groupedFindings);
+      setLastUpdate(latest);
 
     } catch (err) {
       console.error('Error loading research data:', err);
@@ -67,6 +78,21 @@ const ResearchResultsDashboard = () => {
   useEffect(() => {
     loadResearchData();
   }, [loadResearchData]);
+
+  useEffect(() => {
+    if (!userId) return;
+    const interval = setInterval(async () => {
+      try {
+        const resp = await getLatestResearchTime(userId);
+        if (resp.latest_research_time > lastUpdate) {
+          loadResearchData();
+        }
+      } catch (err) {
+        console.error('Error checking for new research:', err);
+      }
+    }, 60000);
+    return () => clearInterval(interval);
+  }, [userId, lastUpdate, loadResearchData]);
 
   // Filter and sort topics
   const filteredTopics = useMemo(() => {
@@ -288,12 +314,19 @@ const ResearchResultsDashboard = () => {
 
         {/* Header Actions */}
         <div className="header-actions">
-          <button 
+          <button
             className="export-btn"
             onClick={() => exportFindings('text')}
             disabled={totalFindings === 0}
           >
             📄 Export Results
+          </button>
+          <button
+            className="refresh-btn"
+            onClick={loadResearchData}
+            title="Refresh results"
+          >
+            🔄 Refresh
           </button>
         </div>
       </div>

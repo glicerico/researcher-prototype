@@ -824,6 +824,17 @@ async def get_research_findings(
         raise HTTPException(status_code=500, detail=f"Error getting research findings: {str(e)}")
 
 
+@app.get("/research/findings/latest/{user_id}")
+async def get_latest_research_time(user_id: str):
+    """Return timestamp of latest finding for the user."""
+    try:
+        latest = user_manager.get_latest_research_time(user_id)
+        return {"latest_research_time": latest}
+    except Exception as e:
+        logger.error(f"Error getting latest research time for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error getting latest research time: {str(e)}")
+
+
 @app.post("/research/findings/{finding_id}/mark_read")
 async def mark_research_finding_read(
     finding_id: str,

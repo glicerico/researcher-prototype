@@ -737,8 +737,17 @@ class UserManager:
         
         # Sort by research time (newest first)
         api_findings.sort(key=lambda x: x.get("research_time", 0), reverse=True)
-        
+
         return api_findings
+
+    def get_latest_research_time(self, user_id: str) -> float:
+        """Return the most recent research_time across all findings for a user."""
+        findings_data = self.get_research_findings(user_id)
+        latest = 0.0
+        for findings in findings_data.values():
+            for f in findings:
+                latest = max(latest, f.get("research_time", 0))
+        return latest
     
     # =================== MIGRATION HELPERS ===================
     
