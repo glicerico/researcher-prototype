@@ -57,7 +57,8 @@ class AutonomousResearcher:
     async def start(self):
         """Start the autonomous research engine."""
         if not self.enabled:
-            logger.info("🔬 Autonomous Research Engine is disabled in configuration")
+            logger.info("""🔬 Autonomous Research Engine is disabled in configuration.
+                        It can be enabled it in the Research Topics dashboard.""")
             return
 
         if self.is_running:

@@ -44,7 +44,7 @@ async def lifespan(app: FastAPI):
         logger.info(f"App startup - Config override: {_motivation_config_override}")
         app.state.autonomous_researcher = initialize_autonomous_researcher(user_manager, _motivation_config_override)
         await app.state.autonomous_researcher.start()
-        logger.info("🔬 Autonomous Research Engine started successfully")
+        logger.info("🔬 Autonomous Research Engine initialized successfully")
     except Exception as e:
         logger.error(f"🔬 Failed to start Autonomous Research Engine: {str(e)}", exc_info=True)
         # Don't fail the app startup if research engine fails
