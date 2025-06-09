@@ -156,7 +156,7 @@ The research engine provides detailed logging with 🔬 emojis to help track res
 
 1. Navigate to the frontend directory:
    ```
-   cd chatbot-react
+   cd frontend
    ```
 
 2. Install dependencies:
@@ -189,7 +189,7 @@ The research engine provides detailed logging with 🔬 emojis to help track res
   - `prompts.py`: Centralized prompts used throughout the system (chat + research)
   - `config.py`: Configuration settings
   - `requirements.txt`: Python dependencies
-- `chatbot-react/`: Contains the React frontend
+- `frontend/`: Contains the React frontend
   - `src/components/`: React components
   - `src/services/`: API services
   - `src/styles/`: CSS files
@@ -378,7 +378,7 @@ The backend can be deployed using various methods:
 To build the React frontend for production:
 
 ```
-cd chatbot-react
+cd frontend
 npm run build
 ```
 
@@ -400,7 +400,7 @@ GPLv3
 2. **Frontend Not Connecting to Backend**
    - Ensure the backend server is running on port 8000
    - Check that you don't have CORS issues (in browser developer console)
-   - Verify the API URL in `chatbot-react/src/services/api.js` is correct
+   - Verify the API URL in `frontend/src/services/api.js` is correct
 
 3. **User Settings Not Updating**
    - User settings are loaded when the dropdown is opened

@@ -19,14 +19,14 @@ Directory quick-look:
   • `tests/`          Pytest test-suite (`unit/` & `integration/`).
   • `run_tests.sh`    Helper script to run tests / coverage.
 
-• `chatbot-react/` → React 18 SPA consuming the backend API.
+• `frontend/` → React 18 SPA consuming the backend API.
   • `src/components/` UI components (functional, hooks-based, `.jsx`).
   • `src/services/`   `axios` wrappers talking to FastAPI.
   • `src/styles/`     CSS modules / plain CSS.
 
 • `setup.sh`     → One-shot script that installs Python + npm dependencies.
 
-If you add files, keep the structure coherent (e.g. new LangGraph nodes into `backend/nodes/`, new React UI parts into `chatbot-react/src/components/`).
+If you add files, keep the structure coherent (e.g. new LangGraph nodes into `backend/nodes/`, new React UI parts into `frontend/src/components/`).
 
 ---
 
@@ -82,7 +82,7 @@ flake8 .
 
 ### Frontend
 ```bash
-cd chatbot-react
+cd frontend
 npm run lint
 
 # Frontend Testing - Use appropriate command for your scenario:
@@ -114,7 +114,7 @@ All commands must exit 0.
 
 # ▶️ Run everything (two terminals)
 python backend/app.py      # http://localhost:8000
-cd chatbot-react && npm start  # http://localhost:3000
+cd frontend && npm start  # http://localhost:3000
 
 # ✅ Run unit tests only
 cd backend && ./run_tests.sh
@@ -139,7 +139,7 @@ API_PORT=8000
 DEFAULT_MODEL=gpt-4o-mini
 ZEP_ENABLED=false  # optional advanced memory
 ```
-The React app reads `chatbot-react/.env.*` – `REACT_APP_API_URL` should point to the backend.
+The React app reads `frontend/.env.*` – `REACT_APP_API_URL` should point to the backend.
 
 ---
 

@@ -849,6 +849,63 @@ async def mark_research_finding_read(
         raise HTTPException(status_code=500, detail=f"Error marking finding as read: {str(e)}")
 
 
+@app.delete("/research/findings/{finding_id}")
+async def delete_research_finding(
+    finding_id: str,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Delete a specific research finding."""
+    try:
+        result = user_manager.delete_research_finding(user_id, finding_id)
+        
+        if not result["success"]:
+            if "not found" in result["error"]:
+                raise HTTPException(status_code=404, detail=result["error"])
+            else:
+                raise HTTPException(status_code=500, detail=result["error"])
+        
+        return {
+            "success": True,
+            "message": f"Successfully deleted research finding",
+            "deleted_finding": result["deleted_finding"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting research finding {finding_id} for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting research finding: {str(e)}")
+
+
+@app.delete("/research/findings/topic/{topic_name}")
+async def delete_all_topic_findings(
+    topic_name: str,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Delete all research findings for a specific topic."""
+    try:
+        result = user_manager.delete_all_topic_findings(user_id, topic_name)
+        
+        if not result["success"]:
+            if "not found" in result["error"]:
+                raise HTTPException(status_code=404, detail=result["error"])
+            else:
+                raise HTTPException(status_code=500, detail=result["error"])
+        
+        return {
+            "success": True,
+            "message": f"Successfully deleted all findings for topic '{topic_name}'",
+            "topic_name": result["topic_name"],
+            "findings_deleted": result["findings_deleted"]
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting all findings for topic '{topic_name}' for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting topic findings: {str(e)}")
+
+
 @app.get("/research/status")
 async def get_research_engine_status():
     """Get the current status of the autonomous research engine."""

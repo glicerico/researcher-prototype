@@ -740,6 +740,152 @@ class UserManager:
         
         return api_findings
     
+    def delete_research_finding(self, user_id: str, finding_id: str) -> Dict[str, Any]:
+        """
+        Delete a specific research finding by its ID.
+        
+        Args:
+            user_id: The ID of the user
+            finding_id: The ID of the finding to delete
+            
+        Returns:
+            Dictionary with success status and deleted finding info
+        """
+        try:
+            findings_data = self.storage.read(self._get_research_findings_path(user_id))
+            if not findings_data:
+                return {
+                    "success": False,
+                    "error": "No research findings found for user",
+                    "deleted_finding": None
+                }
+            
+            # Find and remove the finding
+            deleted_finding = None
+            topic_name = None
+            
+            for topic, findings in findings_data.items():
+                if topic == "metadata":
+                    continue
+                
+                for i, finding in enumerate(findings):
+                    if finding.get("finding_id") == finding_id:
+                        deleted_finding = findings.pop(i)
+                        topic_name = topic
+                        break
+                
+                if deleted_finding:
+                    break
+            
+            if not deleted_finding:
+                return {
+                    "success": False,
+                    "error": f"Finding with ID {finding_id} not found",
+                    "deleted_finding": None
+                }
+            
+            # Remove topic if empty
+            if topic_name and not findings_data[topic_name]:
+                del findings_data[topic_name]
+                if "metadata" in findings_data:
+                    findings_data["metadata"]["topics_count"] = max(0, findings_data["metadata"].get("topics_count", 1) - 1)
+            
+            # Update metadata
+            if "metadata" in findings_data:
+                findings_data["metadata"]["total_findings"] = max(0, findings_data["metadata"].get("total_findings", 1) - 1)
+            
+            # Save updated findings
+            success = self.storage.write(self._get_research_findings_path(user_id), findings_data)
+            
+            if success:
+                logger.info(f"Deleted research finding {finding_id} for user {user_id}")
+                return {
+                    "success": True,
+                    "deleted_finding": {
+                        "finding_id": deleted_finding.get("finding_id"),
+                        "topic_name": topic_name,
+                        "research_time": deleted_finding.get("research_time"),
+                        "findings_summary": deleted_finding.get("findings_summary")
+                    }
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Failed to save after deletion",
+                    "deleted_finding": None
+                }
+                
+        except Exception as e:
+            logger.error(f"Error deleting research finding {finding_id} for user {user_id}: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "deleted_finding": None
+            }
+    
+    def delete_all_topic_findings(self, user_id: str, topic_name: str) -> Dict[str, Any]:
+        """
+        Delete all research findings for a specific topic.
+        
+        Args:
+            user_id: The ID of the user
+            topic_name: Name of the topic to delete all findings for
+            
+        Returns:
+            Dictionary with success status and deletion info
+        """
+        try:
+            findings_data = self.storage.read(self._get_research_findings_path(user_id))
+            if not findings_data:
+                return {
+                    "success": False,
+                    "error": "No research findings found for user",
+                    "findings_deleted": 0
+                }
+            
+            if topic_name not in findings_data:
+                return {
+                    "success": False,
+                    "error": f"Topic '{topic_name}' not found",
+                    "findings_deleted": 0
+                }
+            
+            # Count findings before deletion
+            findings_count = len(findings_data[topic_name])
+            
+            # Remove the entire topic
+            del findings_data[topic_name]
+            
+            # Update metadata
+            if "metadata" in findings_data:
+                findings_data["metadata"]["total_findings"] = max(0, findings_data["metadata"].get("total_findings", findings_count) - findings_count)
+                findings_data["metadata"]["topics_count"] = max(0, findings_data["metadata"].get("topics_count", 1) - 1)
+            
+            # Save updated findings
+            success = self.storage.write(self._get_research_findings_path(user_id), findings_data)
+            
+            if success:
+                logger.info(f"Deleted all {findings_count} research findings for topic '{topic_name}' for user {user_id}")
+                return {
+                    "success": True,
+                    "topic_name": topic_name,
+                    "findings_deleted": findings_count
+                }
+            else:
+                return {
+                    "success": False,
+                    "error": "Failed to save after deletion",
+                    "findings_deleted": 0
+                }
+                
+        except Exception as e:
+            logger.error(f"Error deleting all findings for topic '{topic_name}' for user {user_id}: {str(e)}")
+            return {
+                "success": False,
+                "error": str(e),
+                "findings_deleted": 0
+            }
+    
     # =================== MIGRATION HELPERS ===================
     
     def migrate_topics_from_profile(self, user_id: str) -> bool:

@@ -291,6 +291,27 @@ export const markFindingAsRead = async (findingId) => {
   }
 };
 
+// Delete research findings functions
+export const deleteResearchFinding = async (findingId) => {
+  try {
+    const response = await api.delete(`/research/findings/${findingId}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting research finding:', error);
+    throw error;
+  }
+};
+
+export const deleteAllTopicFindings = async (topicName) => {
+  try {
+    const response = await api.delete(`/research/findings/topic/${encodeURIComponent(topicName)}`);
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting all topic findings:', error);
+    throw error;
+  }
+};
+
 export const getResearchEngineStatus = async () => {
   try {
     const response = await api.get('/research/status');

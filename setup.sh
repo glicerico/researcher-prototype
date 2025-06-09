@@ -26,7 +26,7 @@ pip install --upgrade pip
 pip install -r "$BACKEND_DIR/requirements.txt"
 
 # --- Frontend setup ---
-FRONTEND_DIR="$REPO_ROOT/chatbot-react"
+FRONTEND_DIR="$REPO_ROOT/frontend"
 
 echo "Installing npm dependencies in $FRONTEND_DIR"
 cd "$FRONTEND_DIR"
@@ -40,5 +40,5 @@ To run the application:
    source backend/venv/bin/activate
    python backend/app.py
 2. In another terminal, start the frontend:
-   cd chatbot-react && npm start
+   cd frontend && npm start
 EOM

@@ -3,7 +3,9 @@ import { Link } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { 
   getResearchFindings,
-  markFindingAsRead
+  markFindingAsRead,
+  deleteResearchFinding,
+  deleteAllTopicFindings
 } from '../services/api';
 import '../styles/ResearchResultsDashboard.css';
 
@@ -170,6 +172,37 @@ const ResearchResultsDashboard = () => {
       await loadResearchData();
     } catch (err) {
       console.error('Error marking finding as read:', err);
+    }
+  };
+
+  // Handle delete individual finding
+  const handleDeleteFinding = async (findingId, findingSummary) => {
+    const summary = findingSummary ? findingSummary.substring(0, 100) + '...' : 'this finding';
+    if (!window.confirm(`Are you sure you want to delete ${summary}?`)) {
+      return;
+    }
+
+    try {
+      await deleteResearchFinding(findingId);
+      await loadResearchData();
+    } catch (err) {
+      console.error('Error deleting finding:', err);
+      setError('Failed to delete finding. Please try again.');
+    }
+  };
+
+  // Handle delete all findings for a topic
+  const handleDeleteAllTopicFindings = async (topicName) => {
+    if (!window.confirm(`Are you sure you want to delete ALL findings for topic "${topicName}"? This action cannot be undone.`)) {
+      return;
+    }
+
+    try {
+      await deleteAllTopicFindings(topicName);
+      await loadResearchData();
+    } catch (err) {
+      console.error('Error deleting all topic findings:', err);
+      setError('Failed to delete topic findings. Please try again.');
     }
   };
 
@@ -437,10 +470,22 @@ const ResearchResultsDashboard = () => {
                         </span>
                       </div>
                     </div>
-                    <div className="topic-toggle">
-                      <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>
-                        ▼
-                      </span>
+                    <div className="topic-actions">
+                      <button
+                        className="delete-topic-btn"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          handleDeleteAllTopicFindings(topicName);
+                        }}
+                        title={`Delete all ${findings.length} findings for this topic`}
+                      >
+                        🗑️ Delete All
+                      </button>
+                      <div className="topic-toggle">
+                        <span className={`expand-icon ${isExpanded ? 'expanded' : ''}`}>
+                          ▼
+                        </span>
+                      </div>
                     </div>
                   </div>
 
@@ -488,6 +533,17 @@ const ResearchResultsDashboard = () => {
                                   ✓
                                 </button>
                               )}
+                              
+                              <button
+                                className="delete-finding-btn"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleDeleteFinding(finding.finding_id, finding.findings_summary);
+                                }}
+                                title="Delete this finding"
+                              >
+                                🗑️
+                              </button>
                             </div>
                           </div>
 
