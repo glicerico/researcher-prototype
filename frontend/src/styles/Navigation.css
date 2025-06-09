@@ -2,9 +2,12 @@
   background: #fff;
   border-bottom: 1px solid #e1e5e9;
   box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
-  position: sticky;
+  position: fixed;
   top: 0;
-  z-index: 100;
+  left: 0;
+  right: 0;
+  width: 100%;
+  z-index: 1200;
 }
 
 .nav-container {
