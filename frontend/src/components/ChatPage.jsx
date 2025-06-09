@@ -2,15 +2,10 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { useSession } from '../context/SessionContext';
 import ChatMessage from './ChatMessage';
 import ChatInput from './ChatInput';
-import ModelSelector from './ModelSelector';
 import TypingIndicator from './TypingIndicator';
-import UserSelector from './UserSelector';
-import UserProfile from './UserProfile';
-import UserDropdown from './UserDropdown';
-import ConversationTopics from './ConversationTopics';
 import SessionHistory from './SessionHistory';
-import { getModels, sendChatMessage, getCurrentUser, triggerUserActivity } from '../services/api';
-import { generateDisplayName } from '../utils/userUtils';
+import ConversationTopics from './ConversationTopics';
+import { sendChatMessage, triggerUserActivity } from '../services/api';
 import '../App.css';
 
 const ChatPage = () => {
@@ -19,104 +14,21 @@ const ChatPage = () => {
     userId,
     sessionId,
     messages,
-    userDisplayName,
     personality,
-    updateUserId,
+    selectedModel,
     updateSessionId,
     updateMessages,
-    updatePersonality,
-    updateUserDisplayName,
     updateConversationTopics,
   } = useSession();
 
   // Local state for UI components
-  const [models, setModels] = useState({});
-  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini');
   const [isTyping, setIsTyping] = useState(false);
-  const [showUserSelector, setShowUserSelector] = useState(false);
-  const [showUserProfile, setShowUserProfile] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
-  const [profileUpdateTime, setProfileUpdateTime] = useState(0);
   
   // Topics sidebar state
   const [isTopicsSidebarCollapsed, setIsTopicsSidebarCollapsed] = useState(false);
   
   const messagesEndRef = useRef(null);
-
-  // Load available models on component mount
-  useEffect(() => {
-    const loadModels = async () => {
-      try {
-        const modelData = await getModels();
-        setModels(modelData.models || {});
-      } catch (error) {
-        console.error('Error loading models:', error);
-      }
-    };
-    
-    loadModels();
-  }, []);
-
-  // Load user data when userId changes
-  useEffect(() => {
-    const loadUserData = async () => {
-      console.log('Loading user data for userId:', userId);
-      
-      if (!userId) {
-        console.log('No userId, resetting personality and display name');
-        updatePersonality(null);
-        updateUserDisplayName('');
-        return;
-      }
-      
-      try {
-        setIsLoading(true);
-        const userData = await getCurrentUser();
-        console.log('User data loaded:', userData);
-        
-        // Set personality with fallback to default values
-        updatePersonality(userData?.personality || {
-          style: 'helpful',
-          tone: 'friendly'
-        });
-        
-        // Set display name with fallback to user ID
-        if (userData?.display_name) {
-          console.log('Setting display name:', userData.display_name);
-          updateUserDisplayName(userData.display_name);
-        } else {
-          const fallbackDisplayName = generateDisplayName(userId);
-          console.log('No display name found, using generated name:', fallbackDisplayName);
-          updateUserDisplayName(fallbackDisplayName);
-        }
-      } catch (error) {
-        console.error('Error loading user data:', error);
-        
-        // If we get a 404, it means the user no longer exists
-        if (error.response && error.response.status === 404) {
-          console.log('User no longer exists, clearing localStorage and resetting state');
-          localStorage.removeItem('user_id');
-          updateUserId('');
-          updateUserDisplayName('');
-          updatePersonality(null);
-          return;
-        }
-        
-        // For other errors, set default values
-        updatePersonality({
-          style: 'helpful',
-          tone: 'friendly'
-        });
-        
-        const fallbackDisplayName = generateDisplayName(userId);
-        updateUserDisplayName(fallbackDisplayName);
-      } finally {
-        setIsLoading(false);
-      }
-    };
-    
-    loadUserData();
-  }, [userId, updateUserId, updateUserDisplayName, updatePersonality]);
 
   // Generate a system message based on personality
   const getSystemMessage = useCallback(() => {
@@ -218,57 +130,6 @@ const ChatPage = () => {
     }
   };
 
-  const handleUserSelected = useCallback((selectedUserId, displayName) => {
-    console.log('User selected:', selectedUserId, 'Display name:', displayName);
-
-    if (selectedUserId) {
-      updateUserId(selectedUserId);
-      // Update display name if provided
-      if (displayName) {
-        updateUserDisplayName(displayName);
-      }
-    } else {
-      updateUserId('');
-      updateUserDisplayName('');
-    }
-    
-    // Hide the user selector after selection
-    setShowUserSelector(false);
-  }, [updateUserId, updateUserDisplayName]);
-
-  const handleToggleUserProfile = useCallback(() => {
-    setShowUserProfile(prevState => {
-      // If we're showing the profile, hide the user selector
-      const newState = !prevState;
-      if (newState) setShowUserSelector(false);
-      return newState;
-    });
-  }, []);
-
-  const handleProfileUpdated = useCallback((updatedPersonality) => {
-    console.log('Profile updated with new personality:', updatedPersonality);
-    
-    // Update personality in state
-    updatePersonality(updatedPersonality);
-    
-    // Trigger UserDropdown reload
-    setProfileUpdateTime(Date.now());
-    
-    // Update the system message immediately
-    const systemMessage = {
-      role: 'system', 
-      content: `You are a ${updatedPersonality.style || 'helpful'} assistant. Please respond in a ${updatedPersonality.tone || 'friendly'} tone.`
-    };
-    
-    // Update the first message if it's a system message
-    updateMessages(prevMessages => {
-      if (prevMessages.length > 0 && prevMessages[0].role === 'system') {
-        return [systemMessage, ...prevMessages.slice(1)];
-      }
-      return [systemMessage, ...prevMessages];
-    });
-  }, [updatePersonality, updateMessages]);
-
   // Add a ref to track user scroll position
   const chatContainerRef = useRef(null);
   // Add state to track if user is manually scrolling
@@ -361,48 +222,6 @@ const ChatPage = () => {
 
   return (
     <div className="chat-container">
-      <div className="chat-header">
-        <h1>AI Chatbot</h1>
-        <div className="header-controls">
-          <ModelSelector 
-            models={models} 
-            selectedModel={selectedModel} 
-            onSelectModel={setSelectedModel} 
-          />
-          <UserDropdown 
-            onUserSelected={handleUserSelected} 
-            currentUserId={userId} 
-            currentDisplayName={userDisplayName || 'Anonymous User'}
-            profileUpdateTime={profileUpdateTime}
-          />
-          {userId && (
-            <button 
-              className="profile-button"
-              onClick={handleToggleUserProfile}
-            >
-              {showUserProfile ? 'Hide Settings' : 'User Settings'}
-            </button>
-          )}
-        </div>
-      </div>
-      
-      {showUserSelector && (
-        <div className="selector-container">
-          <UserSelector onUserSelected={handleUserSelected} />
-        </div>
-      )}
-      
-      {showUserProfile && userId && (
-        <div className="profile-modal-overlay" onClick={handleToggleUserProfile}>
-          <div className="profile-modal-content" onClick={(e) => e.stopPropagation()}>
-            <UserProfile 
-              userId={userId} 
-              onProfileUpdated={handleProfileUpdated} 
-            />
-          </div>
-        </div>
-      )}
-      
       <SessionHistory />
 
       <div

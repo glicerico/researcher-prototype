@@ -23,6 +23,7 @@ export const SessionProvider = ({ children }) => {
   const [userDisplayName, setUserDisplayName] = useState('');
   const [personality, setPersonality] = useState(null);
   const [conversationTopics, setConversationTopics] = useState([]);
+  const [selectedModel, setSelectedModel] = useState('gpt-4o-mini');
 
   // Load stored conversation and session when user changes
   useEffect(() => {
@@ -178,6 +179,10 @@ export const SessionProvider = ({ children }) => {
     setConversationTopics(topics);
   }, []);
 
+  const updateSelectedModel = useCallback((model) => {
+    setSelectedModel(model);
+  }, []);
+
   const resetSession = useCallback(() => {
     setMessages([
       { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
@@ -224,6 +229,7 @@ export const SessionProvider = ({ children }) => {
     personality,
     conversationTopics,
     sessionHistory,
+    selectedModel,
 
     // Actions
     updateUserId,
@@ -233,6 +239,7 @@ export const SessionProvider = ({ children }) => {
     updatePersonality,
     updateUserDisplayName,
     updateConversationTopics,
+    updateSelectedModel,
     resetSession,
     switchSession,
     startNewSession,
