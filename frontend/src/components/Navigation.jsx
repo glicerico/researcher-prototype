@@ -12,11 +12,8 @@ import '../styles/Navigation.css';
 const Navigation = () => {
   const location = useLocation();
   const { 
-    sessionId, 
     userDisplayName, 
-    messages, 
     userId,
-    personality,
     selectedModel,
     updateUserId,
     updateUserDisplayName,
@@ -29,7 +26,6 @@ const Navigation = () => {
   const [models, setModels] = useState({});
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
   const [profileUpdateTime, setProfileUpdateTime] = useState(0);
 
   const isOnChatPage = location.pathname === '/';
@@ -65,7 +61,6 @@ const Navigation = () => {
       }
       
       try {
-        setIsLoading(true);
         const userData = await getCurrentUser();
         console.log('User data loaded:', userData);
         
@@ -105,8 +100,6 @@ const Navigation = () => {
         
         const fallbackDisplayName = generateDisplayName(userId);
         updateUserDisplayName(fallbackDisplayName);
-      } finally {
-        setIsLoading(false);
       }
     };
     

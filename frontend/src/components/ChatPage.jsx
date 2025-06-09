@@ -11,7 +11,6 @@ import '../App.css';
 const ChatPage = () => {
   // Use SessionContext for shared state
   const {
-    userId,
     sessionId,
     messages,
     personality,
