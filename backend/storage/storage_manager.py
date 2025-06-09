@@ -17,15 +17,12 @@ logger = get_logger(__name__)
 class StorageManager:
     """
     Core storage manager for file-based persistence.
-    Handles file I/O operations, caching, and file locking.
+    Handles file I/O operations and file locking.
     """
     
     def __init__(self, base_dir: str = "./storage"):
         """Initialize the storage manager with the base storage directory."""
         self.base_dir = Path(base_dir)
-        self.cache = {}  # Simple in-memory cache
-        self.cache_ttl = 300  # Cache TTL in seconds (5 minutes)
-        self.cache_timestamps = {}  # Track when items were cached
         
         # Create base directories if they don't exist
         self._ensure_directories()
@@ -89,10 +86,6 @@ class StorageManager:
             # Rename the temporary file to the target file (atomic operation)
             shutil.move(str(tmp_path), str(file_path))
             
-            # Update cache
-            self.cache[path] = data
-            self.cache_timestamps[path] = time.time()
-            
             return True
         except Exception as e:
             logger.error(f"Error writing file {path}: {str(e)}")
@@ -101,33 +94,19 @@ class StorageManager:
                 tmp_path.unlink()
             return False
     
-    def read(self, path: str, use_cache: bool = True) -> Dict[str, Any]:
+    def read(self, path: str) -> Dict[str, Any]:
         """
-        Read data from storage with optional caching.
+        Read data from storage.
         
         Args:
             path: Relative path to the file within the storage directory
-            use_cache: Whether to use the cache (default: True)
             
         Returns:
             The data as a dictionary
         """
-        # Check cache first if enabled
-        if use_cache and path in self.cache:
-            # Check if cache is still valid
-            cache_time = self.cache_timestamps.get(path, 0)
-            if time.time() - cache_time < self.cache_ttl:
-                return self.cache[path]
-        
         # Read from file
-        data = self._read_file(path)
+        return self._read_file(path)
         
-        # Update cache
-        self.cache[path] = data
-        self.cache_timestamps[path] = time.time()
-        
-        return data
-    
     def write(self, path: str, data: Dict[str, Any]) -> bool:
         """
         Write data to storage.
@@ -181,11 +160,6 @@ class StorageManager:
             if file_path.exists():
                 file_path.unlink()
             
-            # Remove from cache
-            if path in self.cache:
-                del self.cache[path]
-                del self.cache_timestamps[path]
-            
             return True
         except Exception as e:
             logger.error(f"Error deleting file {path}: {str(e)}")
@@ -234,11 +208,6 @@ class StorageManager:
         except Exception as e:
             logger.error(f"Error listing directories in {directory}: {str(e)}")
             return []
-    
-    def clear_cache(self) -> None:
-        """Clear the in-memory cache."""
-        self.cache.clear()
-        self.cache_timestamps.clear()
     
     def backup(self, backup_dir: Optional[str] = None) -> bool:
         """

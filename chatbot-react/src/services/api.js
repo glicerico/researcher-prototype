@@ -273,6 +273,7 @@ export const getResearchFindings = async (userId, topicName = null, unreadOnly =
     if (unreadOnly) params.unread_only = unreadOnly;
 
     const response = await api.get(`/research/findings/${userId}`, { params });
+    console.log('Research findings response:', response.data);
     return response.data;
   } catch (error) {
     console.error('Error fetching research findings:', error);
