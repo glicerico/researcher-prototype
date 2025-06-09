@@ -40,40 +40,57 @@ const TopicSidebarItem = ({ topic, index, onEnableResearch, onDisableResearch, o
     topic.confidence_score >= 0.6 ? 'medium' : 'low';
 
   return (
-    <div className={`topic-list-item ${topic.is_active_research ? 'active-research' : ''}`}>
-      <div className="topic-main-content">
-        {/* Topic Header Row */}
-        <div className="topic-header-row">
-          <div className="topic-info">
-            <div className="topic-title">
-              <h4 className="topic-name" title={topic.name}>
-                {topic.name}
-              </h4>
-              {topic.is_active_research && (
-                <span className="research-status-badge">
-                  <span className="badge-icon">🔬</span>
-                  <span className="badge-text">RESEARCHING</span>
-                </span>
-              )}
-            </div>
-            
-            <div className="topic-confidence">
-              <div className={`confidence-bar-container ${confidenceClass}`}>
-                <div 
-                  className="confidence-fill"
-                  style={{ width: `${confidencePercentage}%` }}
-                ></div>
-              </div>
-              <span className="confidence-label">{confidencePercentage}% confidence</span>
-            </div>
-
-            {topic.description && (
-              <p className="topic-description-preview">
-                {topic.description.length > 120 ? topic.description.substring(0, 120) + '...' : topic.description}
-              </p>
+    <div className={`topic-list-item ${topic.is_active_research ? 'active-research' : ''} ${isExpanded ? 'expanded' : ''}`}>
+      {/* Compact Header - Always Visible */}
+      <div className="topic-compact-header" onClick={() => setIsExpanded(!isExpanded)}>
+        <div className="topic-compact-info">
+          <div className="topic-compact-title">
+            <span className="topic-name-compact" title={topic.name}>
+              {topic.name}
+            </span>
+            {topic.is_active_research && (
+              <span className="research-indicator">🔬</span>
             )}
           </div>
+          <div className="topic-compact-meta">
+            <span className={`confidence-compact ${confidenceClass}`}>
+              {confidencePercentage}%
+            </span>
+          </div>
+        </div>
+        
+        <div className="topic-compact-actions">
+          <button
+            className="expand-toggle"
+            title={isExpanded ? 'Show less' : 'Show more'}
+          >
+            <span className="expand-icon">{isExpanded ? '▲' : '▼'}</span>
+          </button>
+        </div>
+      </div>
 
+      {/* Expanded Details - Only Visible When Expanded */}
+      {isExpanded && (
+        <div className="topic-expanded-content">
+          {/* Description */}
+          {topic.description && (
+            <div className="topic-description">
+              <p>{topic.description}</p>
+            </div>
+          )}
+
+          {/* Confidence Bar */}
+          <div className="topic-confidence">
+            <div className={`confidence-bar-container ${confidenceClass}`}>
+              <div 
+                className="confidence-fill"
+                style={{ width: `${confidencePercentage}%` }}
+              ></div>
+            </div>
+            <span className="confidence-label">{confidencePercentage}% confidence</span>
+          </div>
+
+          {/* Action Buttons */}
           <div className="topic-actions">
             {!topic.is_active_research ? (
               <button
@@ -120,65 +137,30 @@ const TopicSidebarItem = ({ topic, index, onEnableResearch, onDisableResearch, o
               ) : (
                 <>
                   <span className="btn-icon">🗑️</span>
+                  <span className="btn-text">Delete</span>
                 </>
               )}
             </button>
-
-            <button
-              className="action-btn expand-btn"
-              onClick={() => setIsExpanded(!isExpanded)}
-              title={isExpanded ? 'Show less' : 'Show more'}
-            >
-              <span className="btn-icon">{isExpanded ? '▲' : '▼'}</span>
-            </button>
           </div>
-        </div>
 
-        {/* Expanded Details */}
-        {isExpanded && (
-          <div className="topic-details-expanded">
-            <div className="details-grid">
-              {topic.description && (
-                <div className="detail-section">
-                  <label className="detail-label">Full Description</label>
-                  <p className="detail-content">{topic.description}</p>
-                </div>
-              )}
-
+          {/* Additional Details */}
+          {(topic.conversation_context || topic.suggested_at) && (
+            <div className="topic-metadata">
               {topic.conversation_context && (
-                <div className="detail-section">
-                  <label className="detail-label">Context from Conversation</label>
-                  <p className="detail-content context-text">
-                    "{topic.conversation_context}"
-                  </p>
+                <div className="metadata-item">
+                  <label>Context:</label>
+                  <p className="context-text">"{topic.conversation_context}"</p>
                 </div>
               )}
-
-              <div className="detail-section">
-                <label className="detail-label">Topic Metadata</label>
-                <div className="metadata-grid">
-                  <div className="metadata-item">
-                    <span className="metadata-key">Confidence:</span>
-                    <span className="metadata-value">{confidencePercentage}%</span>
-                  </div>
-                  <div className="metadata-item">
-                    <span className="metadata-key">Suggested:</span>
-                    <span className="metadata-value">
-                      {new Date(topic.suggested_at * 1000).toLocaleDateString()}
-                    </span>
-                  </div>
-                  <div className="metadata-item">
-                    <span className="metadata-key">Status:</span>
-                    <span className="metadata-value">
-                      {topic.is_active_research ? 'Active Research' : 'Suggested'}
-                    </span>
-                  </div>
-                </div>
+              
+              <div className="metadata-item">
+                <label>Suggested:</label>
+                <span>{new Date(topic.suggested_at * 1000).toLocaleDateString()}</span>
               </div>
             </div>
-          </div>
-        )}
-      </div>
+          )}
+        </div>
+      )}
     </div>
   );
 };
