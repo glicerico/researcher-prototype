@@ -90,6 +90,17 @@ const TopicsDashboard = () => {
     loadData();
   }, [loadData]);
 
+  // Auto-refresh data every 10 seconds when user is selected
+  useEffect(() => {
+    if (!userId) return;
+
+    const interval = setInterval(() => {
+      loadData();
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [userId, loadData]);
+
   // Handle global research engine toggle
   const handleToggleGlobalResearch = async () => {
     if (!researchEngineStatus) return;

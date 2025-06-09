@@ -68,6 +68,17 @@ const ResearchResultsDashboard = () => {
     loadResearchData();
   }, [loadResearchData]);
 
+  // Auto-refresh research data every 10 seconds when user is selected
+  useEffect(() => {
+    if (!userId) return;
+
+    const interval = setInterval(() => {
+      loadResearchData();
+    }, 10000); // Refresh every 10 seconds
+
+    return () => clearInterval(interval);
+  }, [userId, loadResearchData]);
+
   // Filter and sort topics
   const filteredTopics = useMemo(() => {
     let topics = Object.keys(researchData);

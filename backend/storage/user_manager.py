@@ -29,7 +29,7 @@ class UserManager:
     
     def _get_user_lock(self, user_id: str) -> threading.Lock:
         """Get or create a lock for a specific user."""
-        with self._locks_lotok:
+        with self._locks_lock:
             if user_id not in self._user_locks:
                 self._user_locks[user_id] = threading.Lock()
             return self._user_locks[user_id]
