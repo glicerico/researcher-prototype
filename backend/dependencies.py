@@ -14,6 +14,7 @@ user_manager = UserManager(storage_manager)
 
 # Initialize Zep manager
 zep_manager = ZepManager()
+_motivation_config_override = {}
 
 
 def generate_display_name_from_user_id(user_id: str) -> str:
