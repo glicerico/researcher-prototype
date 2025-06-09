@@ -23,6 +23,7 @@ export const SessionProvider = ({ children }) => {
   const [userDisplayName, setUserDisplayName] = useState('');
   const [personality, setPersonality] = useState(null);
   const [conversationTopics, setConversationTopics] = useState([]);
+  const [sessionTitles, setSessionTitles] = useState({});
 
   // Load stored conversation and session when user changes
   useEffect(() => {
@@ -33,6 +34,7 @@ export const SessionProvider = ({ children }) => {
       setSessionId(null);
       setConversationTopics([]);
       setSessionHistory([]);
+      setSessionTitles({});
       return;
     }
 
@@ -63,6 +65,17 @@ export const SessionProvider = ({ children }) => {
     } else {
       setSessionHistory([]);
     }
+
+    const titles = localStorage.getItem(`session_titles_${userId}`);
+    if (titles) {
+      try {
+        setSessionTitles(JSON.parse(titles));
+      } catch {
+        setSessionTitles({});
+      }
+    } else {
+      setSessionTitles({});
+    }
   }, [userId]);
 
   // Persist conversation to localStorage
@@ -81,6 +94,16 @@ export const SessionProvider = ({ children }) => {
       localStorage.setItem(`session_id_${userId}`, sessionId);
     }
   }, [sessionId, userId]);
+
+  // Persist session titles
+  useEffect(() => {
+    if (userId) {
+      localStorage.setItem(
+        `session_titles_${userId}`,
+        JSON.stringify(sessionTitles)
+      );
+    }
+  }, [sessionTitles, userId]);
 
   // Validate stored user ID on app startup
   useEffect(() => {
@@ -153,6 +176,18 @@ export const SessionProvider = ({ children }) => {
           }
           return updated;
         });
+
+        setSessionTitles((prev) => {
+          if (prev[newSessionId]) return prev;
+          const updated = { ...prev, [newSessionId]: 'new conversation' };
+          if (userId) {
+            localStorage.setItem(
+              `session_titles_${userId}`,
+              JSON.stringify(updated)
+            );
+          }
+          return updated;
+        });
       }
     },
     [userId]
@@ -177,6 +212,23 @@ export const SessionProvider = ({ children }) => {
   const updateConversationTopics = useCallback((topics) => {
     setConversationTopics(topics);
   }, []);
+
+  const updateSessionTitle = useCallback(
+    (sid, title) => {
+      if (!sid) return;
+      setSessionTitles(prev => {
+        const updated = { ...prev, [sid]: title };
+        if (userId) {
+          localStorage.setItem(
+            `session_titles_${userId}`,
+            JSON.stringify(updated)
+          );
+        }
+        return updated;
+      });
+    },
+    [userId]
+  );
 
   const resetSession = useCallback(() => {
     setMessages([
@@ -224,6 +276,7 @@ export const SessionProvider = ({ children }) => {
     personality,
     conversationTopics,
     sessionHistory,
+    sessionTitles,
 
     // Actions
     updateUserId,
@@ -233,6 +286,7 @@ export const SessionProvider = ({ children }) => {
     updatePersonality,
     updateUserDisplayName,
     updateConversationTopics,
+    updateSessionTitle,
     resetSession,
     switchSession,
     startNewSession,

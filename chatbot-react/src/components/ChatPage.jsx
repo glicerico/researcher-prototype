@@ -27,6 +27,8 @@ const ChatPage = () => {
     updatePersonality,
     updateUserDisplayName,
     updateConversationTopics,
+    sessionTitles,
+    updateSessionTitle,
   } = useSession();
 
   // Local state for UI components
@@ -348,7 +350,15 @@ const ChatPage = () => {
 
   const handleTopicUpdate = useCallback((topics) => {
     updateConversationTopics(topics);
-  }, [updateConversationTopics]);
+    if (
+      topics &&
+      topics.length > 0 &&
+      sessionId &&
+      sessionTitles[sessionId] === 'new conversation'
+    ) {
+      updateSessionTitle(sessionId, topics[0].name);
+    }
+  }, [updateConversationTopics, sessionId, sessionTitles, updateSessionTitle]);
 
   return (
     <div className="chat-container">

@@ -3,7 +3,13 @@ import { useSession } from '../context/SessionContext';
 import '../styles/SessionHistory.css';
 
 const SessionHistory = () => {
-  const { sessionHistory, sessionId, switchSession, startNewSession } = useSession();
+  const {
+    sessionHistory,
+    sessionId,
+    sessionTitles,
+    switchSession,
+    startNewSession
+  } = useSession();
 
   return (
     <div className="session-history">
@@ -12,7 +18,7 @@ const SessionHistory = () => {
         {sessionHistory.map((id) => (
           <li key={id} className={id === sessionId ? 'active' : ''}>
             <button type="button" onClick={() => switchSession(id)}>
-              {id.slice(-8)}
+              {sessionTitles[id] || id.slice(-8)}
             </button>
           </li>
         ))}
