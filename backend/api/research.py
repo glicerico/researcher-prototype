@@ -75,7 +75,7 @@ async def delete_research_finding(finding_id: str, user_id: str = Depends(get_or
 
         return {
             "success": True,
-            "message": f"Successfully deleted research finding",
+            "message": "Successfully deleted research finding",
             "deleted_finding": result["deleted_finding"],
         }
 
