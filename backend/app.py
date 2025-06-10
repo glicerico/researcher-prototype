@@ -25,7 +25,7 @@ class MotivationConfigUpdate(BaseModel):
     satisfaction_decay: Optional[float] = None
 
 
-from dependencies import storage_manager, user_manager, zep_manager, get_or_create_user_id, _motivation_config_override
+from dependencies import storage_manager, profile_manager, research_manager, zep_manager, get_or_create_user_id, _motivation_config_override
 from autonomous_research_engine import initialize_autonomous_researcher
 
 # Global motivation config override (persists across reinitializations)
@@ -43,7 +43,7 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("🔬 Initializing Autonomous Research Engine...")
         logger.info(f"App startup - Config override: {_motivation_config_override}")
-        app.state.autonomous_researcher = initialize_autonomous_researcher(user_manager, _motivation_config_override)
+        app.state.autonomous_researcher = initialize_autonomous_researcher(profile_manager, research_manager, _motivation_config_override)
         await app.state.autonomous_researcher.start()
         logger.info("🔬 Autonomous Research Engine initialized successfully")
     except Exception as e:

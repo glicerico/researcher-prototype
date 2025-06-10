@@ -2,7 +2,7 @@ import os
 from typing import Optional
 from fastapi import Header
 
-from storage import StorageManager, UserManager, ZepManager
+from storage import StorageManager, ProfileManager, ResearchManager, ZepManager
 from logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -10,7 +10,8 @@ logger = get_logger(__name__)
 # Initialize storage components
 storage_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "storage_data")
 storage_manager = StorageManager(storage_dir)
-user_manager = UserManager(storage_manager)
+profile_manager = ProfileManager(storage_manager)
+research_manager = ResearchManager(storage_manager, profile_manager)
 
 # Initialize Zep manager
 zep_manager = ZepManager()
@@ -45,17 +46,17 @@ def generate_display_name_from_user_id(user_id: str) -> str:
 
 def get_existing_user_id(user_id: Optional[str] = Header(None)) -> Optional[str]:
     """Extract user ID from headers if it exists and is valid."""
-    if user_id and user_manager.user_exists(user_id):
+    if user_id and profile_manager.user_exists(user_id):
         return user_id
     return None
 
 
 def get_or_create_user_id(user_id: Optional[str] = Header(None)) -> str:
     """Extract user ID from headers or create a new user."""
-    if user_id and user_manager.user_exists(user_id):
+    if user_id and profile_manager.user_exists(user_id):
         return user_id
 
     # Create a new user
-    new_user_id = user_manager.create_user()
+    new_user_id = profile_manager.create_user()
     logger.info(f"Created new user: {new_user_id}")
     return new_user_id

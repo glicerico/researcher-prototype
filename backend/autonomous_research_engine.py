@@ -14,7 +14,8 @@ logger = get_logger(__name__)
 
 # Import configuration and existing components
 import config
-from storage.user_manager import UserManager
+from storage.profile_manager import ProfileManager
+from storage.research_manager import ResearchManager
 from research_graph_builder import research_graph
 from motivation import MotivationSystem
 
@@ -24,9 +25,10 @@ class AutonomousResearcher:
     LangGraph-based autonomous research engine that conducts background research on subscribed topics.
     """
 
-    def __init__(self, user_manager: UserManager, motivation_config_override: dict = None):
+    def __init__(self, profile_manager: ProfileManager, research_manager: ResearchManager, motivation_config_override: dict = None):
         """Initialize the autonomous researcher."""
-        self.user_manager = user_manager
+        self.profile_manager = profile_manager
+        self.research_manager = research_manager
         self.research_graph = research_graph
         self.is_running = False
         self.research_task = None
@@ -140,7 +142,7 @@ class AutonomousResearcher:
         """Conduct a complete research cycle for all users with active topics."""
         try:
             # Get all users
-            all_users = self.user_manager.list_users()
+            all_users = self.profile_manager.list_users()
             logger.info(f"🔬 Scanning {len(all_users)} users for active research topics...")
 
             total_topics_researched = 0
@@ -150,7 +152,7 @@ class AutonomousResearcher:
             for user_id in all_users:
                 try:
                     # Get active research topics for this user
-                    active_topics = self.user_manager.get_active_research_topics(user_id)
+                    active_topics = self.research_manager.get_active_research_topics(user_id)
 
                     if not active_topics:
                         continue
@@ -189,7 +191,7 @@ class AutonomousResearcher:
                             continue
 
                     # Cleanup old findings for this user
-                    self.user_manager.cleanup_old_research_findings(user_id, config.RESEARCH_FINDINGS_RETENTION_DAYS)
+                    self.research_manager.cleanup_old_research_findings(user_id, config.RESEARCH_FINDINGS_RETENTION_DAYS)
 
                 except Exception as e:
                     logger.error(f"🔬 Error processing user {user_id}: {str(e)}")
@@ -332,7 +334,7 @@ class AutonomousResearcher:
             logger.info(f"🔬 Manual LangGraph research trigger for user: {user_id}")
 
             # Get active research topics for this user
-            active_topics = self.user_manager.get_active_research_topics(user_id)
+            active_topics = self.research_manager.get_active_research_topics(user_id)
 
             if not active_topics:
                 return {
@@ -387,7 +389,7 @@ class AutonomousResearcher:
                     continue
 
             # Cleanup old findings
-            self.user_manager.cleanup_old_research_findings(user_id, config.RESEARCH_FINDINGS_RETENTION_DAYS)
+            self.research_manager.cleanup_old_research_findings(user_id, config.RESEARCH_FINDINGS_RETENTION_DAYS)
 
             return {
                 "success": True,
@@ -432,8 +434,8 @@ def get_autonomous_researcher() -> Optional[AutonomousResearcher]:
     return autonomous_researcher
 
 
-def initialize_autonomous_researcher(user_manager: UserManager, motivation_config_override: dict = None) -> AutonomousResearcher:
+def initialize_autonomous_researcher(profile_manager: ProfileManager, research_manager: ResearchManager, motivation_config_override: dict = None) -> AutonomousResearcher:
     """Initialize the global LangGraph autonomous researcher instance."""
     global autonomous_researcher
-    autonomous_researcher = AutonomousResearcher(user_manager, motivation_config_override)
+    autonomous_researcher = AutonomousResearcher(profile_manager, research_manager, motivation_config_override)
     return autonomous_researcher

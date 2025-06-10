@@ -4,7 +4,7 @@ import asyncio
 
 from models import ChatRequest, ChatResponse
 from graph_builder import chat_graph
-from dependencies import get_or_create_user_id, user_manager, zep_manager
+from dependencies import get_or_create_user_id, profile_manager, zep_manager
 from services.chat_service import extract_and_store_topics_async
 from logging_config import get_logger
 
@@ -40,7 +40,7 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
         }
 
         if request.personality:
-            user_manager.update_personality(user_id, request.personality.model_dump())
+            profile_manager.update_personality(user_id, request.personality.model_dump())
 
         try:
             # Motivation system

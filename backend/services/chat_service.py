@@ -1,6 +1,6 @@
 from logging_config import get_logger
 from nodes.topic_extractor_node import topic_extractor_node
-from dependencies import user_manager
+from dependencies import research_manager
 
 logger = get_logger(__name__)
 
@@ -20,7 +20,7 @@ async def extract_and_store_topics_async(state: dict, user_id: str, session_id: 
             raw_topics = topic_results.get("result", [])
 
             if raw_topics:
-                success = user_manager.store_topic_suggestions(
+                success = research_manager.store_topic_suggestions(
                     user_id=user_id,
                     session_id=session_id,
                     topics=raw_topics,

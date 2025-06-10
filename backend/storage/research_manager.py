@@ -26,6 +26,10 @@ class ResearchManager:
                 self._user_locks[user_id] = threading.Lock()
             return self._user_locks[user_id]
 
+    def _get_user_path(self, user_id: str) -> str:
+        """Get the path to a user's directory."""
+        return f"users/{user_id}"
+
     def store_topic_suggestions(
         self, user_id: str, session_id: str, topics: List[Dict[str, Any]], conversation_context: str = ""
     ) -> bool:

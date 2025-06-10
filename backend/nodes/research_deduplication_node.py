@@ -8,7 +8,7 @@ from nodes.base import (
     ChatState, 
     logger, 
     config,
-    user_manager,
+    research_manager,
     get_current_datetime_str,
     ResearchDeduplicationResult
 )
@@ -50,7 +50,7 @@ def research_deduplication_node(state: ChatState) -> ChatState:
     
     try:
         # Get existing research findings for this topic and user
-        existing_findings = user_manager.get_research_findings(user_id, topic_name)
+        existing_findings = research_manager.get_research_findings(user_id, topic_name)
         
         if not existing_findings or topic_name not in existing_findings:
             logger.info(f"🔄 Research Deduplication: No existing findings for topic '{topic_name}' - not a duplicate")

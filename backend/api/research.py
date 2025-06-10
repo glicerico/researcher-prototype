@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from typing import Optional
 import time
 
-from dependencies import get_or_create_user_id, user_manager, _motivation_config_override
+from dependencies import get_or_create_user_id, profile_manager, research_manager, _motivation_config_override
 from autonomous_research_engine import initialize_autonomous_researcher
 from logging_config import get_logger
 
@@ -27,8 +27,8 @@ async def get_research_findings(
 ):
     """Get research findings for a user, optionally filtered by topic or read status."""
     try:
-        # Use the new API method from user_manager
-        findings = user_manager.get_research_findings_for_api(user_id, topic_name, unread_only)
+        # Use the new API method from research_manager
+        findings = research_manager.get_research_findings_for_api(user_id, topic_name, unread_only)
 
         return {
             "success": True,
@@ -47,7 +47,7 @@ async def get_research_findings(
 async def mark_research_finding_read(finding_id: str, user_id: str = Depends(get_or_create_user_id)):
     """Mark a research finding as read."""
     try:
-        success = user_manager.mark_finding_as_read(user_id, finding_id)
+        success = research_manager.mark_finding_as_read(user_id, finding_id)
 
         if not success:
             raise HTTPException(status_code=404, detail="Finding not found")
@@ -65,7 +65,7 @@ async def mark_research_finding_read(finding_id: str, user_id: str = Depends(get
 async def delete_research_finding(finding_id: str, user_id: str = Depends(get_or_create_user_id)):
     """Delete a specific research finding."""
     try:
-        result = user_manager.delete_research_finding(user_id, finding_id)
+        result = research_manager.delete_research_finding(user_id, finding_id)
 
         if not result["success"]:
             if "not found" in result["error"]:
@@ -90,7 +90,7 @@ async def delete_research_finding(finding_id: str, user_id: str = Depends(get_or
 async def delete_all_topic_findings(topic_name: str, user_id: str = Depends(get_or_create_user_id)):
     """Delete all research findings for a specific topic."""
     try:
-        result = user_manager.delete_all_topic_findings(user_id, topic_name)
+        result = research_manager.delete_all_topic_findings(user_id, topic_name)
 
         if not result["success"]:
             if "not found" in result["error"]:
@@ -134,12 +134,12 @@ async def get_debug_active_topics():
         debug_info = {"total_users": 0, "users_with_active_topics": 0, "total_active_topics": 0, "user_breakdown": []}
 
         # Get all users
-        all_users = user_manager.list_users()
+        all_users = profile_manager.list_users()
         debug_info["total_users"] = len(all_users)
 
         for user_id in all_users:
             try:
-                active_topics = user_manager.get_active_research_topics(user_id)
+                active_topics = research_manager.get_active_research_topics(user_id)
                 if active_topics:
                     debug_info["users_with_active_topics"] += 1
                     debug_info["total_active_topics"] += len(active_topics)
@@ -444,7 +444,7 @@ async def start_research_engine(request: Request):
             try:
                 logger.info("🔬 Re-initializing Autonomous Research Engine...")
                 request.app.state.autonomous_researcher = initialize_autonomous_researcher(
-                    user_manager, _motivation_config_override
+                    profile_manager, research_manager, _motivation_config_override
                 )
                 request.app.state.autonomous_researcher.enable()
                 await request.app.state.autonomous_researcher.start()
@@ -510,7 +510,7 @@ async def restart_research_engine(request: Request):
             try:
                 logger.info("🔬 Initializing Autonomous Research Engine for restart...")
                 request.app.state.autonomous_researcher = initialize_autonomous_researcher(
-                    user_manager, _motivation_config_override
+                    profile_manager, research_manager, _motivation_config_override
                 )
                 request.app.state.autonomous_researcher.enable()
                 await request.app.state.autonomous_researcher.start()
@@ -535,7 +535,7 @@ async def restart_research_engine(request: Request):
 async def get_active_research_topics(user_id: str):
     """Get all active research topics for a user."""
     try:
-        active_topics = user_manager.get_active_research_topics(user_id)
+        active_topics = research_manager.get_active_research_topics(user_id)
 
         # Format for API response
         api_topics = []
@@ -573,7 +573,7 @@ async def enable_disable_research_by_topic_id(
     """Enable or disable research for a topic by its unique ID (safer than index-based operations)."""
     try:
         # Use the safe ID-based method to update research status
-        result = user_manager.update_topic_research_status_by_id(user_id, topic_id, enable)
+        result = research_manager.update_topic_research_status_by_id(user_id, topic_id, enable)
 
         if result["success"]:
             updated_topic = result["updated_topic"]

@@ -17,7 +17,8 @@ from utils import get_current_datetime_str
 
 # Import our storage components
 from storage.storage_manager import StorageManager
-from storage.user_manager import UserManager
+from storage.profile_manager import ProfileManager
+from storage.research_manager import ResearchManager
 from storage.zep_manager import ZepManager
 
 # Import all prompt templates from prompts.py
@@ -57,7 +58,8 @@ from llm_models import (
 # Initialize storage components
 storage_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage_data")
 storage_manager = StorageManager(storage_dir)
-user_manager = UserManager(storage_manager)
+profile_manager = ProfileManager(storage_manager)
+research_manager = ResearchManager(storage_manager, profile_manager)
 zep_manager = ZepManager()
 
 class ChatState(TypedDict):

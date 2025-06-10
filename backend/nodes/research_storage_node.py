@@ -7,7 +7,7 @@ from nodes.base import (
     ChatState, 
     logger, 
     config,
-    user_manager
+    research_manager
 )
 
 
@@ -56,7 +56,7 @@ def research_storage_node(state: ChatState) -> ChatState:
         logger.info(f"💾 Research Storage: Quality score {overall_quality_score:.2f} below threshold {quality_threshold} - not storing")
         
         # Still update last researched time to avoid immediate retry
-        user_manager.update_topic_last_researched(user_id, topic_name)
+        research_manager.update_topic_last_researched(user_id, topic_name)
         
         state["module_results"]["research_storage"] = {
             "success": True,
@@ -75,7 +75,7 @@ def research_storage_node(state: ChatState) -> ChatState:
         logger.info(f"💾 Research Storage: Findings are duplicate - not storing")
         
         # Still update last researched time
-        user_manager.update_topic_last_researched(user_id, topic_name)
+        research_manager.update_topic_last_researched(user_id, topic_name)
         
         state["module_results"]["research_storage"] = {
             "success": True,
@@ -104,11 +104,11 @@ def research_storage_node(state: ChatState) -> ChatState:
         # Store the research finding
         logger.info(f"💾 Research Storage: Storing high-quality finding for topic '{topic_name}' (score: {overall_quality_score:.2f})")
         
-        success = user_manager.store_research_finding(user_id, topic_name, finding)
+        success = research_manager.store_research_finding(user_id, topic_name, finding)
         
         if success:
             # Update last researched time
-            user_manager.update_topic_last_researched(user_id, topic_name, current_time)
+            research_manager.update_topic_last_researched(user_id, topic_name, current_time)
             
             logger.info(f"💾 Research Storage: Successfully stored research finding for '{topic_name}'")
             

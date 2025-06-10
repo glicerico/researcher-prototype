@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 import time
 
-from dependencies import get_or_create_user_id, user_manager
+from dependencies import get_or_create_user_id, research_manager
 from logging_config import get_logger
 
 router = APIRouter()
@@ -13,7 +13,7 @@ async def get_topic_suggestions(session_id: str, user_id: str = Depends(get_or_c
     """Get all suggested topics for a session."""
     try:
         # Get stored topic suggestions from user profile
-        stored_topics = user_manager.get_topic_suggestions(user_id, session_id)
+        stored_topics = research_manager.get_topic_suggestions(user_id, session_id)
 
         # Convert to response format with topic IDs
         topic_suggestions = []
@@ -56,7 +56,7 @@ async def get_all_topic_suggestions(user_id: str = Depends(get_or_create_user_id
     """Get all suggested topics for a user across all sessions."""
     try:
         # Get all topic suggestions from user profile
-        all_topics_by_session = user_manager.get_all_topic_suggestions(user_id)
+        all_topics_by_session = research_manager.get_all_topic_suggestions(user_id)
 
         # Flatten and convert to response format
         all_topics = []
@@ -95,7 +95,7 @@ async def get_topic_processing_status(session_id: str, user_id: str = Depends(ge
     """Check if topic suggestions are available for a session (useful for polling after chat)."""
     try:
         # Get stored topic suggestions from user profile
-        stored_topics = user_manager.get_topic_suggestions(user_id, session_id)
+        stored_topics = research_manager.get_topic_suggestions(user_id, session_id)
 
         has_topics = len(stored_topics) > 0
 
@@ -117,7 +117,7 @@ async def get_topic_statistics(user_id: str = Depends(get_or_create_user_id)):
     """Get statistics about the user's topic suggestions."""
     try:
         # Get all topic suggestions from user profile
-        all_topics_by_session = user_manager.get_all_topic_suggestions(user_id)
+        all_topics_by_session = research_manager.get_all_topic_suggestions(user_id)
 
         # Calculate statistics
         total_topics = 0
@@ -160,7 +160,7 @@ async def delete_session_topics(session_id: str, user_id: str = Depends(get_or_c
     """Delete all topic suggestions for a specific session using safe deletion."""
     try:
         # Use the new safe session deletion method
-        result = user_manager.delete_session_safe(user_id, session_id)
+        result = research_manager.delete_session_safe(user_id, session_id)
 
         if result["success"]:
             return {
@@ -184,10 +184,10 @@ async def cleanup_topics(user_id: str = Depends(get_or_create_user_id)):
     """Clean up old and duplicate topics for the user."""
     try:
         # Ensure migration from profile.json if needed
-        user_manager.migrate_topics_from_profile(user_id)
+        research_manager.migrate_topics_from_profile(user_id)
 
         # Load topics data
-        topics_data = user_manager.get_user_topics(user_id)
+        topics_data = research_manager.get_user_topics(user_id)
 
         if not topics_data.get("sessions"):
             return {"success": True, "message": "No topics to clean up", "topics_removed": 0, "sessions_cleaned": 0}
@@ -243,7 +243,7 @@ async def cleanup_topics(user_id: str = Depends(get_or_create_user_id)):
         topics_data["metadata"]["last_cleanup"] = current_time
 
         # Save updated topics
-        success = user_manager.save_user_topics(user_id, topics_data)
+        success = research_manager.save_user_topics(user_id, topics_data)
 
         if not success:
             raise HTTPException(status_code=500, detail="Failed to clean up topics")
@@ -267,7 +267,7 @@ async def get_top_session_topics(
     """Get the top N topics for a session, ordered by confidence score."""
     try:
         # Get stored topic suggestions from user profile
-        stored_topics = user_manager.get_topic_suggestions(user_id, session_id)
+        stored_topics = research_manager.get_topic_suggestions(user_id, session_id)
 
         # Convert to response format and sort by confidence
         topic_suggestions = []
@@ -313,7 +313,7 @@ async def delete_topic_by_id(topic_id: str, user_id: str = Depends(get_or_create
     """Delete a topic by its unique ID (safer than index-based deletion)."""
     try:
         # Use the safe ID-based deletion method
-        result = user_manager.delete_topic_by_id(user_id, topic_id)
+        result = research_manager.delete_topic_by_id(user_id, topic_id)
 
         if result["success"]:
             deleted_topic = result["deleted_topic"]

@@ -5,7 +5,7 @@ from models import PersonalityConfig, UserSummary, UserProfile
 from dependencies import (
     get_existing_user_id,
     get_or_create_user_id,
-    user_manager,
+    profile_manager,
     generate_display_name_from_user_id,
 )
 from logging_config import get_logger
@@ -19,7 +19,7 @@ async def get_current_user(user_id: Optional[str] = Depends(get_existing_user_id
     if not user_id:
         raise HTTPException(status_code=404, detail="No user ID provided or user not found")
 
-    user_data = user_manager.get_user(user_id)
+    user_data = profile_manager.get_user(user_id)
     if not user_data:
         raise HTTPException(status_code=404, detail="User not found")
 
@@ -33,7 +33,7 @@ async def get_current_user(user_id: Optional[str] = Depends(get_existing_user_id
 
 @router.put("/user/personality")
 async def update_user_personality(personality: PersonalityConfig, user_id: str = Depends(get_or_create_user_id)):
-    success = user_manager.update_personality(user_id, personality.model_dump())
+    success = profile_manager.update_personality(user_id, personality.model_dump())
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update personality")
 
@@ -42,7 +42,7 @@ async def update_user_personality(personality: PersonalityConfig, user_id: str =
 
 @router.put("/user/display-name")
 async def update_user_display_name(display_name: str, user_id: str = Depends(get_or_create_user_id)):
-    success = user_manager.update_user(user_id, {"metadata": {"display_name": display_name}})
+    success = profile_manager.update_user(user_id, {"metadata": {"display_name": display_name}})
     if not success:
         raise HTTPException(status_code=500, detail="Failed to update display name")
 
@@ -51,11 +51,11 @@ async def update_user_display_name(display_name: str, user_id: str = Depends(get
 
 @router.get("/users", response_model=List[UserSummary])
 async def list_users():
-    user_ids = user_manager.list_users()
+    user_ids = profile_manager.list_users()
     user_summaries = []
 
     for user_id in user_ids:
-        user_data = user_manager.get_user(user_id)
+        user_data = profile_manager.get_user(user_id)
         if user_data:
             personality = user_data.get("personality", {})
             personality_config = PersonalityConfig(
@@ -87,7 +87,7 @@ async def create_user(display_name: Optional[str] = None):
     if display_name:
         metadata["display_name"] = display_name
 
-    user_id = user_manager.create_user(metadata)
+    user_id = profile_manager.create_user(metadata)
     if not user_id:
         raise HTTPException(status_code=500, detail="Failed to create user")
 

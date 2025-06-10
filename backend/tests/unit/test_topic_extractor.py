@@ -160,11 +160,11 @@ def test_topic_extractor_with_existing_topics():
 
     with (
         patch("nodes.topic_extractor_node.ChatOpenAI") as mock_openai,
-        patch("nodes.topic_extractor_node.user_manager") as mock_user_manager,
+        patch("nodes.topic_extractor_node.research_manager") as mock_research_manager,
     ):
 
-        # Mock user manager to return existing topics
-        mock_user_manager.get_all_topic_suggestions.return_value = mock_existing_topics
+        # Mock research manager to return existing topics
+        mock_research_manager.get_all_topic_suggestions.return_value = mock_existing_topics
 
         # Mock the structured extractor
         mock_instance = MagicMock()
@@ -177,7 +177,7 @@ def test_topic_extractor_with_existing_topics():
         result = topic_extractor_node(state)
 
         # Verify existing topics were retrieved
-        mock_user_manager.get_all_topic_suggestions.assert_called_once_with("test-user")
+        mock_research_manager.get_all_topic_suggestions.assert_called_once_with("test-user")
 
         # Verify the system message includes existing topics context
         system_message_call = mock_structured.invoke.call_args[0][0][0]  # First message (system message)
@@ -220,11 +220,11 @@ def test_topic_extractor_no_existing_topics():
 
     with (
         patch("nodes.topic_extractor_node.ChatOpenAI") as mock_openai,
-        patch("nodes.topic_extractor_node.user_manager") as mock_user_manager,
+        patch("nodes.topic_extractor_node.research_manager") as mock_research_manager,
     ):
 
-        # Mock user manager to return no existing topics
-        mock_user_manager.get_all_topic_suggestions.return_value = {}
+        # Mock research manager to return no existing topics
+        mock_research_manager.get_all_topic_suggestions.return_value = {}
 
         # Mock the structured extractor
         mock_instance = MagicMock()
@@ -237,7 +237,7 @@ def test_topic_extractor_no_existing_topics():
         result = topic_extractor_node(state)
 
         # Verify existing topics were checked
-        mock_user_manager.get_all_topic_suggestions.assert_called_once_with("new-user")
+        mock_research_manager.get_all_topic_suggestions.assert_called_once_with("new-user")
 
         # Verify the system message doesn't include existing topics section
         system_message_call = mock_structured.invoke.call_args[0][0][0]

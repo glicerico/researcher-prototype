@@ -7,7 +7,7 @@ from nodes.base import (
     ChatState, 
     logger, 
     config,
-    user_manager,
+    profile_manager,
     zep_manager
 )
 
@@ -23,9 +23,9 @@ async def initializer_node(state: ChatState) -> ChatState:
     
     # Handle user management - create or get user
     user_id = state.get("user_id")
-    if not user_id or not user_manager.user_exists(user_id):
+    if not user_id or not profile_manager.user_exists(user_id):
         # Create a new user if needed
-        user_id = user_manager.create_user({
+        user_id = profile_manager.create_user({
             "created_from": "chat_graph",
             "initial_personality": state.get("personality", {})
         })
@@ -34,7 +34,7 @@ async def initializer_node(state: ChatState) -> ChatState:
     else:
         # Update personality from stored preferences if not explicitly provided
         if not state.get("personality"):
-            state["personality"] = user_manager.get_personality(user_id)
+            state["personality"] = profile_manager.get_personality(user_id)
     
     # Handle session ID generation or retrieval
     session_id = state.get("session_id", None)

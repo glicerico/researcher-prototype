@@ -12,7 +12,7 @@ from nodes.base import (
     get_current_datetime_str,
     TOPIC_EXTRACTOR_SYSTEM_PROMPT,
     TopicSuggestions,
-    user_manager
+    research_manager
 )
 from prompts import EXISTING_TOPICS_TEMPLATE
 from typing import List, Dict, Any
@@ -51,7 +51,7 @@ def topic_extractor_node(state: ChatState) -> ChatState:
     existing_topics_section = ""
     if user_id:
         try:
-            all_existing_topics = user_manager.get_all_topic_suggestions(user_id)
+            all_existing_topics = research_manager.get_all_topic_suggestions(user_id)
             if all_existing_topics:
                 # Create a formatted list of existing topics
                 topic_list = []
