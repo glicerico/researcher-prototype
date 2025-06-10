@@ -18,72 +18,92 @@ class TestStorageManager:
         """Test StorageManager initialization."""
         with tempfile.TemporaryDirectory() as temp_dir:
             storage = StorageManager(temp_dir)
-            assert storage.base_dir == temp_dir
+            assert str(storage.base_dir) == temp_dir
             assert os.path.exists(temp_dir)
 
-    @patch('builtins.open', new_callable=mock_open, read_data='{"test": "data"}')
-    @patch('os.path.exists')
-    def test_load_json_success(self, mock_exists, mock_file):
-        """Test successful JSON loading."""
-        mock_exists.return_value = True
-        
-        storage = StorageManager("/test/dir")
-        result = storage.load_json("test.json")
-        
-        assert result == {"test": "data"}
-        mock_file.assert_called_once_with("/test/dir/test.json", 'r')
-
-    @patch('os.path.exists')
-    def test_load_json_file_not_exists(self, mock_exists):
+    def test_load_json_file_not_exists(self):
         """Test JSON loading when file doesn't exist."""
-        mock_exists.return_value = False
-        
-        storage = StorageManager("/test/dir")
-        result = storage.load_json("nonexistent.json")
-        
-        assert result == {}
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = StorageManager(temp_dir)
+            result = storage.read("nonexistent.json")
+            
+            assert result == {}
 
-    @patch('builtins.open', new_callable=mock_open)
-    @patch('os.makedirs')
-    def test_save_json_success(self, mock_makedirs, mock_file):
-        """Test successful JSON saving."""
-        storage = StorageManager("/test/dir")
-        test_data = {"key": "value"}
-        
-        storage.save_json("test.json", test_data)
-        
-        mock_makedirs.assert_called_once_with("/test/dir", exist_ok=True)
-        mock_file.assert_called_once_with("/test/dir/test.json", 'w')
-        mock_file().write.assert_called()
+    def test_save_json_error_handling(self):
+        """Test JSON saving error handling with permission issues."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = StorageManager(temp_dir)
+            test_data = {"key": "value"}
+            
+            # Mock the write operation to fail
+            with patch('storage.storage_manager.shutil.move', side_effect=PermissionError("Permission denied")):
+                result = storage.write("test.json", test_data)
+                assert result is False
 
-    @patch('builtins.open', side_effect=IOError("Permission denied"))
-    @patch('os.makedirs')
-    def test_save_json_error_handling(self, mock_makedirs, mock_file):
-        """Test JSON saving error handling."""
-        storage = StorageManager("/test/dir")
-        test_data = {"key": "value"}
-        
-        # Should not raise exception
-        storage.save_json("test.json", test_data)
+    def test_file_operations_real(self):
+        """Test actual file operations."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = StorageManager(temp_dir)
+            test_data = {"key": "value", "number": 123}
+            
+            # Test write
+            success = storage.write("test.json", test_data)
+            assert success is True
+            
+            # Test read
+            result = storage.read("test.json")
+            assert result == test_data
 
-    @patch('os.path.exists')
-    def test_file_exists(self, mock_exists):
-        """Test file_exists method."""
-        mock_exists.return_value = True
-        
-        storage = StorageManager("/test/dir")
-        result = storage.file_exists("test.json")
-        
-        assert result is True
-        mock_exists.assert_called_once_with("/test/dir/test.json")
+    def test_append_operation(self):
+        """Test append operation."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = StorageManager(temp_dir)
+            
+            # Test append to non-existent file
+            success = storage.append("test.json", "items", "item1")
+            assert success is True
+            
+            # Read and verify
+            result = storage.read("test.json")
+            assert result == {"items": ["item1"]}
+            
+            # Test append to existing file
+            success = storage.append("test.json", "items", "item2")
+            assert success is True
+            
+            result = storage.read("test.json")
+            assert result == {"items": ["item1", "item2"]}
 
-    @patch('os.makedirs')
-    def test_ensure_directory(self, mock_makedirs):
-        """Test ensure_directory method."""
-        storage = StorageManager("/test/dir")
-        storage.ensure_directory("subdir")
-        
-        mock_makedirs.assert_called_once_with("/test/dir/subdir", exist_ok=True)
+    def test_delete_operation(self):
+        """Test delete operation."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = StorageManager(temp_dir)
+            test_data = {"key": "value"}
+            
+            # Create file
+            storage.write("test.json", test_data)
+            
+            # Delete file
+            success = storage.delete("test.json")
+            assert success is True
+            
+            # Verify file is gone
+            result = storage.read("test.json")
+            assert result == {}
+
+    def test_list_files_operation(self):
+        """Test list files operation."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = StorageManager(temp_dir)
+            
+            # Create some test files
+            storage.write("file1.json", {"test": 1})
+            storage.write("file2.json", {"test": 2})
+            
+            # List files
+            files = storage.list_files(".")
+            assert "file1.json" in files
+            assert "file2.json" in files
 
 
 class TestProfileManager:
@@ -97,51 +117,39 @@ class TestProfileManager:
     def test_profile_manager_init(self, mock_storage_manager):
         """Test ProfileManager initialization."""
         pm = ProfileManager(mock_storage_manager)
-        assert pm.storage_manager == mock_storage_manager
+        assert pm.storage == mock_storage_manager
 
-    def test_create_user_profile_new_user(self, mock_storage_manager):
+    def test_create_user_new_user(self, mock_storage_manager):
         """Test creating a new user profile."""
-        mock_storage_manager.load_json.return_value = {}
+        mock_storage_manager.write.return_value = True
         
         pm = ProfileManager(mock_storage_manager)
-        user_id = pm.create_user_profile("test_user")
+        # Mock the user_exists method
+        with patch.object(pm, 'user_exists', return_value=False):
+            user_id = pm.create_user()
         
-        assert user_id == "test_user"
-        mock_storage_manager.save_json.assert_called()
-
-    def test_create_user_profile_existing_user(self, mock_storage_manager):
-        """Test creating profile for existing user."""
-        mock_storage_manager.load_json.return_value = {
-            "user_id": "test_user",
-            "created_at": "2024-01-01T00:00:00Z"
-        }
-        
-        pm = ProfileManager(mock_storage_manager)
-        user_id = pm.create_user_profile("test_user")
-        
-        assert user_id == "test_user"
-        # Should not save again for existing user
-        mock_storage_manager.save_json.assert_not_called()
+        assert user_id != ""  # Should return a valid user ID
+        mock_storage_manager.write.assert_called_once()
 
     def test_get_user_profile_exists(self, mock_storage_manager):
         """Test getting existing user profile."""
         profile_data = {
             "user_id": "test_user",
-            "preferences": {"theme": "dark"}
+            "personality": {"style": "helpful", "tone": "friendly"}
         }
-        mock_storage_manager.load_json.return_value = profile_data
+        mock_storage_manager.read.return_value = profile_data
         
         pm = ProfileManager(mock_storage_manager)
-        profile = pm.get_user_profile("test_user")
+        profile = pm.get_user("test_user")
         
         assert profile == profile_data
 
     def test_get_user_profile_not_exists(self, mock_storage_manager):
         """Test getting non-existent user profile."""
-        mock_storage_manager.load_json.return_value = {}
+        mock_storage_manager.read.return_value = {}
         
         pm = ProfileManager(mock_storage_manager)
-        profile = pm.get_user_profile("nonexistent_user")
+        profile = pm.get_user("nonexistent_user")
         
         assert profile == {}
 
@@ -149,62 +157,79 @@ class TestProfileManager:
         """Test updating user profile."""
         existing_profile = {
             "user_id": "test_user",
-            "preferences": {"theme": "light"}
+            "personality": {"style": "helpful", "tone": "friendly"}
         }
-        mock_storage_manager.load_json.return_value = existing_profile
+        mock_storage_manager.read.return_value = existing_profile
+        mock_storage_manager.write.return_value = True
         
         pm = ProfileManager(mock_storage_manager)
-        updates = {"preferences": {"theme": "dark", "language": "en"}}
+        updates = {"personality": {"style": "professional", "tone": "formal"}}
         
-        success = pm.update_user_profile("test_user", updates)
+        success = pm.update_user("test_user", updates)
         
         assert success is True
-        mock_storage_manager.save_json.assert_called()
+        mock_storage_manager.write.assert_called_once()
 
     def test_update_user_profile_nonexistent(self, mock_storage_manager):
         """Test updating non-existent user profile."""
-        mock_storage_manager.load_json.return_value = {}
+        mock_storage_manager.read.return_value = {}
         
         pm = ProfileManager(mock_storage_manager)
-        updates = {"preferences": {"theme": "dark"}}
+        updates = {"personality": {"style": "professional"}}
         
-        success = pm.update_user_profile("nonexistent_user", updates)
+        success = pm.update_user("nonexistent_user", updates)
         
         assert success is False
-        mock_storage_manager.save_json.assert_not_called()
+        mock_storage_manager.write.assert_not_called()
 
-    @patch('os.listdir')
-    def test_list_users(self, mock_listdir, mock_storage_manager):
-        """Test listing all users."""
-        mock_listdir.return_value = [
-            "user1_profile.json",
-            "user2_profile.json", 
-            "other_file.txt",
-            "user3_profile.json"
-        ]
-        
-        pm = ProfileManager(mock_storage_manager)
-        users = pm.list_users()
-        
-        expected_users = ["user1", "user2", "user3"]
-        assert set(users) == set(expected_users)
+    def test_user_exists_with_real_file_operations(self):
+        """Test user_exists with real file operations."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = StorageManager(temp_dir)
+            pm = ProfileManager(storage)
+            
+            # Test non-existent user
+            assert pm.user_exists("nonexistent_user") is False
+            
+            # Create a user and test existence
+            user_id = pm.create_user()
+            assert pm.user_exists(user_id) is True
 
-    @patch('os.path.exists')
-    def test_user_exists_true(self, mock_exists, mock_storage_manager):
-        """Test checking if user exists - positive case."""
-        mock_exists.return_value = True
-        
-        pm = ProfileManager(mock_storage_manager)
-        exists = pm.user_exists("test_user")
-        
-        assert exists is True
+    def test_profile_manager_integration(self):
+        """Test profile manager with real storage integration."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = StorageManager(temp_dir)
+            pm = ProfileManager(storage)
+            
+            # Create user
+            user_id = pm.create_user(metadata={"test": "data"})
+            assert user_id != ""
+            
+            # Get user
+            profile = pm.get_user(user_id)
+            assert profile["user_id"] == user_id
+            assert profile["metadata"]["test"] == "data"
+            
+            # Update user
+            success = pm.update_user(user_id, {"metadata": {"updated": True}})
+            assert success is True
+            
+            # Verify update
+            updated_profile = pm.get_user(user_id)
+            assert updated_profile["metadata"]["updated"] is True
 
-    @patch('os.path.exists')
-    def test_user_exists_false(self, mock_exists, mock_storage_manager):
-        """Test checking if user exists - negative case."""
-        mock_exists.return_value = False
-        
-        pm = ProfileManager(mock_storage_manager)
-        exists = pm.user_exists("nonexistent_user")
-        
-        assert exists is False 
+    def test_list_users_with_real_storage(self):
+        """Test listing users with real storage operations."""
+        with tempfile.TemporaryDirectory() as temp_dir:
+            storage = StorageManager(temp_dir)
+            pm = ProfileManager(storage)
+            
+            # Create multiple users
+            user1 = pm.create_user()
+            user2 = pm.create_user()
+            
+            # List users
+            users = pm.list_users()
+            assert user1 in users
+            assert user2 in users
+            assert len(users) >= 2 

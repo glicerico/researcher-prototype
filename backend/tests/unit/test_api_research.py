@@ -1,5 +1,5 @@
 import pytest
-from unittest.mock import patch, MagicMock
+from unittest.mock import patch, MagicMock, Mock
 from fastapi.testclient import TestClient
 from fastapi import HTTPException
 import json
@@ -10,6 +10,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from api.research import router, MotivationConfigUpdate
 from app import app
+from dependencies import get_or_create_user_id
 
 
 @pytest.fixture
@@ -18,6 +19,18 @@ def research_client():
     test_app = app
     test_app.include_router(router, prefix="/api")
     return TestClient(test_app)
+
+
+@pytest.fixture  
+def override_get_user_id():
+    """Override the dependency to return a test user ID."""
+    def get_test_user_id():
+        return "test_user"
+    
+    app.dependency_overrides[get_or_create_user_id] = get_test_user_id
+    yield
+    # Clean up
+    app.dependency_overrides.clear()
 
 
 @pytest.fixture
@@ -115,10 +128,8 @@ class TestResearchFindingsEndpoints:
         assert response.status_code == 500
         assert "Error getting research findings" in response.json()["detail"]
 
-    @patch('api.research.get_or_create_user_id')
-    def test_mark_research_finding_read_success(self, mock_get_user, research_client, mock_research_manager):
+    def test_mark_research_finding_read_success(self, research_client, mock_research_manager, override_get_user_id):
         """Test successfully marking a finding as read."""
-        mock_get_user.return_value = "test_user"
         mock_research_manager.mark_finding_as_read.return_value = True
 
         response = research_client.post("/api/research/findings/finding_1/mark_read")
@@ -127,12 +138,11 @@ class TestResearchFindingsEndpoints:
         data = response.json()
         assert data["success"] is True
         assert data["finding_id"] == "finding_1"
+        # Now we can properly verify the expected user ID was used
         mock_research_manager.mark_finding_as_read.assert_called_with("test_user", "finding_1")
 
-    @patch('api.research.get_or_create_user_id')
-    def test_mark_research_finding_read_not_found(self, mock_get_user, research_client, mock_research_manager):
+    def test_mark_research_finding_read_not_found(self, research_client, mock_research_manager, override_get_user_id):
         """Test marking non-existent finding as read."""
-        mock_get_user.return_value = "test_user"
         mock_research_manager.mark_finding_as_read.return_value = False
 
         response = research_client.post("/api/research/findings/nonexistent/mark_read")
@@ -140,10 +150,8 @@ class TestResearchFindingsEndpoints:
         assert response.status_code == 404
         assert "Finding not found" in response.json()["detail"]
 
-    @patch('api.research.get_or_create_user_id')
-    def test_delete_research_finding_success(self, mock_get_user, research_client, mock_research_manager):
+    def test_delete_research_finding_success(self, research_client, mock_research_manager, override_get_user_id):
         """Test successful deletion of a research finding."""
-        mock_get_user.return_value = "test_user"
         mock_research_manager.delete_research_finding.return_value = {
             "success": True,
             "deleted_finding": {"id": "finding_1", "title": "Test Finding"}
@@ -155,12 +163,11 @@ class TestResearchFindingsEndpoints:
         data = response.json()
         assert data["success"] is True
         assert "deleted_finding" in data
+        # Now we can properly verify the expected user ID was used
         mock_research_manager.delete_research_finding.assert_called_with("test_user", "finding_1")
 
-    @patch('api.research.get_or_create_user_id')
-    def test_delete_research_finding_not_found(self, mock_get_user, research_client, mock_research_manager):
+    def test_delete_research_finding_not_found(self, research_client, mock_research_manager, override_get_user_id):
         """Test deletion of non-existent finding."""
-        mock_get_user.return_value = "test_user"
         mock_research_manager.delete_research_finding.return_value = {
             "success": False,
             "error": "Finding not found"
@@ -171,10 +178,8 @@ class TestResearchFindingsEndpoints:
         assert response.status_code == 404
         assert "Finding not found" in response.json()["detail"]
 
-    @patch('api.research.get_or_create_user_id')
-    def test_delete_all_topic_findings_success(self, mock_get_user, research_client, mock_research_manager):
+    def test_delete_all_topic_findings_success(self, research_client, mock_research_manager, override_get_user_id):
         """Test successful deletion of all findings for a topic."""
-        mock_get_user.return_value = "test_user"
         mock_research_manager.delete_all_topic_findings.return_value = {
             "success": True,
             "topic_name": "AI Research",
@@ -195,14 +200,16 @@ class TestResearchEngineStatusEndpoints:
 
     def test_get_research_engine_status_enabled(self, research_client):
         """Test getting research engine status when enabled."""
-        # Mock the app state
-        with patch.object(research_client.app.state, 'autonomous_researcher') as mock_researcher:
-            mock_researcher.get_status.return_value = {
-                "enabled": True,
-                "running": True,
-                "last_run": "2024-01-01T12:00:00Z"
-            }
-
+        # Create a proper mock for the app state
+        mock_researcher = MagicMock()
+        mock_researcher.get_status.return_value = {
+            "enabled": True,
+            "running": True,
+            "last_run": "2024-01-01T12:00:00Z"
+        }
+        
+        # Patch the app state directly with create=True to handle missing attribute
+        with patch.object(research_client.app.state, 'autonomous_researcher', mock_researcher, create=True):
             response = research_client.get("/api/research/status")
             
             assert response.status_code == 200
@@ -212,7 +219,7 @@ class TestResearchEngineStatusEndpoints:
 
     def test_get_research_engine_status_not_initialized(self, research_client):
         """Test getting status when research engine is not initialized."""
-        # Ensure autonomous_researcher is not set
+        # Ensure autonomous_researcher is not set on app state
         if hasattr(research_client.app.state, 'autonomous_researcher'):
             delattr(research_client.app.state, 'autonomous_researcher')
 

@@ -25,12 +25,12 @@ class TestRoutingAnalysis:
         analysis = RoutingAnalysis(
             decision="chat",
             reason="General conversation",
-            complexity="low"
+            complexity=1  # int, not string
         )
         
         assert analysis.decision == "chat"
         assert analysis.reason == "General conversation"
-        assert analysis.complexity == "low"
+        assert analysis.complexity == 1
 
     def test_routing_analysis_all_decisions(self):
         """Test all valid routing decisions."""
@@ -40,13 +40,13 @@ class TestRoutingAnalysis:
             analysis = RoutingAnalysis(
                 decision=decision,
                 reason=f"Test {decision}",
-                complexity="medium"
+                complexity=5  # int between 1-10
             )
             assert analysis.decision == decision
 
     def test_routing_analysis_all_complexities(self):
         """Test all valid complexity levels."""
-        valid_complexities = ["low", "medium", "high"]
+        valid_complexities = [1, 5, 10]  # int values
         
         for complexity in valid_complexities:
             analysis = RoutingAnalysis(
@@ -75,11 +75,22 @@ class TestSearchQuery:
         """Test creating valid SearchQuery."""
         query = SearchQuery(
             query="latest AI developments",
-            reasoning="User asked about recent AI news"
+            search_type="news"  # required field
         )
         
         assert query.query == "latest AI developments"
-        assert query.reasoning == "User asked about recent AI news"
+        assert query.search_type == "news"
+
+    def test_search_query_types(self):
+        """Test different search types."""
+        search_types = ["factual", "news", "concept"]
+        
+        for search_type in search_types:
+            query = SearchQuery(
+                query="test query",
+                search_type=search_type
+            )
+            assert query.search_type == search_type
 
     def test_search_query_required_fields(self):
         """Test that all fields are required."""
@@ -97,12 +108,14 @@ class TestAnalysisTask:
         """Test creating valid AnalysisTask."""
         task = AnalysisTask(
             objective="Analyze data trends",
-            approach="Statistical analysis of provided dataset",
+            required_data="Historical sales data",  # correct field name
+            proposed_approach="Statistical analysis method",  # correct field name
             expected_output="Summary of key trends and insights"
         )
         
         assert task.objective == "Analyze data trends"
-        assert task.approach == "Statistical analysis of provided dataset"
+        assert task.required_data == "Historical sales data"
+        assert task.proposed_approach == "Statistical analysis method"
         assert task.expected_output == "Summary of key trends and insights"
 
     def test_analysis_task_required_fields(self):
@@ -120,12 +133,12 @@ class TestFormattedResponse:
     def test_formatted_response_minimal(self):
         """Test creating FormattedResponse with minimal required fields."""
         response = FormattedResponse(
-            main_response="This is the main response",
-            sources=[]
+            main_response="This is the main response"
+            # sources is optional, not required
         )
         
         assert response.main_response == "This is the main response"
-        assert response.sources == []
+        assert response.sources is None
         assert response.follow_up_questions is None
 
     def test_formatted_response_with_sources(self):
@@ -145,12 +158,13 @@ class TestFormattedResponse:
         assert response.follow_up_questions == ["What about topic X?"]
 
     def test_formatted_response_required_fields(self):
-        """Test that required fields are enforced."""
+        """Test that only main_response is required."""
         with pytest.raises(ValidationError):
             FormattedResponse()
         
-        with pytest.raises(ValidationError):
-            FormattedResponse(main_response="Test response")
+        # This should work - only main_response is required
+        response = FormattedResponse(main_response="Test response")
+        assert response.main_response == "Test response"
 
 
 class TestTopicSuggestionItem:
@@ -200,7 +214,7 @@ class TestTopicSuggestions:
     def test_topic_suggestions_valid(self):
         """Test creating valid TopicSuggestions."""
         suggestions = TopicSuggestions(
-            suggestions=[
+            topics=[  # correct field name is 'topics'
                 TopicSuggestionItem(
                     name="AI Research",
                     description="AI developments",
@@ -214,17 +228,17 @@ class TestTopicSuggestions:
             ]
         )
         
-        assert len(suggestions.suggestions) == 2
-        assert suggestions.suggestions[0].name == "AI Research"
-        assert suggestions.suggestions[1].name == "Climate Change"
+        assert len(suggestions.topics) == 2
+        assert suggestions.topics[0].name == "AI Research"
+        assert suggestions.topics[1].name == "Climate Change"
 
     def test_topic_suggestions_empty(self):
         """Test TopicSuggestions with empty list."""
-        suggestions = TopicSuggestions(suggestions=[])
-        assert suggestions.suggestions == []
+        suggestions = TopicSuggestions(topics=[])
+        assert suggestions.topics == []
 
     def test_topic_suggestions_required_field(self):
-        """Test that suggestions field is required."""
+        """Test that topics field is required."""
         with pytest.raises(ValidationError):
             TopicSuggestions()
 
@@ -235,37 +249,37 @@ class TestResearchQualityAssessment:
     def test_research_quality_assessment_valid(self):
         """Test creating valid ResearchQualityAssessment."""
         assessment = ResearchQualityAssessment(
-            overall_score=0.85,
+            overall_quality_score=0.85,  # correct field name
             recency_score=0.9,
             relevance_score=0.8,
             depth_score=0.85,
             credibility_score=0.9,
             novelty_score=0.75,
             key_insights=["Insight 1", "Insight 2"],
-            summary="High quality research findings",
+            findings_summary="High quality research findings",  # correct field name
             source_urls=["https://example.com/1", "https://example.com/2"]
         )
         
-        assert assessment.overall_score == 0.85
+        assert assessment.overall_quality_score == 0.85
         assert assessment.recency_score == 0.9
         assert len(assessment.key_insights) == 2
-        assert assessment.summary == "High quality research findings"
+        assert assessment.findings_summary == "High quality research findings"
 
     def test_research_quality_assessment_score_bounds(self):
         """Test that scores are within valid bounds."""
         # Valid scores
         valid_assessment = ResearchQualityAssessment(
-            overall_score=0.0,
+            overall_quality_score=0.0,
             recency_score=1.0,
             relevance_score=0.5,
             depth_score=0.7,
             credibility_score=0.8,
             novelty_score=0.3,
             key_insights=[],
-            summary="Test summary",
+            findings_summary="Test summary",
             source_urls=[]
         )
-        assert valid_assessment.overall_score == 0.0
+        assert valid_assessment.overall_quality_score == 0.0
         assert valid_assessment.recency_score == 1.0
 
     def test_research_quality_assessment_required_fields(self):
