@@ -90,7 +90,14 @@ def response_renderer_node(state: ChatState) -> ChatState:
         
         # Extract the formatted response and any follow-up questions
         formatted_response = formatted_result.main_response
+        sources = formatted_result.sources
         follow_up_questions = formatted_result.follow_up_questions
+        
+        # If there are sources, append them to the formatted response
+        if sources and len(sources) > 0:
+            formatted_response += "\n\n**Sources:**\n"
+            for source in sources:
+                formatted_response += f"- {source}\n"
         
         # If there are follow-up questions, append them to the formatted response
         if follow_up_questions and len(follow_up_questions) > 0:
