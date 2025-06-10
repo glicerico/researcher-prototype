@@ -63,7 +63,11 @@ The following information was retrieved from a recent web search related to the 
 
 {search_result_text}
 
-Use this information to provide accurate, up-to-date responses. When referencing this information, you may mention that it comes from recent web sources.
+{citations_section}
+
+{sources_section}
+
+Use this information to provide accurate, up-to-date responses. When referencing specific facts or claims, cite the relevant sources when available.
 """
 
 ANALYSIS_CONTEXT_TEMPLATE = """

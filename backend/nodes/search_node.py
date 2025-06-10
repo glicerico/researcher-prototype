@@ -4,7 +4,6 @@ Search node for performing web searches and retrieving information.
 from nodes.base import (
     ChatState, 
     logger, 
-    HumanMessage,
     PERPLEXITY_SYSTEM_PROMPT,
     config,
     get_current_datetime_str
@@ -76,14 +75,26 @@ def search_node(state: ChatState) -> ChatState:
             response_data = response.json()
             search_result = response_data["choices"][0]["message"]["content"]
             
+            # Extract additional useful information from the response
+            citations = response_data.get("citations", [])
+            search_results = response_data.get("search_results", [])
+            
             # Log the search result
             display_result = search_result[:75] + "..." if len(search_result) > 75 else search_result
             logger.info(f"🔍 Search: Result received: \"{display_result}\"")
             
+            # Log additional context information
+            if citations:
+                logger.info(f"🔍 Search: Found {len(citations)} citations")
+            if search_results:
+                logger.info(f"🔍 Search: Found {len(search_results)} search result sources")
+            
             state["module_results"]["search"] = {
                 "success": True,
                 "result": search_result,
-                "query_used": query_to_search
+                "query_used": query_to_search,
+                "citations": citations,
+                "search_results": search_results,
             }
         else:
             # Handle API error

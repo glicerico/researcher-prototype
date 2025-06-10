@@ -4,8 +4,6 @@ Integrator node that combines all available information to generate a coherent r
 from nodes.base import (
     ChatState, 
     logger,
-    HumanMessage, 
-    AIMessage, 
     SystemMessage,
     ChatOpenAI,
     INTEGRATOR_SYSTEM_PROMPT,
@@ -50,11 +48,39 @@ def integrator_node(state: ChatState) -> ChatState:
     if search_results.get("success", False):
         search_result_text = search_results.get("result", "")
         if search_result_text:
+            # Format citations section if available
+            citations = search_results.get("citations", [])
+            citations_section = ""
+            if citations:
+                citations_list = "\n".join([f"- {citation}" for citation in citations])
+                citations_section = f"CITATIONS:\n{citations_list}"
+                logger.info(f"🧠 Integrator: Including {len(citations)} citations")
+            
+            # Format sources section if available
+            search_sources = search_results.get("search_results", [])
+            sources_section = ""
+            if search_sources:
+                sources_list = []
+                for source in search_sources:
+                    title = source.get("title", "Unknown Title")
+                    url = source.get("url", "")
+                    date = source.get("date", "")
+                    source_info = f"- {title}"
+                    if url:
+                        source_info += f" ({url})"
+                    if date:
+                        source_info += f" - {date}"
+                    sources_list.append(source_info)
+                sources_section = f"SOURCES:\n" + "\n".join(sources_list)
+                logger.info(f"🧠 Integrator: Including {len(search_sources)} source references")
+            
             search_context = SEARCH_CONTEXT_TEMPLATE.format(
-                search_result_text=search_result_text
+                search_result_text=search_result_text,
+                citations_section=citations_section,
+                sources_section=sources_section
             )
             context_sections.append(search_context)
-            logger.info("🧠 Integrator: Added search results to system context")
+            logger.info("🧠 Integrator: Added enhanced search results with citations and sources to system context")
     
     # Add analysis results to context if available
     analysis_results = state.get("module_results", {}).get("analyzer", {})
