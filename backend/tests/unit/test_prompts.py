@@ -28,11 +28,22 @@ def test_search_optimizer_system_prompt_formatting():
 def test_search_context_template_formatting():
     """Test that the search context template can be formatted correctly."""
     search_results = "Result 1\nResult 2\nResult 3"
-    formatted = SEARCH_CONTEXT_TEMPLATE.format(search_result_text=search_results)
+    citations_section = "CITATIONS:\n- Citation 1\n- Citation 2"
+    sources_section = "SOURCES:\n- Source 1 (http://example.com) - 2023-12-01\n- Source 2 (http://test.com) - 2023-12-02"
+    
+    formatted = SEARCH_CONTEXT_TEMPLATE.format(
+        search_result_text=search_results,
+        citations_section=citations_section,
+        sources_section=sources_section
+    )
+    
     assert "Result 1" in formatted
     assert "Result 2" in formatted
     assert "Result 3" in formatted
     assert "CURRENT INFORMATION FROM WEB SEARCH" in formatted
+    assert "Citation 1" in formatted
+    assert "Source 1" in formatted
+    assert "cite the relevant sources" in formatted
 
 def test_response_renderer_system_prompt_formatting():
     """Test that the response renderer system prompt can be formatted correctly."""
