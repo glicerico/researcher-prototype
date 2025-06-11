@@ -37,7 +37,7 @@ def response_renderer_node(state: ChatState) -> ChatState:
     logger.info(f"✨ Renderer: Processing raw response: \"{display_raw}\"")
     
     # Get personality settings to apply to the response
-    personality = state.get("personality", {})
+    personality = state.get("personality") or {}
     style = personality.get("style", "helpful")
     tone = personality.get("tone", "friendly")
     
