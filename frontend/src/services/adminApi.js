@@ -165,6 +165,52 @@ export const getAdminStatus = async () => {
   }
 };
 
+// Flow visualization APIs
+export const getFlowSummary = async () => {
+  try {
+    const response = await adminApi.get('/flows');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getFlowData = async (graphType) => {
+  try {
+    const response = await adminApi.get(`/flows/${graphType}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getNodeInfo = async (nodeId) => {
+  try {
+    const response = await adminApi.get(`/flows/nodes/${nodeId}`);
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const generateFlowDiagrams = async () => {
+  try {
+    const response = await adminApi.post('/flows/diagrams/generate');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
+export const getPromptUsageMap = async () => {
+  try {
+    const response = await adminApi.get('/flows/prompt-usage');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 // Utility functions
 export const isAuthenticated = () => {
   return !!tokenManager.getToken();

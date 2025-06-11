@@ -5,6 +5,7 @@ from datetime import datetime
 
 from services.auth_manager import auth_manager, verify_admin_token
 from services.prompt_manager import prompt_manager
+from services.flow_analyzer import flow_analyzer
 from logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -313,4 +314,152 @@ async def get_admin_status(authorization: Optional[str] = Header(None)):
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail=f"Error getting admin status: {str(e)}"
+        )
+
+
+# Flow visualization endpoints
+@router.get("/flows")
+async def get_flow_summary(authorization: Optional[str] = Header(None)):
+    """Get summary of all LangGraph flows and their prompt usage."""
+    verify_admin_token(authorization)
+    
+    try:
+        summary = flow_analyzer.get_flow_summary()
+        
+        return {
+            'success': True,
+            'flow_summary': summary,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting flow summary: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving flow summary: {str(e)}"
+        )
+
+
+@router.get("/flows/prompt-usage")
+async def get_prompt_usage_map(authorization: Optional[str] = Header(None)):
+    """Get mapping of prompts to the nodes that use them."""
+    verify_admin_token(authorization)
+    
+    try:
+        prompt_usage = flow_analyzer.get_prompt_usage_map()
+        
+        return {
+            'success': True,
+            'prompt_usage': prompt_usage,
+            'total_prompts': len(prompt_usage),
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting prompt usage map: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving prompt usage map: {str(e)}"
+        )
+
+
+@router.get("/flows/nodes/{node_id}")
+async def get_node_info(node_id: str, authorization: Optional[str] = Header(None)):
+    """Get detailed information about a specific node including its prompt."""
+    verify_admin_token(authorization)
+    
+    try:
+        node_info = flow_analyzer.get_node_prompt_info(node_id)
+        
+        if not node_info:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail=f"Node '{node_id}' not found"
+            )
+        
+        # If the node has a prompt, get the full prompt details
+        prompt_details = None
+        if node_info.get('prompt'):
+            prompt_name = node_info['prompt']
+            prompt_details = prompt_manager.get_prompt(prompt_name)
+        
+        return {
+            'success': True,
+            'node_id': node_id,
+            'node_info': node_info,
+            'prompt_details': prompt_details,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error getting node info for {node_id}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving node information: {str(e)}"
+        )
+
+
+@router.post("/flows/diagrams/generate")
+async def generate_flow_diagrams(authorization: Optional[str] = Header(None)):
+    """Generate flow diagrams for both main chat and research graphs."""
+    verify_admin_token(authorization)
+    
+    try:
+        # Get admin user from token (for audit trail)
+        token = authorization.replace("Bearer ", "")
+        payload = auth_manager.get_token_payload(token)
+        admin_user = payload.get("sub", "admin") if payload else "admin"
+        
+        # Generate diagrams
+        result = flow_analyzer.generate_flow_diagrams()
+        
+        # Save metadata for frontend consumption
+        metadata_saved = flow_analyzer.save_flow_metadata()
+        
+        logger.info(f"Admin {admin_user} generated flow diagrams")
+        
+        return {
+            'success': result['success'],
+            'diagrams': result['diagrams'],
+            'errors': result['errors'],
+            'metadata_saved': metadata_saved,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating flow diagrams: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error generating flow diagrams: {str(e)}"
+        )
+
+
+@router.get("/flows/{graph_type}")
+async def get_flow_data(graph_type: str, authorization: Optional[str] = Header(None)):
+    """Get detailed flow data for a specific graph type (main or research)."""
+    verify_admin_token(authorization)
+    
+    if graph_type not in ["main", "research"]:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Graph type must be 'main' or 'research'"
+        )
+    
+    try:
+        flow_data = flow_analyzer.get_flow_data(graph_type)
+        
+        return {
+            'success': True,
+            'graph_type': graph_type,
+            'flow_data': flow_data,
+            'timestamp': datetime.now().isoformat()
+        }
+        
+    except Exception as e:
+        logger.error(f"Error getting flow data for {graph_type}: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error retrieving flow data: {str(e)}"
         ) 

@@ -812,4 +812,406 @@
     width: 95%;
     margin: 20px;
   }
+}
+
+/* Flow Visualization Styles */
+.flow-visualization {
+  padding: 20px;
+  background: white;
+  border-radius: 8px;
+  margin: 20px;
+}
+
+.flow-header {
+  text-align: center;
+  margin-bottom: 30px;
+}
+
+.flow-header h2 {
+  color: #212529;
+  margin: 0 0 8px 0;
+  font-size: 28px;
+}
+
+.flow-header p {
+  color: #6c757d;
+  margin: 0;
+  font-size: 16px;
+}
+
+.flow-summary {
+  margin-bottom: 30px;
+}
+
+.flow-summary h3 {
+  color: #495057;
+  margin-bottom: 16px;
+  font-size: 20px;
+}
+
+.summary-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-bottom: 20px;
+}
+
+.summary-card {
+  background: #f8f9fa;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.summary-card h4 {
+  color: #495057;
+  margin: 0 0 12px 0;
+  font-size: 16px;
+}
+
+.summary-card p {
+  color: #6c757d;
+  margin: 4px 0;
+  font-size: 14px;
+}
+
+.flow-controls {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 30px;
+  padding: 16px;
+  background: #f8f9fa;
+  border-radius: 8px;
+}
+
+.graph-selector {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.graph-selector label {
+  font-weight: 600;
+  color: #495057;
+}
+
+.form-select {
+  padding: 8px 12px;
+  border: 1px solid #ced4da;
+  border-radius: 6px;
+  background: white;
+  color: #495057;
+  font-size: 14px;
+}
+
+.flow-content {
+  display: grid;
+  grid-template-columns: 1fr 300px;
+  gap: 30px;
+}
+
+.flow-main {
+  display: flex;
+  flex-direction: column;
+  gap: 30px;
+}
+
+.diagram-section {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.diagram-section h3 {
+  color: #495057;
+  margin: 0 0 16px 0;
+  font-size: 18px;
+}
+
+.diagram-container {
+  text-align: center;
+  background: #f8f9fa;
+  border-radius: 6px;
+  padding: 20px;
+  min-height: 300px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.flow-diagram {
+  max-width: 100%;
+  max-height: 600px;
+  border-radius: 6px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+}
+
+.diagram-placeholder, .diagram-error {
+  text-align: center;
+  color: #6c757d;
+}
+
+.diagram-placeholder p, .diagram-error p {
+  margin-bottom: 16px;
+  font-size: 16px;
+}
+
+.nodes-section {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+}
+
+.nodes-section h4 {
+  color: #495057;
+  margin: 0 0 16px 0;
+  font-size: 18px;
+}
+
+.nodes-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 16px;
+}
+
+.node-card {
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 16px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  background: white;
+}
+
+.node-card:hover {
+  border-color: #007bff;
+  box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
+  transform: translateY(-2px);
+}
+
+.node-card.router {
+  border-left: 4px solid #dc3545;
+}
+
+.node-card.search {
+  border-left: 4px solid #007bff;
+}
+
+.node-card.analysis {
+  border-left: 4px solid #28a745;
+}
+
+.node-card.integrator {
+  border-left: 4px solid #6f42c1;
+}
+
+.node-card.response {
+  border-left: 4px solid #fd7e14;
+}
+
+.node-card.research {
+  border-left: 4px solid #20c997;
+}
+
+.node-card.system {
+  border-left: 4px solid #6c757d;
+}
+
+.node-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 8px;
+}
+
+.node-header h5 {
+  color: #212529;
+  margin: 0;
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.node-category {
+  background: #e9ecef;
+  color: #495057;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.node-description {
+  color: #6c757d;
+  margin: 8px 0;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+.node-prompt {
+  background: #f8f9fa;
+  padding: 8px;
+  border-radius: 4px;
+  margin: 8px 0;
+  font-size: 12px;
+  color: #495057;
+}
+
+.node-prompt strong {
+  color: #212529;
+}
+
+.btn-sm {
+  padding: 4px 8px;
+  font-size: 12px;
+}
+
+.btn-outline-primary {
+  background: transparent;
+  border: 1px solid #007bff;
+  color: #007bff;
+}
+
+.btn-outline-primary:hover {
+  background: #007bff;
+  color: white;
+}
+
+.flow-sidebar {
+  background: white;
+  border: 1px solid #e9ecef;
+  border-radius: 8px;
+  padding: 20px;
+  height: fit-content;
+  position: sticky;
+  top: 20px;
+}
+
+.node-details h4 {
+  color: #495057;
+  margin: 0 0 16px 0;
+  font-size: 18px;
+}
+
+.node-info p {
+  margin: 8px 0;
+  color: #495057;
+}
+
+.node-info strong {
+  color: #212529;
+}
+
+.prompt-info {
+  background: #f8f9fa;
+  padding: 16px;
+  border-radius: 6px;
+  margin: 16px 0;
+}
+
+.prompt-details {
+  margin-top: 12px;
+}
+
+.no-prompt {
+  color: #6c757d;
+  font-style: italic;
+}
+
+.prompt-usage h4 {
+  color: #495057;
+  margin: 0 0 16px 0;
+  font-size: 18px;
+}
+
+.usage-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.usage-item {
+  border: 1px solid #e9ecef;
+  border-radius: 6px;
+  padding: 12px;
+}
+
+.usage-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.usage-header strong {
+  color: #212529;
+  font-size: 14px;
+}
+
+.usage-item p {
+  color: #6c757d;
+  margin: 0;
+  font-size: 13px;
+}
+
+.flow-visualization.loading {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.flow-visualization.error {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 400px;
+}
+
+.flow-visualization .error-message {
+  text-align: center;
+  color: #dc3545;
+}
+
+.flow-visualization .error-message h3 {
+  margin-bottom: 16px;
+}
+
+.flow-visualization .error-message p {
+  margin-bottom: 20px;
+}
+
+/* Responsive Design for Flow Visualization */
+@media (max-width: 1024px) {
+  .flow-content {
+    grid-template-columns: 1fr;
+  }
+  
+  .flow-sidebar {
+    position: static;
+  }
+}
+
+@media (max-width: 768px) {
+  .flow-visualization {
+    margin: 10px;
+    padding: 15px;
+  }
+  
+  .flow-controls {
+    flex-direction: column;
+    gap: 16px;
+    align-items: stretch;
+  }
+  
+  .nodes-grid {
+    grid-template-columns: 1fr;
+  }
+  
+  .summary-grid {
+    grid-template-columns: 1fr;
+  }
 } 

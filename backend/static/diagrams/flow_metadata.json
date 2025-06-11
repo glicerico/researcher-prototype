@@ -1,0 +1,326 @@
+{
+  "main_chat_flow": {
+    "type": "main",
+    "nodes": [
+      {
+        "id": "initializer",
+        "type": "start",
+        "prompt": null,
+        "category": "System",
+        "description": "Sets up user state and session",
+        "color": "#E8F4FD"
+      },
+      {
+        "id": "router",
+        "type": "decision",
+        "prompt": "ROUTER_SYSTEM_PROMPT",
+        "category": "Router",
+        "description": "Determines conversation flow path",
+        "color": "#FFE6E6"
+      },
+      {
+        "id": "search_prompt_optimizer",
+        "type": "process",
+        "prompt": "SEARCH_OPTIMIZER_SYSTEM_PROMPT",
+        "category": "Search",
+        "description": "Optimizes search queries",
+        "color": "#E6F3FF"
+      },
+      {
+        "id": "analysis_task_refiner",
+        "type": "process",
+        "prompt": "ANALYSIS_REFINER_SYSTEM_PROMPT",
+        "category": "Analysis",
+        "description": "Refines analysis tasks",
+        "color": "#E6FFE6"
+      },
+      {
+        "id": "search",
+        "type": "process",
+        "prompt": "PERPLEXITY_SYSTEM_PROMPT",
+        "category": "Search",
+        "description": "Performs web search",
+        "color": "#E6F3FF"
+      },
+      {
+        "id": "analyzer",
+        "type": "process",
+        "prompt": null,
+        "category": "Analysis",
+        "description": "Analyzes data and problems",
+        "color": "#E6FFE6"
+      },
+      {
+        "id": "integrator",
+        "type": "process",
+        "prompt": "INTEGRATOR_SYSTEM_PROMPT",
+        "category": "Integrator",
+        "description": "Integrates all information",
+        "color": "#F0E6FF"
+      },
+      {
+        "id": "response_renderer",
+        "type": "end",
+        "prompt": "RESPONSE_RENDERER_SYSTEM_PROMPT",
+        "category": "Response",
+        "description": "Formats final response",
+        "color": "#FFF0E6"
+      }
+    ],
+    "edges": [
+      {
+        "from": "initializer",
+        "to": "router"
+      },
+      {
+        "from": "router",
+        "to": "search_prompt_optimizer",
+        "condition": "search"
+      },
+      {
+        "from": "router",
+        "to": "analysis_task_refiner",
+        "condition": "analyzer"
+      },
+      {
+        "from": "router",
+        "to": "integrator",
+        "condition": "chat"
+      },
+      {
+        "from": "search_prompt_optimizer",
+        "to": "search"
+      },
+      {
+        "from": "search",
+        "to": "integrator"
+      },
+      {
+        "from": "analysis_task_refiner",
+        "to": "analyzer"
+      },
+      {
+        "from": "analyzer",
+        "to": "integrator"
+      },
+      {
+        "from": "integrator",
+        "to": "response_renderer"
+      }
+    ],
+    "node_count": 8,
+    "edge_count": 9
+  },
+  "research_flow": {
+    "type": "research",
+    "nodes": [
+      {
+        "id": "research_initializer",
+        "type": "start",
+        "prompt": null,
+        "category": "Research",
+        "description": "Initializes research workflow",
+        "color": "#F0F8E6"
+      },
+      {
+        "id": "research_query_generator",
+        "type": "process",
+        "prompt": "RESEARCH_QUERY_GENERATION_PROMPT",
+        "category": "Research",
+        "description": "Generates research queries",
+        "color": "#F0F8E6"
+      },
+      {
+        "id": "search",
+        "type": "process",
+        "prompt": "PERPLEXITY_SYSTEM_PROMPT",
+        "category": "Search",
+        "description": "Performs web search",
+        "color": "#E6F3FF"
+      },
+      {
+        "id": "research_quality_assessor",
+        "type": "process",
+        "prompt": "RESEARCH_FINDINGS_QUALITY_ASSESSMENT_PROMPT",
+        "category": "Research",
+        "description": "Assesses research quality",
+        "color": "#F0F8E6"
+      },
+      {
+        "id": "research_deduplication",
+        "type": "process",
+        "prompt": "RESEARCH_FINDINGS_DEDUPLICATION_PROMPT",
+        "category": "Research",
+        "description": "Checks for duplicates",
+        "color": "#F0F8E6"
+      },
+      {
+        "id": "research_storage",
+        "type": "end",
+        "prompt": null,
+        "category": "Research",
+        "description": "Stores research findings",
+        "color": "#F0F8E6"
+      }
+    ],
+    "edges": [
+      {
+        "from": "research_initializer",
+        "to": "research_query_generator"
+      },
+      {
+        "from": "research_query_generator",
+        "to": "search"
+      },
+      {
+        "from": "search",
+        "to": "research_quality_assessor"
+      },
+      {
+        "from": "research_quality_assessor",
+        "to": "research_deduplication"
+      },
+      {
+        "from": "research_deduplication",
+        "to": "research_storage"
+      }
+    ],
+    "node_count": 6,
+    "edge_count": 5
+  },
+  "flow_summary": {
+    "flows": {
+      "main_chat": {
+        "node_count": 8,
+        "edge_count": 9,
+        "type": "conditional"
+      },
+      "research": {
+        "node_count": 6,
+        "edge_count": 5,
+        "type": "linear"
+      }
+    },
+    "prompt_usage": {
+      "ROUTER_SYSTEM_PROMPT": [
+        "router"
+      ],
+      "SEARCH_OPTIMIZER_SYSTEM_PROMPT": [
+        "search_prompt_optimizer"
+      ],
+      "ANALYSIS_REFINER_SYSTEM_PROMPT": [
+        "analysis_task_refiner"
+      ],
+      "PERPLEXITY_SYSTEM_PROMPT": [
+        "search"
+      ],
+      "INTEGRATOR_SYSTEM_PROMPT": [
+        "integrator"
+      ],
+      "RESPONSE_RENDERER_SYSTEM_PROMPT": [
+        "response_renderer"
+      ],
+      "RESEARCH_QUERY_GENERATION_PROMPT": [
+        "research_query_generator"
+      ],
+      "RESEARCH_FINDINGS_QUALITY_ASSESSMENT_PROMPT": [
+        "research_quality_assessor"
+      ],
+      "RESEARCH_FINDINGS_DEDUPLICATION_PROMPT": [
+        "research_deduplication"
+      ]
+    },
+    "category_distribution": {
+      "System": 1,
+      "Router": 1,
+      "Search": 3,
+      "Analysis": 2,
+      "Integrator": 1,
+      "Response": 1,
+      "Research": 5
+    },
+    "total_nodes": 14,
+    "total_prompts": 9
+  },
+  "node_prompt_mapping": {
+    "initializer": {
+      "prompt": null,
+      "category": "System",
+      "description": "Sets up user state and session",
+      "color": "#E8F4FD"
+    },
+    "router": {
+      "prompt": "ROUTER_SYSTEM_PROMPT",
+      "category": "Router",
+      "description": "Determines conversation flow path",
+      "color": "#FFE6E6"
+    },
+    "search_prompt_optimizer": {
+      "prompt": "SEARCH_OPTIMIZER_SYSTEM_PROMPT",
+      "category": "Search",
+      "description": "Optimizes search queries",
+      "color": "#E6F3FF"
+    },
+    "analysis_task_refiner": {
+      "prompt": "ANALYSIS_REFINER_SYSTEM_PROMPT",
+      "category": "Analysis",
+      "description": "Refines analysis tasks",
+      "color": "#E6FFE6"
+    },
+    "search": {
+      "prompt": "PERPLEXITY_SYSTEM_PROMPT",
+      "category": "Search",
+      "description": "Performs web search",
+      "color": "#E6F3FF"
+    },
+    "analyzer": {
+      "prompt": null,
+      "category": "Analysis",
+      "description": "Analyzes data and problems",
+      "color": "#E6FFE6"
+    },
+    "integrator": {
+      "prompt": "INTEGRATOR_SYSTEM_PROMPT",
+      "category": "Integrator",
+      "description": "Integrates all information",
+      "color": "#F0E6FF"
+    },
+    "response_renderer": {
+      "prompt": "RESPONSE_RENDERER_SYSTEM_PROMPT",
+      "category": "Response",
+      "description": "Formats final response",
+      "color": "#FFF0E6"
+    },
+    "research_initializer": {
+      "prompt": null,
+      "category": "Research",
+      "description": "Initializes research workflow",
+      "color": "#F0F8E6"
+    },
+    "research_query_generator": {
+      "prompt": "RESEARCH_QUERY_GENERATION_PROMPT",
+      "category": "Research",
+      "description": "Generates research queries",
+      "color": "#F0F8E6"
+    },
+    "research_quality_assessor": {
+      "prompt": "RESEARCH_FINDINGS_QUALITY_ASSESSMENT_PROMPT",
+      "category": "Research",
+      "description": "Assesses research quality",
+      "color": "#F0F8E6"
+    },
+    "research_deduplication": {
+      "prompt": "RESEARCH_FINDINGS_DEDUPLICATION_PROMPT",
+      "category": "Research",
+      "description": "Checks for duplicates",
+      "color": "#F0F8E6"
+    },
+    "research_storage": {
+      "prompt": null,
+      "category": "Research",
+      "description": "Stores research findings",
+      "color": "#F0F8E6"
+    }
+  },
+  "generated_at": 1749682482.5974152
+}

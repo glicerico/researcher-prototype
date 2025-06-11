@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from typing import Optional, List
 import os
 import traceback
@@ -88,6 +89,12 @@ app.include_router(users_router)
 app.include_router(topics_router)
 app.include_router(research_router)
 app.include_router(admin_router)
+
+# Mount static files for diagrams
+static_dir = "static"
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 @app.get("/health")

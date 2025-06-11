@@ -3,6 +3,7 @@ import { useNavigate } from 'react-router-dom';
 import { getAllPrompts, getAdminStatus } from '../../services/adminApi';
 import { useAdmin } from '../../context/AdminContext';
 import PromptEditor from './PromptEditor';
+import FlowVisualization from './FlowVisualization';
 import '../../styles/Admin.css';
 
 const AdminDashboard = () => {
@@ -98,6 +99,12 @@ const AdminDashboard = () => {
           📊 Overview
         </button>
         <button
+          className={`tab-button ${activeTab === 'flows' ? 'active' : ''}`}
+          onClick={() => setActiveTab('flows')}
+        >
+          🔄 Flow Visualization
+        </button>
+        <button
           className={`tab-button ${activeTab === 'editor' ? 'active' : ''}`}
           onClick={() => setActiveTab('editor')}
         >
@@ -171,6 +178,12 @@ const AdminDashboard = () => {
                 ))}
               </div>
             </div>
+          </div>
+        )}
+
+        {activeTab === 'flows' && (
+          <div className="flows-tab">
+            <FlowVisualization onEditPrompt={handlePromptSelect} />
           </div>
         )}
 
