@@ -61,3 +61,9 @@ MOTIVATION_BOREDOM_RATE = float(os.getenv("MOTIVATION_BOREDOM_RATE", "0.001"))
 MOTIVATION_CURIOSITY_DECAY = float(os.getenv("MOTIVATION_CURIOSITY_DECAY", "0.0005"))
 MOTIVATION_TIREDNESS_DECAY = float(os.getenv("MOTIVATION_TIREDNESS_DECAY", "0.0005"))
 MOTIVATION_SATISFACTION_DECAY = float(os.getenv("MOTIVATION_SATISFACTION_DECAY", "0.0005"))
+
+# Admin interface configuration
+ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")  # Change this in production!
+ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET", "your-secret-key-change-in-production")
+ADMIN_JWT_ALGORITHM = os.getenv("ADMIN_JWT_ALGORITHM", "HS256")
+ADMIN_JWT_EXPIRE_MINUTES = int(os.getenv("ADMIN_JWT_EXPIRE_MINUTES", "480"))  # 8 hours
