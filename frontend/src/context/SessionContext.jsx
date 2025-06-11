@@ -37,23 +37,34 @@ export const SessionProvider = ({ children }) => {
       return;
     }
 
-    // Load stored messages
+    // Load stored session ID for this user
     const storedSession = localStorage.getItem(`session_id_${userId}`);
-    if (storedSession) {
-      setSessionId(storedSession);
-    }
+    
+    // Always set the session ID (either stored or null)
+    setSessionId(storedSession);
 
+    // Load stored messages for this user's session
     const storedMessages = storedSession
       ? localStorage.getItem(`chat_messages_${userId}_${storedSession}`)
       : null;
+    
     if (storedMessages) {
       try {
         setMessages(JSON.parse(storedMessages));
       } catch {
-        // ignore parse errors
+        // If parsing fails, reset to default
+        setMessages([
+          { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
+        ]);
       }
+    } else {
+      // ✅ FIX: Always reset messages when no stored messages exist
+      setMessages([
+        { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
+      ]);
     }
 
+    // Load session history for this user
     const history = localStorage.getItem(`session_history_${userId}`);
     if (history) {
       try {
@@ -66,14 +77,26 @@ export const SessionProvider = ({ children }) => {
     }
   }, [userId]);
 
-  // Persist conversation to localStorage
+  // Persist conversation to localStorage with better isolation
   useEffect(() => {
-    if (userId && sessionId && messages.length > 1) {
-      localStorage.setItem(
-        `chat_messages_${userId}_${sessionId}`,
-        JSON.stringify(messages)
-      );
-    }
+    // ✅ FIX: Add delay to prevent race conditions during user switching
+    const persistMessages = setTimeout(() => {
+      if (userId && sessionId && messages.length > 1) {
+        // Only persist if messages aren't the default system message
+        const isDefaultMessage = messages.length === 1 && 
+          messages[0].role === 'system' && 
+          messages[0].content === "Hello! I'm your AI assistant. How can I help you today?";
+        
+        if (!isDefaultMessage) {
+          localStorage.setItem(
+            `chat_messages_${userId}_${sessionId}`,
+            JSON.stringify(messages)
+          );
+        }
+      }
+    }, 100); // Small delay to ensure user switching is complete
+
+    return () => clearTimeout(persistMessages);
   }, [messages, userId, sessionId]);
 
   // Persist session ID
@@ -112,6 +135,19 @@ export const SessionProvider = ({ children }) => {
 
   const updateUserId = useCallback((newUserId) => {
     if (newUserId) {
+      // ✅ FIX: Clear state immediately when switching users to prevent data leakage
+      if (newUserId !== userId) {
+        // Reset state first to prevent showing previous user's data
+        setMessages([
+          { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
+        ]);
+        setSessionId(null);
+        setConversationTopics([]);
+        setSessionHistory([]);
+        setUserDisplayName('');
+        setPersonality(null);
+      }
+      
       setUserId(newUserId);
       localStorage.setItem('user_id', newUserId);
     } else {

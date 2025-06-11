@@ -9,6 +9,7 @@ import ResearchResultsDashboard from './components/ResearchResultsDashboard';
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
+import './utils/testDataIsolation'; // Import test utilities for debugging
 import './App.css';
 
 function App() {
