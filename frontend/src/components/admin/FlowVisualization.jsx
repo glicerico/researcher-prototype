@@ -19,6 +19,12 @@ const FlowVisualization = ({ onEditPrompt }) => {
   const [generating, setGenerating] = useState(false);
   const [error, setError] = useState(null);
 
+  // Helper function to construct full URLs for static assets
+  const getStaticUrl = (relativePath) => {
+    const baseUrl = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+    return `${baseUrl}${relativePath}`;
+  };
+
   useEffect(() => {
     loadFlowData();
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
@@ -44,14 +50,13 @@ const FlowVisualization = ({ onEditPrompt }) => {
       setPromptUsage(usageResponse.prompt_usage);
 
       // Set default diagrams (they should already exist)
-      const timestamp = Date.now();
       setDiagrams({
         main_chat: {
-          url: `http://localhost:8000/static/diagrams/main_chat_flow.png?t=${timestamp}`,
+          url: getStaticUrl('/static/diagrams/main_chat_flow.png'),
           generated: true
         },
         research: {
-          url: `http://localhost:8000/static/diagrams/research_flow.png?t=${timestamp}`,
+          url: getStaticUrl('/static/diagrams/research_flow.png'),
           generated: true
         }
       });
@@ -82,14 +87,26 @@ const FlowVisualization = ({ onEditPrompt }) => {
       setGenerating(true);
       const response = await generateFlowDiagrams();
       
-      console.log('Diagram generation response:', response); // Debug log
-      
       if (response.success) {
-        setDiagrams(response.diagrams);
-        console.log('Diagrams set:', response.diagrams); // Debug log
+        // Convert relative URLs to absolute URLs
+        const diagramsWithFullUrls = {};
+        Object.entries(response.diagrams).forEach(([key, diagram]) => {
+          diagramsWithFullUrls[key] = {
+            ...diagram,
+            url: getStaticUrl(diagram.url)
+          };
+        });
+        setDiagrams(diagramsWithFullUrls);
       } else {
         console.warn('Diagram generation had errors:', response.errors);
-        setDiagrams(response.diagrams || {});
+        const diagramsWithFullUrls = {};
+        Object.entries(response.diagrams || {}).forEach(([key, diagram]) => {
+          diagramsWithFullUrls[key] = {
+            ...diagram,
+            url: getStaticUrl(diagram.url)
+          };
+        });
+        setDiagrams(diagramsWithFullUrls);
       }
     } catch (err) {
       console.error('Error generating diagrams:', err);
@@ -149,8 +166,6 @@ const FlowVisualization = ({ onEditPrompt }) => {
     const diagramKey = selectedGraph === 'main' ? 'main_chat' : selectedGraph;
     const diagramData = diagrams[diagramKey];
     
-    console.log('Render diagram - selectedGraph:', selectedGraph, 'diagramKey:', diagramKey, 'diagrams:', diagrams, 'diagramData:', diagramData); // Debug log
-    
     if (!diagramData) {
       return (
         <div className="diagram-placeholder">
@@ -172,23 +187,13 @@ const FlowVisualization = ({ onEditPrompt }) => {
           src={diagramData.url} 
           alt={`${selectedGraph} flow diagram`}
           className="flow-diagram"
-          onLoad={() => {
-            console.log('Image loaded successfully:', diagramData.url);
-          }}
           onError={(e) => {
-            console.error('Image failed to load:', diagramData.url, e);
             e.target.style.display = 'none';
             e.target.nextSibling.style.display = 'block';
           }}
         />
         <div className="diagram-error" style={{ display: 'none' }}>
           <p>Diagram could not be loaded</p>
-          <p>URL: {diagramData.url}</p>
-          <p>
-            <a href={diagramData.url} target="_blank" rel="noopener noreferrer">
-              Test direct link
-            </a>
-          </p>
           <button 
             onClick={generateDiagrams}
             disabled={generating}
@@ -343,14 +348,6 @@ const FlowVisualization = ({ onEditPrompt }) => {
       <div className="flow-header">
         <h2>LangGraph Flow Visualization</h2>
         <p>Understand how prompts intervene in conversation flows</p>
-        
-        {/* Debug info - remove this later */}
-        <div style={{ background: '#f0f0f0', padding: '10px', margin: '10px 0', fontSize: '12px' }}>
-          <strong>Debug Info:</strong><br/>
-          Selected Graph: {selectedGraph}<br/>
-          Diagrams Available: {Object.keys(diagrams).join(', ')}<br/>
-          Current Diagram URL: {diagrams[selectedGraph === 'main' ? 'main_chat' : selectedGraph]?.url || 'None'}
-        </div>
       </div>
 
       {renderFlowSummary()}

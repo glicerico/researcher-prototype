@@ -52,7 +52,7 @@ class FlowAnalyzer:
             if main_success:
                 results["diagrams"]["main_chat"] = {
                     "path": main_diagram_path,
-                    "url": "http://localhost:8000/static/diagrams/main_chat_flow.png",
+                    "url": "/static/diagrams/main_chat_flow.png",
                     "generated": True
                 }
             else:
@@ -69,7 +69,7 @@ class FlowAnalyzer:
             if research_success:
                 results["diagrams"]["research"] = {
                     "path": research_diagram_path,
-                    "url": "http://localhost:8000/static/diagrams/research_flow.png",
+                    "url": "/static/diagrams/research_flow.png",
                     "generated": True
                 }
             else:
