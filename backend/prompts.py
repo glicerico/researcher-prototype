@@ -5,7 +5,6 @@ Each prompt is defined as a string template that can be formatted with dynamic v
 
 # Router prompts
 ROUTER_SYSTEM_PROMPT = """
-
 Current date and time: {current_time}
 You are a message router that determines the best module to handle a user's request. 
 Analyze the conversation history to classify the request into one of these categories:
@@ -17,6 +16,9 @@ Analyze the conversation history to classify the request into one of these categ
 
 {memory_context_section}
 """
+
+# Search optimizer prompts
+SEARCH_OPTIMIZER_SYSTEM_PROMPT = """
 Current date and time: {current_time}
 You are an expert at rephrasing user questions into effective search engine queries.
 Analyze the provided conversation history and the LATEST user question.
@@ -29,7 +31,6 @@ Focus on the core intent of the LATEST user question and use precise terminology
 
 # Analyzer task refiner prompts
 ANALYSIS_REFINER_SYSTEM_PROMPT = """
-
 Current date and time: {current_time}
 You are an expert at breaking down user requests into clear, structured analytical tasks, considering the full conversation context.
 Analyze the provided conversation history and the LATEST user request.
@@ -40,9 +41,14 @@ Ensure the refined task is actionable and self-contained based on the conversati
 {memory_context_section}
 """
 
+# Web search prompts
+PERPLEXITY_SYSTEM_PROMPT = """Current date and time: {current_time}. 
+You are a helpful and accurate web search assistant. 
+Provide comprehensive answers based on web search results.
+"""
+
 # Integrator prompts
-INTEGRATOR_SYSTEM_PROMPT = """
-Current date and time: {current_time}.
+INTEGRATOR_SYSTEM_PROMPT = """Current date and time: {current_time}.
 You are the central reasoning component of an AI assistant system. Your task is to integrate all available information and generate a coherent, thoughtful response.
 
 {memory_context_section}
@@ -61,49 +67,8 @@ This ensures users can verify the information and gives proper attribution to so
 """
 
 # Context templates for system prompt integration
-SEARCH_CONTEXT_TEMPLATE = """
-CURRENT INFORMATION FROM WEB SEARCH:
-The following information was retrieved from a recent web search related to the user's query:
-
-{search_result_text}
-
-{citations_section}
-
-{sources_section}
-
-Use this information to provide accurate, up-to-date responses. When referencing specific facts or claims, cite the relevant sources when available.
-"""
-
-ANALYSIS_CONTEXT_TEMPLATE = """
-ANALYTICAL INSIGHTS:
-The following analysis was performed related to the user's query:
-
-{analysis_result_text}
-
-Incorporate these insights naturally into your response where relevant.
-"""
-
-MEMORY_CONTEXT_TEMPLATE = """
-CONVERSATION MEMORY:
-The following is relevant context from your previous interactions with this user:
-
-{memory_context}
-
-Use this context to maintain conversation continuity and reference previous topics when relevant.
-"""
-
-EXISTING_TOPICS_TEMPLATE = """
-EXISTING RESEARCH TOPICS:
-The user is already tracking the following research topics:
-
-{existing_topics_list}
-
-Avoid suggesting topics that are too similar to these. Instead, look for complementary research areas or more specific sub-topics that would add value to their research portfolio.
-"""
-
 # Response renderer prompts
 RESPONSE_RENDERER_SYSTEM_PROMPT = """
-
 Current date and time: {current_time}
 You are the response formatting component of an AI assistant system. 
 
@@ -127,9 +92,7 @@ Preserve all factual information and source attributions exactly as presented in
 """
 
 # Autonomous Research Engine prompts
-
-RESEARCH_QUERY_GENERATION_PROMPT = """
-Current date and time: {current_time}.
+RESEARCH_QUERY_GENERATION_PROMPT = """Current date and time: {current_time}.
 You are an expert research query generator for autonomous research systems.
 
 TASK: Generate an optimized research query for the following topic.
@@ -150,8 +113,7 @@ INSTRUCTIONS:
 Generate a single, well-crafted research query that will effectively find new and relevant information about this topic.
 """
 
-RESEARCH_FINDINGS_QUALITY_ASSESSMENT_PROMPT = """
-Current date and time: {current_time}.
+RESEARCH_FINDINGS_QUALITY_ASSESSMENT_PROMPT = """Current date and time: {current_time}.
 You are an expert research quality assessor. Evaluate the quality of research findings based on multiple criteria.
 
 TOPIC: {topic_name}
@@ -177,8 +139,7 @@ INSTRUCTIONS:
 Focus on providing accurate assessments that will help determine if these findings are worth storing for the user.
 """
 
-RESEARCH_FINDINGS_DEDUPLICATION_PROMPT = """
-Current date and time: {current_time}.
+RESEARCH_FINDINGS_DEDUPLICATION_PROMPT = """Current date and time: {current_time}.
 You are an expert at detecting duplicate or highly similar research findings.
 
 TASK: Compare new research findings against existing findings to detect duplicates.
@@ -206,3 +167,41 @@ Determine:
 Consider findings as duplicates if similarity_score > 0.8 or if they don't add meaningful new information.
 Always err on the side of keeping findings unless they are very clearly duplicates.
 """
+
+# Other prompts
+TOPIC_EXTRACTOR_SYSTEM_PROMPT = """Current date and time: {current_time}.
+You are an expert topic extraction system. Your task is to analyze conversations and identify research-worthy topics that users might want to follow for ongoing research.
+
+{existing_topics_section}
+
+INSTRUCTIONS:
+1. Review the entire conversation history
+2. Consider the user's existing research topics (if any) listed above
+3. Identify NEW topics that would benefit from ongoing research or monitoring
+4. Avoid suggesting topics that are too similar to existing ones
+5. Focus on topics that are:
+   - Substantive and research-worthy (not trivial questions)
+   - Have evolving information (news, technology, trends, etc.)
+   - Would benefit from periodic updates
+   - Are specific enough to be actionable for research
+   - Genuinely different from existing research topics
+
+6. For each NEW topic, provide:
+   - name: A concise, descriptive name (2-6 words)
+   - description: A brief explanation of what research would cover (1-2 sentences)
+   - confidence_score: Float between 0.0-1.0 indicating how research-worthy this topic is
+
+7. Return ONLY topics with confidence_score >= {min_confidence}
+8. Limit to maximum {max_suggestions} topics per conversation
+
+AVOID topics that are:
+- Too broad or vague
+- Personal questions with no research component
+- One-time informational queries
+- Basic how-to questions
+- Topics already fully covered in the conversation
+- Similar to existing research topics (be creative and find new angles!)
+
+Focus on extracting topics that would genuinely benefit from autonomous research and monitoring, while complementing the user's existing research interests.
+"""
+

@@ -211,49 +211,98 @@ class PromptManager:
     def _write_prompts_file(self) -> bool:
         """Write the updated prompts back to the prompts.py file."""
         try:
-            # Read the current file to preserve structure and comments
-            with open(self.prompts_file, 'r') as f:
-                lines = f.readlines()
+            # Generate the entire file content safely
+            file_content = []
             
-            # Update prompt values in the file
-            updated_lines = []
-            i = 0
-            while i < len(lines):
-                line = lines[i]
+            # Add file header
+            file_content.append('"""\n')
+            file_content.append('Contains all prompts used by LLMs throughout the system.\n')
+            file_content.append('Each prompt is defined as a string template that can be formatted with dynamic values.\n')
+            file_content.append('"""\n\n')
+            
+            # Group prompts by category for better organization
+            categories = {
+                'Router prompts': ['ROUTER_SYSTEM_PROMPT'],
+                'Search optimizer prompts': ['SEARCH_OPTIMIZER_SYSTEM_PROMPT'],
+                'Analyzer task refiner prompts': ['ANALYSIS_REFINER_SYSTEM_PROMPT'],
+                'Web search prompts': ['PERPLEXITY_SYSTEM_PROMPT'],
+                'Integrator prompts': ['INTEGRATOR_SYSTEM_PROMPT'],
+                'Context templates for system prompt integration': [
+                    'SEARCH_CONTEXT_TEMPLATE', 'ANALYSIS_CONTEXT_TEMPLATE', 
+                    'MEMORY_CONTEXT_TEMPLATE', 'EXISTING_TOPICS_TEMPLATE'
+                ],
+                'Response renderer prompts': ['RESPONSE_RENDERER_SYSTEM_PROMPT'],
+                'Autonomous Research Engine prompts': [
+                    'RESEARCH_QUERY_GENERATION_PROMPT', 'RESEARCH_FINDINGS_QUALITY_ASSESSMENT_PROMPT',
+                    'RESEARCH_FINDINGS_DEDUPLICATION_PROMPT'
+                ]
+            }
+            
+            # Write prompts by category
+            for category, prompt_names in categories.items():
+                file_content.append(f'# {category}\n')
                 
-                # Check if line starts a prompt definition
-                for prompt_name in self.prompts:
-                    if line.strip().startswith(f'{prompt_name} = """') or line.strip().startswith(f"{prompt_name} = '''"):
-                        # Found prompt start, replace entire prompt
-                        quote_type = '"""' if '"""' in line else "'''"
+                for prompt_name in prompt_names:
+                    if prompt_name in self.prompts:
+                        content = self.prompts[prompt_name]['content']
                         
-                        # Add the prompt definition line
-                        updated_lines.append(f'{prompt_name} = {quote_type}\n')
+                        # Choose the safest quote style
+                        if '"""' not in content:
+                            quote_style = '"""'
+                        elif "'''" not in content:
+                            quote_style = "'''"
+                        else:
+                            # Both triple quotes present, use repr() for safe escaping
+                            file_content.append(f'{prompt_name} = {repr(content)}\n\n')
+                            continue
                         
-                        # Add the new content
-                        updated_lines.append(self.prompts[prompt_name]['content'])
-                        
-                        # Add closing quotes
-                        if not self.prompts[prompt_name]['content'].endswith('\n'):
-                            updated_lines.append('\n')
-                        updated_lines.append(f'{quote_type}\n')
-                        
-                        # Skip original prompt content
-                        i += 1
-                        while i < len(lines) and not (lines[i].strip().endswith(quote_type) and lines[i].strip() != quote_type):
-                            i += 1
-                        i += 1  # Skip the closing quote line
-                        break
-                else:
-                    # Not a prompt line, keep as is
-                    updated_lines.append(line)
-                    i += 1
+                        # Write the prompt with chosen quote style
+                        file_content.append(f'{prompt_name} = {quote_style}')
+                        if not content.endswith('\n'):
+                            content += '\n'
+                        file_content.append(content)
+                        file_content.append(f'{quote_style}\n\n')
+                
+            # Write any remaining prompts not in categories
+            remaining_prompts = set(self.prompts.keys()) - {name for names in categories.values() for name in names}
+            if remaining_prompts:
+                file_content.append('# Other prompts\n')
+                for prompt_name in sorted(remaining_prompts):
+                    content = self.prompts[prompt_name]['content']
+                    
+                    # Choose the safest quote style
+                    if '"""' not in content:
+                        quote_style = '"""'
+                    elif "'''" not in content:
+                        quote_style = "'''"
+                    else:
+                        # Both triple quotes present, use repr() for safe escaping
+                        file_content.append(f'{prompt_name} = {repr(content)}\n\n')
+                        continue
+                    
+                    # Write the prompt with chosen quote style
+                    file_content.append(f'{prompt_name} = {quote_style}')
+                    if not content.endswith('\n'):
+                        content += '\n'
+                    file_content.append(content)
+                    file_content.append(f'{quote_style}\n\n')
             
-            # Write back to file
+            # Write the complete file
             with open(self.prompts_file, 'w') as f:
-                f.writelines(updated_lines)
+                f.writelines(file_content)
             
-            # Reload prompts to verify
+            # Verify the file is valid Python by trying to import it
+            import importlib
+            import sys
+            
+            # Remove from cache if already loaded
+            if 'prompts' in sys.modules:
+                del sys.modules['prompts']
+            
+            # Try to import the updated file
+            import prompts
+            
+            # Reload our prompts from the file to verify
             self._load_prompts()
             
             return True
