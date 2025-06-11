@@ -5,6 +5,7 @@ import Navigation from './components/Navigation';
 import ChatPage from './components/ChatPage';
 import TopicsDashboard from './components/TopicsDashboard';
 import ResearchResultsDashboard from './components/ResearchResultsDashboard';
+import './utils/testDataIsolation'; // Import test utilities for debugging
 import './App.css';
 
 function App() {
