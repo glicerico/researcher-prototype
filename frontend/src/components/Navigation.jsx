@@ -187,6 +187,13 @@ const Navigation = () => {
               >
                 📊 Research Results
               </Link>
+              <Link 
+                to="/admin" 
+                className={`nav-link admin-link ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
+                title="Admin Panel - Prompt Management"
+              >
+                🛠️ Admin
+              </Link>
             </div>
           </div>
 

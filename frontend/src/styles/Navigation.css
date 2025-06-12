@@ -79,6 +79,26 @@
   box-shadow: 0 2px 8px rgba(0, 123, 255, 0.15);
 }
 
+.nav-link.admin-link {
+  background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+  color: white !important;
+  border-radius: 6px;
+  font-weight: 600;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+}
+
+.nav-link.admin-link:hover {
+  background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(220, 53, 69, 0.4);
+}
+
+.nav-link.admin-link.active {
+  background: linear-gradient(135deg, #bd2130 0%, #a71e2a 100%);
+  color: white !important;
+  box-shadow: 0 4px 12px rgba(220, 53, 69, 0.5);
+}
+
 .chat-controls {
   display: flex;
   gap: 0.75rem;

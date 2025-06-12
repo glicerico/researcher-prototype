@@ -1,5 +1,6 @@
 from fastapi import FastAPI, HTTPException, Depends, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
 from typing import Optional, List
 import os
 import traceback
@@ -71,7 +72,7 @@ app = FastAPI(title="AI Chatbot API", version="1.0.0", lifespan=lifespan)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000"],  # React dev server
+    allow_origins=["http://localhost:3000", "https://yourapp.com"],  # React dev server and production
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -81,11 +82,19 @@ from api.chat import router as chat_router
 from api.users import router as users_router
 from api.topics import router as topics_router
 from api.research import router as research_router
+from api.admin import router as admin_router
 
 app.include_router(chat_router)
 app.include_router(users_router)
 app.include_router(topics_router)
 app.include_router(research_router)
+app.include_router(admin_router)
+
+# Mount static files for diagrams
+static_dir = "static"
+if not os.path.exists(static_dir):
+    os.makedirs(static_dir, exist_ok=True)
+app.mount("/static", StaticFiles(directory=static_dir), name="static")
 
 
 @app.get("/health")
