@@ -7,7 +7,6 @@ import FlowVisualization from './FlowVisualization';
 import '../../styles/Admin.css';
 
 const AdminDashboard = () => {
-  const [prompts, setPrompts] = useState({});
   const [categories, setCategories] = useState({});
   const [selectedPrompt, setSelectedPrompt] = useState(null);
   const [status, setStatus] = useState(null);
@@ -30,7 +29,6 @@ const AdminDashboard = () => {
         getAdminStatus()
       ]);
       
-      setPrompts(promptsData.prompts);
       setCategories(promptsData.categories);
       setStatus(statusData);
     } catch (error) {

@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { getPrompt, updatePrompt, testPrompt, getPromptHistory, restorePrompt } from '../../services/adminApi';
 import '../../styles/Admin.css';
 
@@ -21,15 +21,7 @@ const PromptEditor = ({ promptName, onBack, onPromptUpdated }) => {
   const [history, setHistory] = useState([]);
   const [showHistory, setShowHistory] = useState(false);
 
-  useEffect(() => {
-    loadPrompt();
-  }, [promptName]);
-
-  useEffect(() => {
-    setHasChanges(content !== originalContent);
-  }, [content, originalContent]);
-
-  const loadPrompt = async () => {
+  const loadPrompt = useCallback(async () => {
     try {
       setLoading(true);
       const promptData = await getPrompt(promptName);
@@ -50,7 +42,15 @@ const PromptEditor = ({ promptName, onBack, onPromptUpdated }) => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [promptName]);
+
+  useEffect(() => {
+    loadPrompt();
+  }, [loadPrompt]);
+
+  useEffect(() => {
+    setHasChanges(content !== originalContent);
+  }, [content, originalContent]);
 
   const loadHistory = async () => {
     try {
