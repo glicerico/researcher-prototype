@@ -9,7 +9,7 @@ langsmith
 zep-cloud==2.14.0
 uuid
 pathlib
-pygraphviz
+#pygraphviz
 requests
 PyJWT
 
