@@ -15,9 +15,6 @@ from nodes.base import (
 )
 from utils import get_last_user_message
 
-# Import the memory context template
-from prompts import MEMORY_CONTEXT_TEMPLATE
-
 
 def analysis_task_refiner_node(state: ChatState) -> ChatState:
     """Refines the user's request into a detailed task for the analysis engine, considering conversation context."""
@@ -40,7 +37,7 @@ def analysis_task_refiner_node(state: ChatState) -> ChatState:
     memory_context = state.get("memory_context")
     memory_context_section = ""
     if memory_context:
-        memory_context_section = MEMORY_CONTEXT_TEMPLATE.format(memory_context=memory_context)
+        memory_context_section = f"CONVERSATION MEMORY:\n{memory_context}\n\nUse this context to maintain conversation continuity and reference previous topics when relevant."
         logger.debug("🧩 Analysis Refiner: Including memory context in task refinement")
     else:
         logger.debug("🧩 Analysis Refiner: No memory context available")

@@ -14,7 +14,6 @@ from nodes.base import (
     TopicSuggestions,
     research_manager
 )
-from prompts import EXISTING_TOPICS_TEMPLATE
 from typing import List, Dict, Any
 
 
@@ -64,9 +63,7 @@ def topic_extractor_node(state: ChatState) -> ChatState:
                 
                 if topic_list:
                     existing_topics_list = "\n".join(topic_list[:20])  # Limit to top 20 to avoid huge prompts
-                    existing_topics_section = EXISTING_TOPICS_TEMPLATE.format(
-                        existing_topics_list=existing_topics_list
-                    )
+                    existing_topics_section = f"EXISTING RESEARCH TOPICS:\nThe user is already tracking the following research topics:\n\n{existing_topics_list}\n\nAvoid suggesting topics that are too similar to these. Instead, look for complementary research areas or more specific sub-topics that would add value to their research portfolio."
                     logger.debug(f"🔍 Topic Extractor: Including {len(topic_list)} existing topics in context")
                 else:
                     existing_topics_section = ""

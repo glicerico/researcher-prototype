@@ -12,8 +12,8 @@ from nodes.base import (
 )
 from utils import get_last_user_message
 
-# Import the context templates
-from prompts import SEARCH_CONTEXT_TEMPLATE, ANALYSIS_CONTEXT_TEMPLATE, MEMORY_CONTEXT_TEMPLATE
+# Remove the context template imports
+# from prompts import SEARCH_CONTEXT_TEMPLATE, ANALYSIS_CONTEXT_TEMPLATE, MEMORY_CONTEXT_TEMPLATE
 
 
 def integrator_node(state: ChatState) -> ChatState:
@@ -38,7 +38,7 @@ def integrator_node(state: ChatState) -> ChatState:
     memory_context = state.get("memory_context")
     memory_context_section = ""
     if memory_context:
-        memory_context_section = MEMORY_CONTEXT_TEMPLATE.format(memory_context=memory_context)
+        memory_context_section = f"CONVERSATION MEMORY:\n{memory_context}\n\nUse this context to maintain conversation continuity and reference previous topics when relevant."
         logger.info("🧠 Integrator: Including memory context from previous conversations")
     else:
         logger.debug("🧠 Integrator: No memory context available")
@@ -74,11 +74,8 @@ def integrator_node(state: ChatState) -> ChatState:
                 sources_section = f"SOURCES:\n" + "\n".join(sources_list)
                 logger.info(f"🧠 Integrator: Including {len(search_sources)} source references")
             
-            search_context = SEARCH_CONTEXT_TEMPLATE.format(
-                search_result_text=search_result_text,
-                citations_section=citations_section,
-                sources_section=sources_section
-            )
+            # Directly construct the search context string
+            search_context = f"CURRENT INFORMATION FROM WEB SEARCH:\nThe following information was retrieved from a recent web search related to the user's query:\n\n{search_result_text}\n\n{citations_section}\n\n{sources_section}\n\nUse this information to provide accurate, up-to-date responses. When referencing specific facts or claims, cite the relevant sources when available."
             context_sections.append(search_context)
             logger.info("🧠 Integrator: Added enhanced search results with citations and sources to system context")
     
@@ -87,9 +84,8 @@ def integrator_node(state: ChatState) -> ChatState:
     if analysis_results.get("success", False):
         analysis_result_text = analysis_results.get("result", "")
         if analysis_result_text:
-            analysis_context = ANALYSIS_CONTEXT_TEMPLATE.format(
-                analysis_result_text=analysis_result_text
-            )
+            # Directly construct the analysis context string
+            analysis_context = f"ANALYTICAL INSIGHTS:\nThe following analysis was performed related to the user's query:\n\n{analysis_result_text}\n\nIncorporate these insights naturally into your response where relevant."
             context_sections.append(analysis_context)
             logger.info("🧠 Integrator: Added analysis results to system context")
     

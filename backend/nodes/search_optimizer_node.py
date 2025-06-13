@@ -15,9 +15,6 @@ from nodes.base import (
 )
 from utils import get_last_user_message
 
-# Import the memory context template
-from prompts import MEMORY_CONTEXT_TEMPLATE
-
 
 def search_prompt_optimizer_node(state: ChatState) -> ChatState:
     """Refines the user's query into an optimized search query using an LLM, considering conversation context."""
@@ -43,7 +40,7 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
     memory_context = state.get("memory_context")
     memory_context_section = ""
     if memory_context:
-        memory_context_section = MEMORY_CONTEXT_TEMPLATE.format(memory_context=memory_context)
+        memory_context_section = f"CONVERSATION MEMORY:\n{memory_context}\n\nUse this context to maintain conversation continuity and reference previous topics when relevant."
         logger.debug("🔬 Search Optimizer: Including memory context in search optimization")
     else:
         logger.debug("🔬 Search Optimizer: No memory context available")
