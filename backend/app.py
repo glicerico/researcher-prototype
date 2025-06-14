@@ -72,7 +72,7 @@ app = FastAPI(title="AI Chatbot API", version="1.0.0", lifespan=lifespan)
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:3000", "https://yourapp.com"],  # React dev server and production
+    allow_origins=config.CORS_ORIGINS,  # Use configurable origins from environment
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
