@@ -43,7 +43,8 @@ Changes apply instantly and are stored in your profile.
 1. Type your message and hit **Enter**.  
 2. A typing indicator shows the assistant is thinking.  
 3. Messages are saved automatically; scroll to review.  
-4. Use **↑ / ↓** keys to cycle through your recent inputs (handy for editing).
+4. Click **Show Routing Info** next to any assistant reply to see which module (chat / search / analyzer) handled the request, the router's reason, complexity score and the lightweight model it used.  
+5. Use **↑ / ↓** keys to cycle through your recent inputs (handy for editing).
 
 ---
 

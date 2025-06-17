@@ -54,6 +54,19 @@ All routes live under `/research/debug/*` and do **not** require admin auth – 
 * **Logging** – configurable via `logging_config.py`; emojis mark graph stages.  Use `configure_logging(level=logging.DEBUG)` for verbose output.
 * **LangSmith Tracing** – enable by setting `LANGCHAIN_TRACING_V2=true` and API key.  Links to each trace appear in the log output.
 
+## 2.5. Router Diagnostics in the Chat UI
+
+Every assistant message now includes a **Show Routing Info** link. Clicking it reveals a mini panel with:
+
+| Field | Meaning |
+|-------|---------|
+| Module | The path chosen by the router: **chat**, **search** or **analyzer** |
+| Reason | Short natural-language explanation from the router model |
+| Complexity | Estimated difficulty of the user request *(1-10)* |
+| Router Model | The lightweight model (e.g. *gpt-4o-mini*) used for the routing decision |
+
+This is invaluable when troubleshooting unexpected behaviour – you can instantly verify whether a message was routed to the correct module and why.
+
 ## 4. Visualising Graphs Locally
 
 ```bash
