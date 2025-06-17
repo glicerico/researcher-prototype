@@ -28,6 +28,12 @@ After logging in the JWT is stored in `localStorage`; subsequent requests add `A
 | **Flow Visualiser** | Fetches generated PNG/SVG diagrams of the LangGraph and research flow |
 | **Status Panel** | Quick health checks (OpenAI key, Zep memory, research engine status) |
 
++#### Prompt version control
++
++Every time you press **Save** in the Prompt Editor the server writes a timestamped backup of the previous content to `backend/storage_data/prompts/`.  These backups are **not** part of the Git repo, so you can experiment freely.  Use the *History* button in the UI to compare, restore or download earlier versions.
++
++Restoring a version simply copies it over the active prompt – older backups remain intact.
+
 To regenerate diagrams on-demand:
 
 ```
