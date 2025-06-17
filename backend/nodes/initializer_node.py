@@ -10,6 +10,7 @@ from nodes.base import (
     profile_manager,
     zep_manager
 )
+from dependencies import get_or_create_user_id, GUEST_USER_ID
 
 
 async def initializer_node(state: ChatState) -> ChatState:
@@ -21,16 +22,16 @@ async def initializer_node(state: ChatState) -> ChatState:
     state["module_results"] = state.get("module_results", {})
     state["personality"] = state.get("personality", {"style": "helpful", "tone": "friendly"})
     
-    # Handle user management - create or get user
+    # Handle user management - use guest user system instead of creating new users
     user_id = state.get("user_id")
     if not user_id or not profile_manager.user_exists(user_id):
-        # Create a new user if needed
-        user_id = profile_manager.create_user({
-            "created_from": "chat_graph",
-            "initial_personality": state.get("personality", {})
-        })
+        # Use the guest user system instead of creating new users
+        user_id = get_or_create_user_id(user_id)
         state["user_id"] = user_id
-        logger.info(f"Created new user: {user_id}")
+        if user_id == GUEST_USER_ID:
+            logger.info(f"🔄 Initializer: Using guest user: {user_id}")
+        else:
+            logger.info(f"🔄 Initializer: Using existing user: {user_id}")
     else:
         # Update personality from stored preferences if not explicitly provided
         if not state.get("personality"):
