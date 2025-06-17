@@ -193,9 +193,11 @@ export const getNodeInfo = async (nodeId) => {
   }
 };
 
-export const generateFlowDiagrams = async () => {
+export const generateFlowDiagrams = async (forceRegenerate = false) => {
   try {
-    const response = await adminApi.post('/flows/diagrams/generate');
+    const response = await adminApi.post('/flows/diagrams/generate', null, {
+      params: { force_regenerate: forceRegenerate }
+    });
     return response.data;
   } catch (error) {
     throw error;

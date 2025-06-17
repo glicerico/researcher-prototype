@@ -82,10 +82,10 @@ const FlowVisualization = ({ onEditPrompt }) => {
     }
   };
 
-  const generateDiagrams = async () => {
+  const generateDiagrams = async (forceRegenerate = false) => {
     try {
       setGenerating(true);
-      const response = await generateFlowDiagrams();
+      const response = await generateFlowDiagrams(forceRegenerate);
       
       if (response.success) {
         // Convert relative URLs to absolute URLs
@@ -97,6 +97,14 @@ const FlowVisualization = ({ onEditPrompt }) => {
           };
         });
         setDiagrams(diagramsWithFullUrls);
+        
+        // Log whether we used cache or generated new diagrams
+        const usedCache = Object.values(response.diagrams).some(d => d.cached);
+        if (usedCache) {
+          console.log('Using cached flow diagrams');
+        } else {
+          console.log('Generated new flow diagrams');
+        }
       } else {
         console.warn('Diagram generation had errors:', response.errors);
         const diagramsWithFullUrls = {};
@@ -171,7 +179,7 @@ const FlowVisualization = ({ onEditPrompt }) => {
         <div className="diagram-placeholder">
           <p>Diagram could not be loaded</p>
           <button 
-            onClick={generateDiagrams}
+            onClick={() => generateDiagrams(true)}
             disabled={generating}
             className="btn btn-primary"
           >
@@ -195,7 +203,7 @@ const FlowVisualization = ({ onEditPrompt }) => {
         <div className="diagram-error" style={{ display: 'none' }}>
           <p>Diagram could not be loaded</p>
           <button 
-            onClick={generateDiagrams}
+            onClick={() => generateDiagrams(true)}
             disabled={generating}
             className="btn btn-primary"
           >
@@ -366,7 +374,7 @@ const FlowVisualization = ({ onEditPrompt }) => {
         </div>
         
         <button 
-          onClick={generateDiagrams}
+          onClick={() => generateDiagrams(true)}
           disabled={generating}
           className="btn btn-outline-primary"
         >

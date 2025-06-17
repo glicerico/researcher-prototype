@@ -402,8 +402,14 @@ async def get_node_info(node_id: str, authorization: Optional[str] = Header(None
 
 
 @router.post("/flows/diagrams/generate")
-async def generate_flow_diagrams(authorization: Optional[str] = Header(None)):
-    """Generate flow diagrams for both main chat and research graphs."""
+async def generate_flow_diagrams(
+    force_regenerate: bool = False,
+    authorization: Optional[str] = Header(None)
+):
+    """
+    Generate flow diagrams for both main chat and research graphs.
+    Uses cached diagrams if they exist unless force_regenerate is True.
+    """
     verify_admin_token(authorization)
     
     try:
@@ -412,19 +418,24 @@ async def generate_flow_diagrams(authorization: Optional[str] = Header(None)):
         payload = auth_manager.get_token_payload(token)
         admin_user = payload.get("sub", "admin") if payload else "admin"
         
-        # Generate diagrams
-        result = flow_analyzer.generate_flow_diagrams()
+        # Generate diagrams (or use cache)
+        result = flow_analyzer.generate_flow_diagrams(force_regenerate=force_regenerate)
         
         # Save metadata for frontend consumption
         metadata_saved = flow_analyzer.save_flow_metadata()
         
-        logger.info(f"Admin {admin_user} generated flow diagrams")
+        # Log appropriate message
+        if any(diagram.get('cached', False) for diagram in result['diagrams'].values()):
+            logger.info(f"Admin {admin_user} loaded cached flow diagrams")
+        else:
+            logger.info(f"Admin {admin_user} generated flow diagrams")
         
         return {
             'success': result['success'],
             'diagrams': result['diagrams'],
             'errors': result['errors'],
             'metadata_saved': metadata_saved,
+            'force_regenerate': force_regenerate,
             'timestamp': datetime.now().isoformat()
         }
         

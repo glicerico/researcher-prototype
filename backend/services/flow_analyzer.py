@@ -23,9 +23,13 @@ class FlowAnalyzer:
         """Ensure the diagrams directory exists."""
         os.makedirs(self.diagrams_dir, exist_ok=True)
     
-    def generate_flow_diagrams(self) -> Dict[str, Any]:
+    def generate_flow_diagrams(self, force_regenerate: bool = False) -> Dict[str, Any]:
         """
         Generate flow diagrams for both main chat and research graphs.
+        Uses cached diagrams if they exist unless force_regenerate is True.
+        
+        Args:
+            force_regenerate: If True, regenerate diagrams even if they exist
         
         Returns:
             Dictionary with generation results and file paths
@@ -37,43 +41,80 @@ class FlowAnalyzer:
         }
         
         try:
-            # Import graphs
+            # Define diagram paths
+            main_diagram_path = os.path.join(self.diagrams_dir, "main_chat_flow.png")
+            research_diagram_path = os.path.join(self.diagrams_dir, "research_flow.png")
+            
+            # Check if diagrams already exist (unless forcing regeneration)
+            if not force_regenerate and os.path.exists(main_diagram_path) and os.path.exists(research_diagram_path):
+                # Use existing diagrams
+                results["diagrams"]["main_chat"] = {
+                    "path": main_diagram_path,
+                    "url": "/static/diagrams/main_chat_flow.png",
+                    "generated": False,  # Indicates using cached version
+                    "cached": True
+                }
+                results["diagrams"]["research"] = {
+                    "path": research_diagram_path,
+                    "url": "/static/diagrams/research_flow.png", 
+                    "generated": False,  # Indicates using cached version
+                    "cached": True
+                }
+                return results
+            
+            # Import graphs (only if we need to generate)
             from graph_builder import chat_graph
             from research_graph_builder import research_graph
             
             # Generate main chat flow diagram
-            main_diagram_path = os.path.join(self.diagrams_dir, "main_chat_flow.png")
-            main_success = visualize_langgraph_with_prompts(
-                chat_graph, 
-                main_diagram_path, 
-                "Main Chat Flow"
-            )
-            
-            if main_success:
+            if force_regenerate or not os.path.exists(main_diagram_path):
+                main_success = visualize_langgraph_with_prompts(
+                    chat_graph, 
+                    main_diagram_path, 
+                    "Main Chat Flow"
+                )
+                
+                if main_success:
+                    results["diagrams"]["main_chat"] = {
+                        "path": main_diagram_path,
+                        "url": "/static/diagrams/main_chat_flow.png",
+                        "generated": True
+                    }
+                else:
+                    results["errors"].append("Failed to generate main chat flow diagram")
+            else:
+                # Use existing diagram
                 results["diagrams"]["main_chat"] = {
                     "path": main_diagram_path,
                     "url": "/static/diagrams/main_chat_flow.png",
-                    "generated": True
+                    "generated": False,
+                    "cached": True
                 }
-            else:
-                results["errors"].append("Failed to generate main chat flow diagram")
             
             # Generate research flow diagram
-            research_diagram_path = os.path.join(self.diagrams_dir, "research_flow.png")
-            research_success = visualize_langgraph_with_prompts(
-                research_graph, 
-                research_diagram_path, 
-                "Research Flow"
-            )
-            
-            if research_success:
+            if force_regenerate or not os.path.exists(research_diagram_path):
+                research_success = visualize_langgraph_with_prompts(
+                    research_graph, 
+                    research_diagram_path, 
+                    "Research Flow"
+                )
+                
+                if research_success:
+                    results["diagrams"]["research"] = {
+                        "path": research_diagram_path,
+                        "url": "/static/diagrams/research_flow.png",
+                        "generated": True
+                    }
+                else:
+                    results["errors"].append("Failed to generate research flow diagram")
+            else:
+                # Use existing diagram
                 results["diagrams"]["research"] = {
                     "path": research_diagram_path,
                     "url": "/static/diagrams/research_flow.png",
-                    "generated": True
+                    "generated": False,
+                    "cached": True
                 }
-            else:
-                results["errors"].append("Failed to generate research flow diagram")
             
             # If any diagram failed, mark as partial success
             if results["errors"]:
