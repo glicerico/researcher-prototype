@@ -42,6 +42,9 @@ The deployment includes an admin interface for deeper inspection.
          • Restoring simply overwrites the *active* prompt; earlier backups remain available.
          • Backups live in `backend/storage_data/prompts/` and are **not** tracked by Git, so feel free to experiment.
    * **Flows** – PNG / SVG diagrams of the LangGraph pipeline.
+     1. Click **Flows** in the left sidebar.
+     2. Two tabs are shown: **Main Chat Flow** and **Research Flow**.
+     3. The diagram renders inline; use the download buttons to save PNG/SVG or **Regenerate** to rebuild if you changed the graph.
    * **Status** – backend health, research engine state, OpenAI key check.
 
 ---
