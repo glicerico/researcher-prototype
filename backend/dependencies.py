@@ -17,11 +17,45 @@ research_manager = ResearchManager(storage_manager, profile_manager)
 zep_manager = ZepManager()
 _motivation_config_override = {}
 
+# Default guest user configuration
+GUEST_USER_ID = "guest"
+GUEST_DISPLAY_NAME = "Guest User"
+
+
+def ensure_guest_user_exists() -> None:
+    """Ensure the default guest user exists, create it if not."""
+    if not profile_manager.user_exists(GUEST_USER_ID):
+        # Create guest user with specific metadata
+        metadata = {
+            "display_name": GUEST_DISPLAY_NAME,
+            "is_guest": True,
+            "created_from": "system_default"
+        }
+        
+        # Create the guest user profile directly
+        profile = {
+            "user_id": GUEST_USER_ID,
+            "created_at": 0,  # Use 0 to indicate it's the system default
+            "metadata": metadata,
+            "personality": {"style": "helpful", "tone": "friendly", "additional_traits": {}},
+        }
+        
+        # Save the profile using storage manager directly
+        profile_path = f"{profile_manager.users_path}/{GUEST_USER_ID}/profile.json"
+        if profile_manager.storage.write(profile_path, profile):
+            logger.info(f"Created default guest user: {GUEST_USER_ID}")
+        else:
+            logger.error(f"Failed to create default guest user: {GUEST_USER_ID}")
+
 
 def generate_display_name_from_user_id(user_id: str) -> str:
     """Generate a display name from a user ID."""
     if not user_id:
         return "User"
+
+    # Handle guest user specially
+    if user_id == GUEST_USER_ID:
+        return GUEST_DISPLAY_NAME
 
     # Check if it's a friendly ID format (adjective-noun-number) - new format
     if len(user_id.split("-")) == 3 and not user_id.startswith("user-"):
@@ -52,11 +86,17 @@ def get_existing_user_id(user_id: Optional[str] = Header(None)) -> Optional[str]
 
 
 def get_or_create_user_id(user_id: Optional[str] = Header(None)) -> str:
-    """Extract user ID from headers or create a new user."""
+    """Extract user ID from headers or return the default guest user."""
     if user_id and profile_manager.user_exists(user_id):
         return user_id
 
-    # Create a new user
-    new_user_id = profile_manager.create_user()
-    logger.info(f"Created new user: {new_user_id}")
-    return new_user_id
+    # Ensure guest user exists before returning it
+    ensure_guest_user_exists()
+    
+    # Return guest user instead of creating a new user
+    logger.info(f"Using default guest user: {GUEST_USER_ID}")
+    return GUEST_USER_ID
+
+
+# Initialize guest user on startup
+ensure_guest_user_exists()

@@ -11,6 +11,11 @@
 export const generateDisplayName = (userId, fallbackPrefix = 'User') => {
   if (!userId) return fallbackPrefix;
   
+  // Handle guest user specially
+  if (userId === 'guest') {
+    return 'Guest User';
+  }
+  
   // Check if it's a friendly ID format (adjective-noun-number)
   if (userId.split('-').length === 3 && !userId.startsWith('user-')) {
     const parts = userId.split('-');
@@ -41,6 +46,11 @@ export const generateDisplayName = (userId, fallbackPrefix = 'User') => {
  */
 export const isFriendlyUserId = (userId) => {
   if (!userId) return false;
+  
+  // Guest user is considered a special case, not friendly format
+  if (userId === 'guest') {
+    return false;
+  }
   
   // Check new format: adjective-noun-number
   if (userId.split('-').length === 3 && !userId.startsWith('user-')) {
