@@ -101,11 +101,17 @@ const ChatPage = () => {
         updateSessionId(response.session_id);
       }
       
+      // Combine routing_analysis (detailed metrics) with module_used (fallback)
+      const routingInfo = {
+        ...(response.routing_analysis || {}),
+        module_used: response.module_used || (response.routing_analysis ? response.routing_analysis.decision : undefined),
+      };
+
       // Add assistant response to messages
       const assistantMessage = { 
         role: 'assistant', 
         content: response.response,
-        routingInfo: response.routing_info
+        routingInfo,
       };
       
       updateMessages(prev => [...prev, assistantMessage]);

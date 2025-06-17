@@ -95,6 +95,7 @@ The deployment includes an admin interface for deeper inspection.
      2. Two tabs are shown: **Main Chat Flow** and **Research Flow**.
      3. The diagram renders inline; use the download buttons to save PNG/SVG or **Regenerate** to rebuild if you changed the graph.
    * **Status** – backend health, research engine state, OpenAI key check.
+   * **Traces** – Your LangSmith API key was set at deploy time, so every chat and research run is traced automatically.  Log messages include a link, or you can open https://smith.langchain.com, sign in with your key and select the **researcher-prototype** project to view detailed graphs and timings.
 
 ---
 
