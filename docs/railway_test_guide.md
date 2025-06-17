@@ -26,7 +26,56 @@ Welcome!  This short guide explains how to access and test the **Researcher-Prot
 
 ---
 
-## 3. Using the Admin Console
+## 3. Enable the Research Engine (it's OFF by default)
+
+Railway starts the backend with the autonomous researcher disabled to conserve CPU.
+
+1. Click the **Topics** button in the top bar to open the *Topics Dashboard*.
+2. At the top you'll see **Research Engine: Inactive** with a grey dot.
+3. Press the **Enable Engine ▶️** button.  The dot turns green and status switches to *Active*.
+4. The engine stays on as long as the container is running; you can pause it with the same button.
+
+> The global engine must be active before any individual topic can be researched.
+
+---
+
+## 4. Autonomous Research & Motivation Drives
+
+Once the engine is active you can:
+
+* Click **🔬 Research this topic** on a suggestion to subscribe it.
+* Use **🚀 Run Now** in the dashboard to trigger immediate research.
+
+### What motivates the engine?
+
+The system models four internal "drives":
+
+| Drive | Increases | Decreases |
+|-------|-----------|-----------|
+| **Boredom**      | Time since last research | Each research run |
+| **Curiosity**    | User activity (chatting) | Gradual decay |
+| **Tiredness**    | Each research run | Time / rest |
+| **Satisfaction** | High-quality findings | Time / rest |
+
+Research is launched when **boredom + curiosity ≥ threshold** (default 1.0).
+
+You can inspect and tweak these in real time:
+
+1. **💡 View Drives** – shows current values.
+2. **⏰ Research Timing** – open presets or fine-tune parameters.
+
+Key parameters (Engine Settings modal):
+
+* **Threshold** – motivation required to start a run (lower = more frequent).
+* **Boredom rate** – speed boredom rises (per second).
+* **Curiosity decay** – how fast curiosity fades when idle.
+* **Tiredness & Satisfaction decay** – recovery rates after research.
+
+Preset buttons (*Aggressive*, *Balanced*, *Conservative*, *Very Patient*) apply sensible combos.
+
+---
+
+## 5. Using the Admin Console
 
 The deployment includes an admin interface for deeper inspection.
 
@@ -46,26 +95,6 @@ The deployment includes an admin interface for deeper inspection.
      2. Two tabs are shown: **Main Chat Flow** and **Research Flow**.
      3. The diagram renders inline; use the download buttons to save PNG/SVG or **Regenerate** to rebuild if you changed the graph.
    * **Status** – backend health, research engine state, OpenAI key check.
-
----
-
-## 4. Autonomous Research
-
-1. After sending a few messages you'll see topic suggestions (right sidebar).
-2. Click **🔬 Research this topic** to enable background research.
-3. Open the **💡 Motivation** modal (top-right) to watch boredom/curiosity drives build up.
-4. When motivation crosses the threshold the engine will auto-research and findings will appear.
-
----
-
-## 5. Things to Try
-
-| Feature | How |
-|---------|-----|
-| Change assistant personality | Click the ✨ icon |
-| Trigger research instantly | Topics dashboard → **🚀 Research Now** |
-| Mark findings read | Click the ✔️ icon next to a finding |
-| View backend logs | (maintainer only) Railway console → Logs tab |
 
 ---
 
