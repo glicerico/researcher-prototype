@@ -24,7 +24,7 @@ describe('App Component (Unit Tests)', () => {
 
   test('renders chat interface by default', () => {
     render(<App />);
-    expect(screen.getByText(/AI Chatbot/i)).toBeInTheDocument();
+    expect(screen.getByText(/AI Research Assistant/i)).toBeInTheDocument();
     expect(screen.getByPlaceholderText(/Type your message here/i)).toBeInTheDocument();
   });
 });

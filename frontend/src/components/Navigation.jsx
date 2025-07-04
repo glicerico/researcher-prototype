@@ -181,14 +181,20 @@ const Navigation = () => {
               >
                 🔍 Research Topics
               </Link>
-              <Link 
-                to="/research-results" 
+              <Link
+                to="/research-results"
                 className={`nav-link ${location.pathname === '/research-results' ? 'active' : ''}`}
               >
                 📊 Research Results
               </Link>
-              <Link 
-                to="/admin" 
+              <Link
+                to="/knowledge-graph"
+                className={`nav-link ${location.pathname === '/knowledge-graph' ? 'active' : ''}`}
+              >
+                🧠 Knowledge Graph
+              </Link>
+              <Link
+                to="/admin"
                 className={`nav-link admin-link ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
                 title="Admin Panel - Prompt Management"
               >

@@ -42,10 +42,18 @@ Ensure the refined task is actionable and self-contained based on the conversati
 """
 
 # Web search prompts
-PERPLEXITY_SYSTEM_PROMPT = """Current date and time: {current_time}. 
-You are a helpful and accurate web search assistant. 
+PERPLEXITY_SYSTEM_PROMPT = """Current date and time: {current_time}.
+You are a helpful and accurate web search assistant.
 Provide comprehensive answers based on web search results.
 """
+
+# Context rendering templates used for testing and formatting
+SEARCH_CONTEXT_TEMPLATE = (
+    "CURRENT INFORMATION FROM WEB SEARCH\n" "{search_result_text}\n" "{citations_section}\n" "{sources_section}"
+)
+ANALYSIS_CONTEXT_TEMPLATE = (
+    "CURRENT ANALYSIS RESULTS\n" "{analysis_result_text}\n" "{citations_section}\n" "{sources_section}"
+)
 
 # Integrator prompts
 INTEGRATOR_SYSTEM_PROMPT = """Current date and time: {current_time}.
@@ -204,4 +212,3 @@ AVOID topics that are:
 
 Focus on extracting topics that would genuinely benefit from autonomous research and monitoring, while complementing the user's existing research interests.
 """
-

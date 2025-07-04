@@ -7,6 +7,7 @@ A full-stack prototype that pairs a conversational AI with an autonomous backgro
 * Motivation-driven research scheduler
 * JWT-secured admin console & prompt editor
 * Local JSON storage – no external DB needed
+* Optional Zep memory with knowledge graph viewer
 
 ## Quick Start (dev)
 

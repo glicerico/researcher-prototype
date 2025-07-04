@@ -1,0 +1,11 @@
+.knowledge-graph {
+  display: flex;
+  justify-content: center;
+  margin-top: 2rem;
+}
+
+.kg-message {
+  text-align: center;
+  margin-top: 2rem;
+  color: #555;
+}
