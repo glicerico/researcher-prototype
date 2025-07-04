@@ -1,0 +1,12 @@
+.knowledge-graph {
+  padding: 1rem;
+  text-align: center;
+}
+
+.knowledge-graph svg {
+  border: 1px solid #ccc;
+}
+
+.knowledge-graph.error {
+  color: red;
+}

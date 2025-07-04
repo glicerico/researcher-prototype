@@ -76,13 +76,19 @@ Findings appear underneath each topic with:
 
 ---
 
-## 6. Motivation Dashboard
+## 6. Memory Graph
+
+Click **Memory Graph** in the header to view a visualisation of the knowledge stored in Zep for the current user. Nodes represent entities while lines show facts linking them.
+
+---
+
+## 7. Motivation Dashboard
 
 Press the 💡 icon to open real-time bars for **boredom**, **curiosity**, **tiredness** and **satisfaction**.  When boredom + curiosity ≥ threshold a new research cycle is launched automatically.
 
 ---
 
-## 7. Admin Console (optional)
+## 8. Admin Console (optional)
 
 For advanced users / administrators.
 
@@ -95,7 +101,7 @@ For advanced users / administrators.
 
 ---
 
-## 8. Keyboard Shortcuts
+## 9. Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
@@ -106,13 +112,13 @@ For advanced users / administrators.
 
 ---
 
-## 9. Logout & Clearing Data
+## 10. Logout & Clearing Data
 
 User data lives in `backend/storage_data/` (JSON).  Deleting a user or the directory will permanently erase associated chats, settings and research findings.  There is no cloud backup.
 
 ---
 
-## 10. Getting Help
+## 11. Getting Help
 
 * Hover tooltips explain most buttons.  
 * Logs appear in the terminal running the backend.  

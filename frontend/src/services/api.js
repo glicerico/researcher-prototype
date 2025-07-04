@@ -425,4 +425,14 @@ export const restartResearchEngine = async () => {
   }
 };
 
-export default api; 
+export const getKnowledgeGraph = async () => {
+  try {
+    const response = await api.get('/graph');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching knowledge graph:', error);
+    throw error;
+  }
+};
+
+export default api;

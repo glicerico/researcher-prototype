@@ -6,6 +6,7 @@ import Navigation from './components/Navigation';
 import ChatPage from './components/ChatPage';
 import TopicsDashboard from './components/TopicsDashboard';
 import ResearchResultsDashboard from './components/ResearchResultsDashboard';
+import KnowledgeGraphPage from './components/KnowledgeGraphPage';
 import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
@@ -41,6 +42,7 @@ function App() {
                       <Route path="/" element={<ChatPage />} />
                       <Route path="/topics" element={<TopicsDashboard />} />
                       <Route path="/research-results" element={<ResearchResultsDashboard />} />
+                      <Route path="/knowledge-graph" element={<KnowledgeGraphPage />} />
                     </Routes>
                   </main>
                 </>

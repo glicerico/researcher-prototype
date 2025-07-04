@@ -5,6 +5,7 @@ A full-stack prototype that pairs a conversational AI with an autonomous backgro
 * React 19 front-end
 * FastAPI + LangGraph back-end
 * Motivation-driven research scheduler
+* Optional Zep memory with knowledge graph
 * JWT-secured admin console & prompt editor
 * Local JSON storage – no external DB needed
 
