@@ -83,12 +83,14 @@ from api.users import router as users_router
 from api.topics import router as topics_router
 from api.research import router as research_router
 from api.admin import router as admin_router
+from api.graph import router as graph_router
 
 app.include_router(chat_router)
 app.include_router(users_router)
 app.include_router(topics_router)
 app.include_router(research_router)
 app.include_router(admin_router)
+app.include_router(graph_router)
 
 # Mount static files for diagrams
 static_dir = "static"

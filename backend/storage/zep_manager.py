@@ -79,18 +79,19 @@ class ZepManager:
                 # User doesn't exist, create them
                 pass
             
-            # Create user in Zep
-            await self.client.user.add(
+            # Create user
+            user = await self.client.user.add(
                 user_id=user_id,
                 first_name=first_name,
-                last_name=last_name
+                last_name=last_name,
+                metadata={"created_by": "researcher-prototype"}
             )
             
             logger.info(f"Created ZEP user: {user_id} ({first_name} {last_name})")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to create user in Zep: {str(e)}")
+            logger.error(f"Failed to create ZEP user {user_id}: {str(e)}")
             return False
     
     async def create_session(self, session_id: str, user_id: str) -> bool:
@@ -118,29 +119,21 @@ class ZepManager:
                 pass
             
             # Try to create session - this will fail if user doesn't exist
-            try:
-                await self.client.memory.add_session(
-                    session_id=session_id,
-                    user_id=user_id
-                )
-                logger.info(f"Created ZEP session: {session_id} for user {user_id}")
-                return True
-            except Exception as e:
-                # If session creation failed, it might be because user doesn't exist
-                # Try creating user first, then session
-                logger.debug(f"Session creation failed, ensuring user exists: {str(e)}")
-                await self.create_user(user_id)
-                
-                # Try session creation again
-                await self.client.memory.add_session(
-                    session_id=session_id,
-                    user_id=user_id
-                )
-                logger.info(f"Created ZEP session: {session_id} for user {user_id} (after creating user)")
-                return True
+            # so we'll create the user first if needed
+            await self.create_user(user_id)
+            
+            # Create session
+            session = await self.client.memory.add_session(
+                session_id=session_id,
+                user_id=user_id,
+                metadata={"created_by": "researcher-prototype"}
+            )
+            
+            logger.info(f"Created ZEP session: {session_id} for user {user_id}")
+            return True
             
         except Exception as e:
-            logger.error(f"Failed to create session in Zep: {str(e)}")
+            logger.error(f"Failed to create ZEP session {session_id}: {str(e)}")
             return False
     
     def _parse_user_name(self, user_id: str, display_name: str = None) -> tuple[str, str]:
@@ -267,13 +260,22 @@ class ZepManager:
             return []
         
         try:
-            edges = await self.client.graph.search(
+            search_results = await self.client.graph.search(
                 user_id=user_id, 
-                text=query, 
-                limit=limit, 
-                search_scope="edges"
+                query=query, 
+                limit=limit
             )
-            return [edge.fact for edge in edges if edge.fact]
+            
+            # Filter for edges and extract facts
+            facts = []
+            if search_results:
+                for item in search_results:
+                    if hasattr(item, 'source_node_uuid') and hasattr(item, 'target_node_uuid'):
+                        # This looks like an edge
+                        if hasattr(item, 'fact') and item.fact:
+                            facts.append(item.fact)
+            
+            return facts
             
         except Exception as e:
             logger.error(f"Failed to search user facts in Zep: {str(e)}")
