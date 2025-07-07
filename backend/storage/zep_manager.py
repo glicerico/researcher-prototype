@@ -312,4 +312,226 @@ class ZepManager:
             
         except Exception as e:
             logger.error(f"Failed to add message to session {session_id}: {str(e)}")
-            return False 
+            return False
+
+    async def get_nodes_by_user_id(self, user_id: str, cursor: Optional[str] = None, limit: int = 100) -> tuple[List[Dict[str, Any]], Optional[str]]:
+        """
+        Get nodes for a specific user with pagination.
+        
+        Args:
+            user_id: The user ID
+            cursor: Optional cursor for pagination
+            limit: Maximum number of nodes to return
+            
+        Returns:
+            Tuple of (nodes list, next_cursor)
+        """
+        if not self.is_enabled():
+            return [], None
+        
+        try:
+            # Prepare parameters for the API call
+            params = {
+                "limit": limit,
+                "uuidCursor": cursor or ""
+            }
+            
+            nodes = await self.client.graph.node.getByUserId(user_id, **params)
+            
+            # Transform nodes to our expected format
+            transformed_nodes = []
+            for node in nodes:
+                transformed_node = {
+                    "uuid": node.uuid,
+                    "name": node.name,
+                    "summary": node.summary,
+                    "labels": node.labels,
+                    "created_at": node.created_at,
+                    "updated_at": "",  # SDK doesn't provide updated_at
+                    "attributes": node.attributes
+                }
+                transformed_nodes.append(transformed_node)
+            
+            # Determine next cursor
+            next_cursor = None
+            if transformed_nodes and len(transformed_nodes) == limit:
+                next_cursor = transformed_nodes[-1]["uuid"]
+            
+            return transformed_nodes, next_cursor
+            
+        except Exception as e:
+            logger.error(f"Failed to get nodes for user {user_id}: {str(e)}")
+            return [], None
+
+    async def get_edges_by_user_id(self, user_id: str, cursor: Optional[str] = None, limit: int = 100) -> tuple[List[Dict[str, Any]], Optional[str]]:
+        """
+        Get edges for a specific user with pagination.
+        
+        Args:
+            user_id: The user ID
+            cursor: Optional cursor for pagination
+            limit: Maximum number of edges to return
+            
+        Returns:
+            Tuple of (edges list, next_cursor)
+        """
+        if not self.is_enabled():
+            return [], None
+        
+        try:
+            # Prepare parameters for the API call
+            params = {
+                "limit": limit,
+                "uuidCursor": cursor or ""
+            }
+            
+            edges = await self.client.graph.edge.getByUserId(user_id, **params)
+            
+            # Transform edges to our expected format
+            transformed_edges = []
+            for edge in edges:
+                transformed_edge = {
+                    "uuid": edge.uuid,
+                    "source_node_uuid": edge.source_node_uuid,
+                    "target_node_uuid": edge.target_node_uuid,
+                    "type": "",  # SDK doesn't provide type field
+                    "name": edge.name,
+                    "fact": edge.fact,
+                    "episodes": edge.episodes,
+                    "created_at": edge.created_at,
+                    "updated_at": "",  # SDK doesn't provide updated_at
+                    "valid_at": edge.valid_at,
+                    "expired_at": edge.expired_at,
+                    "invalid_at": edge.invalid_at
+                }
+                transformed_edges.append(transformed_edge)
+            
+            # Determine next cursor
+            next_cursor = None
+            if transformed_edges and len(transformed_edges) == limit:
+                next_cursor = transformed_edges[-1]["uuid"]
+            
+            return transformed_edges, next_cursor
+            
+        except Exception as e:
+            logger.error(f"Failed to get edges for user {user_id}: {str(e)}")
+            return [], None
+
+    async def get_all_nodes_by_user_id(self, user_id: str) -> List[Dict[str, Any]]:
+        """
+        Get all nodes for a specific user using pagination.
+        
+        Args:
+            user_id: The user ID
+            
+        Returns:
+            List of all nodes for the user
+        """
+        all_nodes = []
+        cursor = None
+        
+        while True:
+            nodes, next_cursor = await self.get_nodes_by_user_id(user_id, cursor, limit=100)
+            all_nodes.extend(nodes)
+            
+            if next_cursor is None or len(nodes) == 0:
+                break
+                
+            cursor = next_cursor
+        
+        logger.debug(f"Retrieved {len(all_nodes)} nodes for user {user_id}")
+        return all_nodes
+
+    async def get_all_edges_by_user_id(self, user_id: str) -> List[Dict[str, Any]]:
+        """
+        Get all edges for a specific user using pagination.
+        
+        Args:
+            user_id: The user ID
+            
+        Returns:
+            List of all edges for the user
+        """
+        all_edges = []
+        cursor = None
+        
+        while True:
+            edges, next_cursor = await self.get_edges_by_user_id(user_id, cursor, limit=100)
+            all_edges.extend(edges)
+            
+            if next_cursor is None or len(edges) == 0:
+                break
+                
+            cursor = next_cursor
+        
+        logger.debug(f"Retrieved {len(all_edges)} edges for user {user_id}")
+        return all_edges
+
+    def create_triplets(self, edges: List[Dict[str, Any]], nodes: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """
+        Create triplets from nodes and edges.
+        
+        Args:
+            edges: List of edge dictionaries
+            nodes: List of node dictionaries
+            
+        Returns:
+            List of triplet dictionaries
+        """
+        # Create a Set of node UUIDs that are connected by edges
+        connected_node_ids = set()
+        
+        # Create triplets from edges
+        edge_triplets = []
+        for edge in edges:
+            source_node = None
+            target_node = None
+            
+            # Find source and target nodes
+            for node in nodes:
+                if node["uuid"] == edge["source_node_uuid"]:
+                    source_node = node
+                if node["uuid"] == edge["target_node_uuid"]:
+                    target_node = node
+            
+            if source_node and target_node:
+                # Add source and target node IDs to connected set
+                connected_node_ids.add(source_node["uuid"])
+                connected_node_ids.add(target_node["uuid"])
+                
+                triplet = {
+                    "sourceNode": source_node,
+                    "edge": edge,
+                    "targetNode": target_node
+                }
+                edge_triplets.append(triplet)
+        
+        # Find isolated nodes (nodes that don't appear in any edge)
+        isolated_nodes = [node for node in nodes if node["uuid"] not in connected_node_ids]
+        
+        # For isolated nodes, create special triplets
+        isolated_triplets = []
+        for node in isolated_nodes:
+            # Create a special marker edge for isolated nodes
+            virtual_edge = {
+                "uuid": f"isolated-node-{node['uuid']}",
+                "source_node_uuid": node["uuid"],
+                "target_node_uuid": node["uuid"],
+                "type": "_isolated_node_",
+                "name": "",  # Empty name so it doesn't show a label
+                "created_at": node["created_at"],
+                "updated_at": node["updated_at"]
+            }
+            
+            triplet = {
+                "sourceNode": node,
+                "edge": virtual_edge,
+                "targetNode": node
+            }
+            isolated_triplets.append(triplet)
+        
+        # Combine edge triplets with isolated node triplets
+        all_triplets = edge_triplets + isolated_triplets
+        
+        logger.debug(f"Created {len(all_triplets)} triplets ({len(edge_triplets)} from edges, {len(isolated_triplets)} from isolated nodes)")
+        return all_triplets 
