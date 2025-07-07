@@ -60,8 +60,6 @@ export const GraphVisualization = forwardRef(
     },
     ref
   ) => {
-    const isDarkMode = document.body.classList.contains('dark');
-
     // Graph state for popovers
     const [showNodePopup, setShowNodePopup] = useState(false);
     const [showEdgePopup, setShowEdgePopup] = useState(false);
