@@ -5,6 +5,7 @@ A full-stack prototype that pairs a conversational AI with an autonomous backgro
 * React 19 front-end
 * FastAPI + LangGraph back-end
 * Motivation-driven research scheduler
+* Knowledge Graph visualization (powered by Zep)
 * JWT-secured admin console & prompt editor
 * Local JSON storage – no external DB needed
 
@@ -38,6 +39,8 @@ docs/      extended documentation (setup, research engine, admin debug …)
 * docs/setup.md – prerequisites, env variables, testing
 * docs/research_engine.md – how autonomous research & motivation work
 * docs/admin_debugging.md – admin UI, debug APIs, logging & tracing
+* docs/user_guide.md – everyday usage including Knowledge Graph
+* docs/zep_graph_visualization.md – Knowledge Graph implementation details
 * docs/troubleshooting.md – common errors and fixes
 
 ## License

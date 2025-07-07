@@ -135,22 +135,7 @@ Fetches graph data for a user or group.
 **Response:**
 ```json
 {
-  "triplets": [...],
-  "node_count": 42,
-  "edge_count": 38
-}
-```
-
-#### GET /api/graph/test/{user_id}
-Tests if graph data is available for a user.
-
-**Response:**
-```json
-{
-  "status": "success",
-  "has_nodes": true,
-  "has_edges": true,
-  "message": "Graph connectivity test successful"
+  "triplets": [...]
 }
 ```
 

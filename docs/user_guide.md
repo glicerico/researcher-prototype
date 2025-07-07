@@ -82,7 +82,41 @@ Press the 💡 icon to open real-time bars for **boredom**, **curiosity**, **tir
 
 ---
 
-## 7. Admin Console (optional)
+## 7. Knowledge Graph Visualization
+
+The Knowledge Graph shows your personal knowledge network stored in Zep as an interactive visualization.
+
+### Accessing the Graph
+
+1. Go to **User Settings** (click your avatar in the top-left).
+2. Click the **Knowledge Graph** button.
+3. The graph loads automatically showing:
+   - **Nodes**: People, concepts, entities from your conversations
+   - **Edges**: Relationships between entities
+   - **Colors**: Different entity types (hover the legend to see)
+
+### Interacting with the Graph
+
+* **Zoom**: Mouse wheel or pinch gesture
+* **Pan**: Click and drag on background
+* **Move nodes**: Click and drag individual nodes
+* **View details**: Click on nodes or edges to see information
+* **Reset**: Click background to clear selection
+
+### What the Graph Shows
+
+The Knowledge Graph builds from your conversations and research, showing:
+
+* **Entities**: People, places, organizations, concepts mentioned
+* **Relationships**: How these entities connect
+* **Facts**: Specific information about relationships
+* **Context**: When and where information was discussed
+
+> **Note**: The graph populates over time as you chat and research. New users may have empty or sparse graphs initially.
+
+---
+
+## 8. Admin Console (optional)
 
 For advanced users / administrators.
 
@@ -95,7 +129,7 @@ For advanced users / administrators.
 
 ---
 
-## 8. Keyboard Shortcuts
+## 9. Keyboard Shortcuts
 
 | Shortcut | Action |
 |----------|--------|
@@ -106,13 +140,13 @@ For advanced users / administrators.
 
 ---
 
-## 9. Logout & Clearing Data
+## 10. Logout & Clearing Data
 
 User data lives in `backend/storage_data/` (JSON).  Deleting a user or the directory will permanently erase associated chats, settings and research findings.  There is no cloud backup.
 
 ---
 
-## 10. Getting Help
+## 11. Getting Help
 
 * Hover tooltips explain most buttons.  
 * Logs appear in the terminal running the backend.  
