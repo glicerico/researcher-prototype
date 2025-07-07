@@ -13,21 +13,22 @@
 
 .user {
   align-self: flex-end;
-  background-color: #e1f5fe;
+  background-color: var(--primary-color);
+  color: #000;
   margin-left: auto;
 }
 
 .assistant {
   align-self: flex-start;
-  background-color: #f5f5f5;
+  background-color: var(--surface-color);
   margin-right: auto;
 }
 
 .system {
   align-self: center;
-  background-color: #f5f5f5;
+  background-color: var(--surface-color);
   font-style: italic;
-  color: #757575;
+  color: var(--text-secondary-color);
   max-width: 90%;
   text-align: center;
   padding: 5px 10px;
@@ -40,7 +41,7 @@
 /* Special styling for debug info */
 .system pre,
 .system code {
-  background-color: #f0f0f0;
+  background-color: var(--hover-color);
   padding: 5px;
   border-radius: 3px;
   font-family: monospace;
@@ -57,7 +58,7 @@
 
 .message-metadata {
   margin-top: 8px;
-  border-top: 1px dashed #ddd;
+  border-top: 1px dashed var(--border-color);
   padding-top: 8px;
   font-size: 0.85em;
 }
@@ -65,7 +66,7 @@
 .routing-info-toggle {
   background: none;
   border: none;
-  color: #2196f3;
+  color: var(--primary-color);
   cursor: pointer;
   font-size: 0.85em;
   padding: 0;
@@ -74,11 +75,11 @@
 
 .routing-info {
   margin-top: 8px;
-  background-color: #f8f8f8;
+  background-color: var(--hover-color);
   border-radius: 4px;
   padding: 8px;
   font-size: 0.85em;
-  border-left: 3px solid #2196f3;
+  border-left: 3px solid var(--primary-color);
 }
 
 .routing-info-item {
@@ -91,10 +92,10 @@
 
 .routing-label {
   font-weight: bold;
-  color: #424242;
+  color: var(--text-color);
   margin-right: 5px;
 }
 
 .routing-value {
-  color: #616161;
+  color: var(--text-secondary-color);
 } 

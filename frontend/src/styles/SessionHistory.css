@@ -1,8 +1,8 @@
 .session-history {
   width: 200px;
   height: calc(100vh - 120px);
-  background: #f9fafb;
-  border-right: 1px solid #e5e7eb;
+  background: var(--surface-color);
+  border-right: 1px solid var(--border-color);
   position: fixed;
   top: 120px;
   left: 0;
@@ -16,7 +16,7 @@
   margin: 1rem;
   font-size: 1rem;
   font-weight: 600;
-  color: #374151;
+  color: var(--text-color);
 }
 
 .session-history ul {
@@ -38,21 +38,27 @@
   padding: 0.25rem 0.5rem;
   cursor: pointer;
   border-radius: 4px;
-  color: #374151;
+  color: var(--text-secondary-color);
+  transition: background-color 0.2s, color 0.2s;
+}
+
+.session-history li button:hover {
+  background-color: var(--hover-color);
+  color: var(--text-color);
 }
 
 .session-history li.active button {
-  background: #e7f3ff;
+  background: var(--primary-color);
   font-weight: bold;
-  color: #1a202c;
+  color: var(--button-text-color);
 }
 
 .new-session {
   margin: 1rem;
   padding: 0.5rem;
   border: none;
-  background: #3182ce;
-  color: white;
+  background: var(--primary-color);
+  color: var(--button-text-color);
   border-radius: 4px;
   cursor: pointer;
 }

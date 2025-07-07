@@ -1,7 +1,7 @@
 .debug-button {
   margin-left: 10px;
   padding: 5px 10px;
-  background-color: #f44336;
+  background-color: var(--color-danger);
   color: white;
   border: none;
   border-radius: 5px;
@@ -9,5 +9,5 @@
 }
 
 .debug-button:hover {
-  background-color: #d32f2f;
+  filter: brightness(0.9);
 } 

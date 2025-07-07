@@ -9,7 +9,7 @@
   display: inline-block;
   width: 8px;
   height: 8px;
-  background-color: #aaa;
+  background-color: var(--text-muted-color);
   border-radius: 50%;
   animation: typing 1s infinite ease-in-out;
 }

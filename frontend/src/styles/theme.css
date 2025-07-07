@@ -1,0 +1,89 @@
+:root {
+  --background-color: #1a1a1a;
+  --surface-color: #2c2c2c;
+  --primary-color: #61dafb;
+  --secondary-color: #bb86fc;
+  --text-color: #e0e0e0;
+  --text-secondary-color: #a0a0a0;
+  --border-color: #444444;
+  --hover-color: #3a3a3a;
+  --active-color: #4f4f4f;
+  
+  --button-background-color: #3e3e3e;
+  --button-text-color: #ffffff;
+  --button-hover-background-color: #555555;
+  
+  --input-background-color: #2a2a2a;
+  --input-border-color: #444444;
+  --input-text-color: #e0e0e0;
+
+  --color-primary: #007bff;
+  --color-success: #28a745;
+  --color-warning: #ffc107;
+  --color-danger: #dc3545;
+  --color-info: #17a2b8;
+
+  --link-color: var(--primary-color);
+  --link-hover-color: #82e9ff;
+
+  --font-family-sans-serif: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', sans-serif;
+  --font-family-monospace: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+
+  --box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+  --card-background: var(--surface-color);
+  --card-border-radius: 8px;
+  --card-padding: 1rem;
+}
+
+body {
+    background-color: var(--background-color);
+    color: var(--text-color);
+    font-family: var(--font-family-sans-serif);
+    margin: 0;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+}
+
+a {
+    color: var(--link-color);
+    text-decoration: none;
+}
+
+a:hover {
+    color: var(--link-hover-color);
+    text-decoration: underline;
+}
+
+button {
+    background-color: var(--button-background-color);
+    color: var(--button-text-color);
+    border: 1px solid var(--border-color);
+    border-radius: 4px;
+    padding: 0.5rem 1rem;
+    cursor: pointer;
+    transition: background-color 0.2s ease-in-out;
+}
+
+button:hover {
+    background-color: var(--button-hover-background-color);
+}
+
+input, textarea {
+    background-color: var(--input-background-color);
+    color: var(--input-text-color);
+    border: 1px solid var(--input-border-color);
+    border-radius: 4px;
+    padding: 0.5rem;
+}
+
+input:focus, textarea:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+code {
+  font-family: var(--font-family-monospace);
+  background-color: var(--surface-color);
+  padding: 0.2em 0.4em;
+  border-radius: 3px;
+} 
