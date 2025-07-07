@@ -495,19 +495,29 @@ const Graph = forwardRef(
           });
       };
 
-      // Function to handle node click
-      function handleNodeClick(event, d) {
-        event.stopPropagation();
+      // Variable to track click timing for proper single/double click handling
+      let clickTimeout = null;
 
+      // Function to highlight node and its connections
+      function highlightNode(d) {
         if (resetLinksRef.current) resetLinksRef.current();
         if (resetNodesRef.current) resetNodesRef.current();
-        if (onNodeClick) onNodeClick(d.id);
 
         // Highlight clicked node
-        d3.select(event.currentTarget)
-          .select("circle")
-          .attr("stroke", theme.node.selected)
-          .attr("stroke-width", 3);
+        node
+          .selectAll("circle")
+          .attr("fill", (n) => {
+            if (n.id === d.id) return theme.node.selected;
+            return getNodeColor(n);
+          })
+          .attr("stroke", (n) => {
+            if (n.id === d.id) return theme.node.selected;
+            return theme.node.stroke;
+          })
+          .attr("stroke-width", (n) => {
+            if (n.id === d.id) return 3;
+            return 1;
+          });
 
         // Highlight connected links
         link
@@ -561,8 +571,42 @@ const Graph = forwardRef(
           });
       }
 
-      // Bind node click handler
-      node.on("click", handleNodeClick);
+      // Function to handle node single click (highlight only)
+      function handleNodeSingleClick(event, d) {
+        event.stopPropagation();
+
+        // Clear any existing timeout
+        if (clickTimeout) {
+          clearTimeout(clickTimeout);
+        }
+
+        // Set a timeout to handle single click after double-click detection window
+        clickTimeout = setTimeout(() => {
+          highlightNode(d);
+          clickTimeout = null;
+        }, 200); // 200ms delay to detect double-click
+      }
+
+      // Function to handle node double click (show modal)
+      function handleNodeDoubleClick(event, d) {
+        event.stopPropagation();
+        
+        // Clear the single click timeout
+        if (clickTimeout) {
+          clearTimeout(clickTimeout);
+          clickTimeout = null;
+        }
+
+        // Highlight the node first
+        highlightNode(d);
+        
+        // Then call the original onNodeClick callback to show the modal
+        if (onNodeClick) onNodeClick(d.id);
+      }
+
+      // Bind node click handlers
+      node.on("click", handleNodeSingleClick);
+      node.on("dblclick", handleNodeDoubleClick);
 
       // Add circles to nodes
       node
