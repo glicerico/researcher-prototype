@@ -7,5 +7,7 @@
 .model-selector select {
   padding: 5px 10px;
   border-radius: 5px;
-  border: none;
+  border: 1px solid var(--input-border-color);
+  background-color: var(--input-background-color);
+  color: var(--input-text-color);
 } 

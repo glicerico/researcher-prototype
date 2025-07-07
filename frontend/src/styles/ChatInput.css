@@ -2,32 +2,34 @@
   padding: 15px;
   display: flex;
   gap: 10px;
-  border-top: 1px solid #eee;
+  border-top: 1px solid var(--border-color);
 }
 
 .chat-input-container.disabled {
   opacity: 0.7;
-  background-color: #f8f9fa;
+  background-color: var(--hover-color);
 }
 
 #user-input {
   flex: 1;
   padding: 12px;
-  border: 1px solid #ddd;
+  border: 1px solid var(--input-border-color);
   border-radius: 5px;
   resize: none;
   font-size: 1rem;
+  background-color: var(--input-background-color);
+  color: var(--input-text-color);
 }
 
 #user-input:disabled {
-  background-color: #f1f3f5;
+  background-color: var(--hover-color);
   cursor: not-allowed;
 }
 
 #send-button {
   padding: 0 20px;
-  background-color: #4a6fa5;
-  color: white;
+  background-color: var(--primary-color);
+  color: var(--button-text-color);
   border: none;
   border-radius: 5px;
   cursor: pointer;
@@ -36,10 +38,10 @@
 }
 
 #send-button:hover:not(:disabled) {
-  background-color: #3a5a8a;
+  background-color: var(--link-hover-color);
 }
 
 #send-button:disabled {
-  background-color: #adb5bd;
+  background-color: var(--hover-color);
   cursor: not-allowed;
 } 
