@@ -38,7 +38,6 @@ const colors = {
   }
 };
 
-// eslint-disable-next-line react/display-name
 const Graph = forwardRef(
   (
     {
@@ -665,7 +664,6 @@ const Graph = forwardRef(
       // Draw links
       link.each(function (d) {
         const group = d3.select(this);
-        const lineGenerator = d3.line().curve(d3.curveBasis);
 
         d.relations.forEach((_, idx) => {
           const path = group
@@ -692,14 +690,14 @@ const Graph = forwardRef(
           .attr("cursor", "pointer");
 
         // Background rect for label
-        const rect = labelGroup
+        labelGroup
           .append("rect")
           .attr("fill", theme.link.label.bg)
           .attr("rx", 4)
           .attr("ry", 4);
 
         // Text label
-        const text = labelGroup
+        labelGroup
           .append("text")
           .attr("text-anchor", "middle")
           .attr("font-size", 10)
@@ -805,28 +803,78 @@ const Graph = forwardRef(
         node.attr("transform", (d) => `translate(${d.x}, ${d.y})`);
       });
 
-      // Zoom to fit on mount
-      if (zoomOnMount && nodes.length > 0) {
-        setTimeout(() => {
-          const bounds = g.node().getBBox();
-          const fullWidth = width;
-          const fullHeight = height;
-          const widthScale = fullWidth / bounds.width;
-          const heightScale = fullHeight / bounds.height;
-          const scale = 0.8 * Math.min(widthScale, heightScale);
-          const translate = [
-            fullWidth / 2 - scale * (bounds.x + bounds.width / 2),
-            fullHeight / 2 - scale * (bounds.y + bounds.height / 2),
-          ];
+      // Also listen for when the simulation ends to do a final zoom to fit
+      simulation.on("end", () => {
+        if (zoomOnMount && nodes.length > 0) {
+          setTimeout(() => {
+            const zoomToFit = () => {
+              try {
+                const bounds = g.node().getBBox();
+                if (bounds.width === 0 || bounds.height === 0) return;
+                
+                const fullWidth = width;
+                const fullHeight = height;
+                const padding = 50;
+                
+                const widthScale = (fullWidth - padding * 2) / bounds.width;
+                const heightScale = (fullHeight - padding * 2) / bounds.height;
+                const scale = 0.9 * Math.min(widthScale, heightScale);
+                
+                const translate = [
+                  fullWidth / 2 - scale * (bounds.x + bounds.width / 2),
+                  fullHeight / 2 - scale * (bounds.y + bounds.height / 2),
+                ];
 
-          svgElement
-            .transition()
-            .duration(750)
-            .call(
-              zoom.transform,
-              d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
-            );
-        }, 100);
+                svgElement
+                  .transition()
+                  .duration(500)
+                  .call(
+                    zoom.transform,
+                    d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+                  );
+              } catch (error) {
+                console.warn('Could not zoom to fit on simulation end:', error);
+              }
+            };
+            zoomToFit();
+          }, 100);
+        }
+      });
+
+      // Zoom to fit on mount - wait for simulation to settle
+      if (zoomOnMount && nodes.length > 0) {
+        const zoomToFit = () => {
+          try {
+            const bounds = g.node().getBBox();
+            if (bounds.width === 0 || bounds.height === 0) return;
+            
+            const fullWidth = width;
+            const fullHeight = height;
+            const padding = 50; // Add some padding around the graph
+            
+            const widthScale = (fullWidth - padding * 2) / bounds.width;
+            const heightScale = (fullHeight - padding * 2) / bounds.height;
+            const scale = 0.9 * Math.min(widthScale, heightScale);
+            
+            const translate = [
+              fullWidth / 2 - scale * (bounds.x + bounds.width / 2),
+              fullHeight / 2 - scale * (bounds.y + bounds.height / 2),
+            ];
+
+            svgElement
+              .transition()
+              .duration(750)
+              .call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+              );
+          } catch (error) {
+            console.warn('Could not zoom to fit:', error);
+          }
+        };
+        
+        // Wait longer for the simulation to settle after our simulated drag
+        setTimeout(zoomToFit, 1000);
       }
 
       // Handle background click to reset
