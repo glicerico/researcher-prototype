@@ -67,6 +67,7 @@ const Graph = forwardRef(
     const simulationRef = useRef(null);
     const zoomRef = useRef(null);
     const isInitializedRef = useRef(false);
+    const userHasZoomedRef = useRef(false); // Track if user has manually zoomed
 
     // Add ref for zoomToLinkById
     const graphRef = useRef({
@@ -332,6 +333,11 @@ const Graph = forwardRef(
         .scaleExtent([0.1, 4])
         .on("zoom", (event) => {
           g.attr("transform", event.transform);
+          
+          // Track if this zoom was initiated by user interaction
+          if (event.sourceEvent) {
+            userHasZoomedRef.current = true;
+          }
         });
 
       zoomRef.current = zoom;
@@ -805,7 +811,8 @@ const Graph = forwardRef(
 
       // Also listen for when the simulation ends to do a final zoom to fit
       simulation.on("end", () => {
-        if (zoomOnMount && nodes.length > 0) {
+        // Only auto-zoom if user hasn't manually adjusted the view
+        if (zoomOnMount && nodes.length > 0 && !userHasZoomedRef.current) {
           setTimeout(() => {
             const zoomToFit = () => {
               try {
@@ -844,6 +851,9 @@ const Graph = forwardRef(
       // Zoom to fit on mount - wait for simulation to settle
       if (zoomOnMount && nodes.length > 0) {
         const zoomToFit = () => {
+          // Only auto-zoom if user hasn't manually adjusted the view
+          if (userHasZoomedRef.current) return;
+          
           try {
             const bounds = g.node().getBBox();
             if (bounds.width === 0 || bounds.height === 0) return;
@@ -877,11 +887,47 @@ const Graph = forwardRef(
         setTimeout(zoomToFit, 1000);
       }
 
-      // Handle background click to reset
+      // Handle background click to reset selection
       svgElement.on("click", () => {
         if (resetLinksRef.current) resetLinksRef.current();
         if (resetNodesRef.current) resetNodesRef.current();
         if (onBlur) onBlur();
+      });
+
+      // Handle background double-click to reset zoom to fit
+      svgElement.on("dblclick", () => {
+        if (nodes.length > 0) {
+          try {
+            const bounds = g.node().getBBox();
+            if (bounds.width === 0 || bounds.height === 0) return;
+            
+            const fullWidth = width;
+            const fullHeight = height;
+            const padding = 50;
+            
+            const widthScale = (fullWidth - padding * 2) / bounds.width;
+            const heightScale = (fullHeight - padding * 2) / bounds.height;
+            const scale = 0.9 * Math.min(widthScale, heightScale);
+            
+            const translate = [
+              fullWidth / 2 - scale * (bounds.x + bounds.width / 2),
+              fullHeight / 2 - scale * (bounds.y + bounds.height / 2),
+            ];
+
+            // Reset the user zoom flag since this is an intentional reset
+            userHasZoomedRef.current = false;
+
+            svgElement
+              .transition()
+              .duration(750)
+              .call(
+                zoom.transform,
+                d3.zoomIdentity.translate(translate[0], translate[1]).scale(scale)
+              );
+          } catch (error) {
+            console.warn('Could not reset zoom to fit:', error);
+          }
+        }
       });
 
       // Cleanup function
@@ -890,6 +936,7 @@ const Graph = forwardRef(
           simulationRef.current.stop();
         }
       };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []); // Empty dependency array ensures this runs only once
 
     return (

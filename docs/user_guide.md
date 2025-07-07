@@ -84,35 +84,54 @@ Press the 💡 icon to open real-time bars for **boredom**, **curiosity**, **tir
 
 ## 7. Knowledge Graph Visualization
 
-The Knowledge Graph shows your personal knowledge network stored in Zep as an interactive visualization.
+The Knowledge Graph shows your personal knowledge network stored in Zep as an interactive visualization. The graph automatically arranges itself naturally and remembers your viewing preferences.
 
 ### Accessing the Graph
 
 1. Go to **User Settings** (click your avatar in the top-left).
 2. Click the **Knowledge Graph** button.
-3. The graph loads automatically showing:
-   - **Nodes**: People, concepts, entities from your conversations
-   - **Edges**: Relationships between entities
-   - **Colors**: Different entity types (hover the legend to see)
+3. The graph loads automatically with:
+   - **Natural layout**: Nodes arrange themselves organically
+   - **Auto-centering**: Graph fits perfectly in view
+   - **Entity legend**: Hover to see color codes for different types
 
-### Interacting with the Graph
+### Smart Interactions
 
-* **Zoom**: Mouse wheel or pinch gesture
+**Navigation:**
+* **Zoom**: Mouse wheel or pinch gesture (your zoom level is remembered!)
 * **Pan**: Click and drag on background
 * **Move nodes**: Click and drag individual nodes
-* **View details**: Click on nodes or edges to see information
-* **Reset**: Click background to clear selection
+* **Reset view**: Double-click background to auto-fit graph
+
+**Exploration:**
+* **Highlight connections**: Single-click any node to see what it connects to
+* **View details**: Double-click any node to open detailed information
+* **Edge details**: Single-click any connection line
+* **Clear selection**: Single-click empty background
+
+**Modal Controls:**
+* **Close details**: Press **ESC** key or click outside the modal
+* **Full information**: Modals show complete entity/relationship details
 
 ### What the Graph Shows
 
-The Knowledge Graph builds from your conversations and research, showing:
+The Knowledge Graph builds from your conversations and research, displaying:
 
-* **Entities**: People, places, organizations, concepts mentioned
-* **Relationships**: How these entities connect
-* **Facts**: Specific information about relationships
-* **Context**: When and where information was discussed
+* **Entities**: People, places, organizations, concepts from your chats
+* **Relationships**: How these entities connect and relate
+* **Facts**: Specific information about connections
+* **Attributes**: Detailed properties of each entity
+* **Timeline**: When information was created/updated
 
-> **Note**: The graph populates over time as you chat and research. New users may have empty or sparse graphs initially.
+### User-Friendly Features
+
+* **Zoom memory**: Your preferred zoom level stays as you explore
+* **Smart centering**: Only auto-centers when you haven't zoomed manually
+* **Smooth animations**: Natural transitions between views
+* **Mobile support**: Works on phones and tablets
+* **Keyboard friendly**: ESC key consistently closes dialogs
+
+> **Note**: The graph grows over time as you chat and research. New users start with empty graphs that populate through conversations.
 
 ---
 
@@ -136,7 +155,8 @@ For advanced users / administrators.
 | **Enter** | Send message |
 | **Shift + Enter** | New line without sending |
 | **↑ / ↓** | Cycle through previous inputs |
-| **Esc**   | Close modals |
+| **Esc**   | Close modals and Knowledge Graph details |
+| **Double-click background** | Reset Knowledge Graph zoom to fit |
 
 ---
 

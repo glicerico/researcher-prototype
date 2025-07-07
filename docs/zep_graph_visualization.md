@@ -43,13 +43,15 @@ The Zep Knowledge Graph Visualization feature allows users to view their knowled
 ## Features
 
 ### Interactive Graph Visualization
-- **Force-directed layout** using D3.js physics simulation
-- **Zoom and pan** capabilities with mouse/touch controls
-- **Drag nodes** to reposition them
-- **Click interactions**:
-  - Click nodes to view node details
-  - Click edges to view relationship details
-  - Click background to reset selection
+- **Force-directed layout** using D3.js physics simulation with natural initialization
+- **Intelligent zoom and pan** capabilities with user preference tracking
+- **Drag nodes** to reposition them (preserves user layout preferences)
+- **Smart click interactions**:
+  - **Single-click nodes**: Highlight node and connected edges
+  - **Double-click nodes**: Open detailed information modal
+  - **Single-click edges**: View relationship details
+  - **Single-click background**: Reset selection and clear highlights
+  - **Double-click background**: Reset zoom to fit entire graph
 
 ### Visual Features
 - **Color-coded nodes** by entity type
@@ -57,6 +59,9 @@ The Zep Knowledge Graph Visualization feature allows users to view their knowled
 - **Curved edges** for multiple relationships
 - **Arrowheads** showing relationship direction
 - **Edge labels** showing relationship types
+- **Full-screen modals** with dark overlay for node/edge details
+- **Keyboard shortcuts**: ESC key to close modals
+- **Automatic centering** that respects user interactions
 
 ### Data Display
 - **Node details**: Name, summary, labels, attributes, timestamps
@@ -69,12 +74,31 @@ The Zep Knowledge Graph Visualization feature allows users to view their knowled
 
 1. Navigate to User Settings in the application
 2. Click the "Knowledge Graph" button
-3. The graph will load automatically
-4. Interact with the graph:
-   - Zoom: Mouse wheel or pinch gesture
-   - Pan: Click and drag on background
-   - Move nodes: Click and drag nodes
-   - View details: Click on nodes or edges
+3. The graph will load automatically with natural layout and auto-centering
+
+#### Graph Interactions
+
+**Navigation:**
+- **Zoom**: Mouse wheel or pinch gesture
+- **Pan**: Click and drag on background
+- **Move nodes**: Click and drag individual nodes
+- **Reset view**: Double-click background to auto-fit graph
+
+**Exploration:**
+- **Highlight connections**: Single-click any node to see its connections
+- **View node details**: Double-click any node to open detailed information modal
+- **View relationship details**: Single-click any edge/connection
+- **Clear selection**: Single-click on empty background
+
+**Modal Controls:**
+- **Close modal**: Press ESC key or click outside the modal
+- **Click outside**: Click the dark overlay to close
+- **Close button**: Click the X button in the modal header
+
+#### User Experience Features
+- **Zoom preference tracking**: Your zoom level is preserved during exploration
+- **Natural layout**: Graph automatically arranges itself organically on load
+- **Responsive design**: Works on desktop and mobile devices
 
 ### For Developers
 
@@ -103,6 +127,30 @@ import GraphVisualization from './components/graph/GraphVisualization';
   zoomOnMount={true}
 />
 ```
+
+## User Experience Design
+
+### Interaction Design Principles
+
+1. **Progressive Disclosure**: Single-click for quick exploration, double-click for details
+2. **Non-destructive Navigation**: User zoom/pan preferences are preserved
+3. **Clear Visual Feedback**: Highlighting, dimming, and focus states guide exploration
+4. **Keyboard Accessibility**: ESC key consistently closes modals
+5. **Intuitive Reset**: Double-click background provides easy way back to overview
+
+### Accessibility Features
+
+- **Keyboard Navigation**: ESC key support for modal dismissal
+- **Visual Contrast**: Dark overlay ensures modal content is clearly readable
+- **Clear State Indication**: Selected and highlighted states are visually distinct
+- **Touch Support**: All interactions work on mobile devices
+
+### Performance Optimizations
+
+- **Intelligent Auto-zoom**: Only triggers when user hasn't manually adjusted view
+- **Natural Layout**: Graph self-organizes without artificial positioning
+- **Smooth Transitions**: 750ms animations for zoom and layout changes
+- **Memory Management**: Proper cleanup of D3 simulations and event listeners
 
 ## Configuration
 
@@ -159,6 +207,26 @@ Fetches graph data for a user or group.
    - Check browser console for errors
    - Ensure D3.js is properly installed (`npm install d3`)
 
+5. **Graph appears clustered/overlapping on load**
+   - This should auto-resolve as the simulation runs
+   - If persistent, try refreshing the page
+   - Check that the natural layout initialization is working
+
+6. **Auto-zoom not working**
+   - Verify that user hasn't manually zoomed (this disables auto-zoom)
+   - Double-click background to reset zoom behavior
+   - Check browser console for zoom calculation errors
+
+7. **Modal not closing with ESC key**
+   - Ensure the modal has focus (click on it first)
+   - Check that no other elements are capturing keyboard events
+   - Try clicking outside the modal as alternative
+
+8. **Node highlighting not working**
+   - Ensure you're single-clicking (not double-clicking) nodes
+   - Check that simulation has finished initial layout
+   - Verify theme colors are properly configured
+
 ### Debug Mode
 
 Enable debug mode by setting `REACT_APP_DEBUG=true` to access:
@@ -180,26 +248,53 @@ Enable debug mode by setting `REACT_APP_DEBUG=true` to access:
    - SVG rendering can be slow for many elements
    - Consider Canvas rendering for graphs >1000 nodes
 
+## Recent Enhancements (v2024.1)
+
+✅ **Improved Interaction Model**:
+- Single-click for exploration, double-click for details
+- ESC key modal dismissal
+- Background double-click zoom reset
+
+✅ **Smart Auto-zoom**:
+- Respects user zoom preferences
+- Natural graph layout initialization
+- Preserves exploration state
+
+✅ **Enhanced UX**:
+- Full-screen modals with dark overlays
+- Smooth transitions and animations
+- Touch-friendly mobile support
+
 ## Future Enhancements
 
 1. **Search and Filter**:
    - Search nodes by name or attributes
    - Filter by node types or date ranges
+   - Saved filter presets
 
 2. **Graph Analytics**:
    - Centrality measures
    - Clustering visualization
    - Path finding between nodes
+   - Graph metrics dashboard
 
 3. **Export Features**:
    - Export as image (PNG/SVG)
    - Export graph data as JSON
    - Generate graph reports
+   - Shareable graph URLs
 
-4. **Collaboration**:
+4. **Advanced Interactions**:
+   - Multi-select nodes with Ctrl/Cmd+click
+   - Bookmarkable node positions
+   - Minimap for large graphs
+   - Timeline view for temporal data
+
+5. **Collaboration**:
    - Share graph views
    - Collaborative annotations
    - Graph versioning
+   - Real-time collaborative exploration
 
 ## Security Considerations
 
