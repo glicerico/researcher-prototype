@@ -359,6 +359,16 @@ const Graph = forwardRef(
         }
       });
 
+      // Give nodes initial positions with some randomness to avoid overlap
+      const centerX = width / 2;
+      const centerY = height / 2;
+      
+      nodes.forEach((node, i) => {
+        // Start near center with some randomness
+        node.x = centerX + (Math.random() - 0.5) * 100;
+        node.y = centerY + (Math.random() - 0.5) * 100;
+      });
+
       // Create simulation with custom forces
       const simulation = d3
         .forceSimulation(nodes)
@@ -400,7 +410,7 @@ const Graph = forwardRef(
             .strength((d) => (isolatedNodeIds.has(d.id) ? 0.15 : 0.01))
         )
         .velocityDecay(0.4)
-        .alphaDecay(0.05)
+        .alphaDecay(0.02)
         .alphaMin(0.001);
 
       simulationRef.current = simulation;
@@ -627,6 +637,30 @@ const Graph = forwardRef(
         .attr("fill", theme.node.text)
         .attr("pointer-events", "none")
         .attr("user-select", "none");
+
+      // Start the simulation normally
+      simulation.alpha(0.3).restart();
+      
+      // Simulate the "drag effect" that naturally organizes the graph
+      // This mimics what happens when you manually drag a node
+      setTimeout(() => {
+        // Pick a random node to "disturb" (simulating a drag)
+        if (nodes.length > 0) {
+          const randomNode = nodes[Math.floor(Math.random() * nodes.length)];
+          
+          // Slightly move the node (simulating a small drag)
+          randomNode.x += (Math.random() - 0.5) * 50;
+          randomNode.y += (Math.random() - 0.5) * 50;
+          
+          // "Heat up" the simulation like a drag would do
+          simulation.alphaTarget(0.1).restart();
+          
+          // Let it settle after a moment
+          setTimeout(() => {
+            simulation.alphaTarget(0);
+          }, 500);
+        }
+      }, 100); // Small delay to let initial positioning settle
 
       // Draw links
       link.each(function (d) {
