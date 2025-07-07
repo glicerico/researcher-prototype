@@ -234,7 +234,6 @@ class ZepManager:
         try:
             # Memory retrieval currently uses session_id as the key, but it does
             # retrieve larger memory context.
-            # TODO: Compare with use of zep.graph.search() on nodes and edges.
             memory = await self.client.memory.get(session_id=session_id)
             return memory.context if memory else None
             
