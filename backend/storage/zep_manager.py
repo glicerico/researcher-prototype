@@ -330,25 +330,24 @@ class ZepManager:
             return [], None
         
         try:
-            # Prepare parameters for the API call
-            params = {
-                "limit": limit,
-                "uuidCursor": cursor or ""
-            }
+            # Use the correct Python SDK method - following the working implementation pattern
+            nodes = await self.client.graph.node.get_by_user_id(
+                user_id, 
+                uuid_cursor=cursor or "",
+                limit=limit
+            )
             
-            nodes = await self.client.graph.node.getByUserId(user_id, **params)
-            
-            # Transform nodes to our expected format
+            # Transform nodes to our expected format following the working implementation
             transformed_nodes = []
             for node in nodes:
                 transformed_node = {
-                    "uuid": node.uuid,
+                    "uuid": node.uuid_,  # Note: SDK uses uuid_ not uuid
                     "name": node.name,
                     "summary": node.summary,
-                    "labels": node.labels,
+                    "labels": node.labels if node.labels else [],
                     "created_at": node.created_at,
                     "updated_at": "",  # SDK doesn't provide updated_at
-                    "attributes": node.attributes
+                    "attributes": node.attributes if node.attributes else {}
                 }
                 transformed_nodes.append(transformed_node)
             
@@ -379,25 +378,24 @@ class ZepManager:
             return [], None
         
         try:
-            # Prepare parameters for the API call
-            params = {
-                "limit": limit,
-                "uuidCursor": cursor or ""
-            }
+            # Use the correct Python SDK method - following the working implementation pattern
+            edges = await self.client.graph.edge.get_by_user_id(
+                user_id,
+                uuid_cursor=cursor or "",
+                limit=limit
+            )
             
-            edges = await self.client.graph.edge.getByUserId(user_id, **params)
-            
-            # Transform edges to our expected format
+            # Transform edges to our expected format following the working implementation
             transformed_edges = []
             for edge in edges:
                 transformed_edge = {
-                    "uuid": edge.uuid,
+                    "uuid": edge.uuid_,  # Note: SDK uses uuid_ not uuid
                     "source_node_uuid": edge.source_node_uuid,
                     "target_node_uuid": edge.target_node_uuid,
                     "type": "",  # SDK doesn't provide type field
                     "name": edge.name,
                     "fact": edge.fact,
-                    "episodes": edge.episodes,
+                    "episodes": edge.episodes if edge.episodes else [],
                     "created_at": edge.created_at,
                     "updated_at": "",  # SDK doesn't provide updated_at
                     "valid_at": edge.valid_at,
