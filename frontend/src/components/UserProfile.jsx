@@ -87,25 +87,27 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
     <div className="user-profile">
       <div className="user-profile-header">
         <h3>User Settings</h3>
-        {!isEditing ? (
-          <button 
-            className="edit-profile-btn"
-            onClick={() => setIsEditing(true)}
-          >
-            Edit
-          </button>
-        ) : (
-          <button 
-            className="cancel-edit-btn"
-            onClick={() => {
-              setIsEditing(false);
-              setEditedStyle(profile.personality.style);
-              setEditedTone(profile.personality.tone);
-            }}
-          >
-            Cancel
-          </button>
-        )}
+        <div className="header-actions">
+          {!isEditing ? (
+            <button 
+              className="edit-profile-btn"
+              onClick={() => setIsEditing(true)}
+            >
+              Edit
+            </button>
+          ) : (
+            <button 
+              className="cancel-edit-btn"
+              onClick={() => {
+                setIsEditing(false);
+                setEditedStyle(profile.personality.style);
+                setEditedTone(profile.personality.tone);
+              }}
+            >
+              Cancel
+            </button>
+          )}
+        </div>
       </div>
       
       <div className="user-profile-content">

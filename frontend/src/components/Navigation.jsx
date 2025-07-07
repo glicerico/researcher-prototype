@@ -5,6 +5,7 @@ import ModelSelector from './ModelSelector';
 import UserDropdown from './UserDropdown';
 import UserProfile from './UserProfile';
 import UserSelector from './UserSelector';
+import KnowledgeGraphViewer from './graph/KnowledgeGraphViewer';
 import { getModels, getCurrentUser } from '../services/api';
 import { generateDisplayName } from '../utils/userUtils';
 import '../styles/Navigation.css';
@@ -26,6 +27,7 @@ const Navigation = () => {
   const [models, setModels] = useState({});
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
+  const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
   const [profileUpdateTime, setProfileUpdateTime] = useState(0);
 
   const isOnChatPage = location.pathname === '/';
@@ -187,6 +189,13 @@ const Navigation = () => {
               >
                 📊 Research Results
               </Link>
+              <button 
+                className={`nav-link knowledge-graph-btn ${showKnowledgeGraph ? 'active' : ''}`}
+                onClick={() => setShowKnowledgeGraph(true)}
+                title="View Knowledge Graph"
+              >
+                🕸️ Knowledge Graph
+              </button>
               <Link 
                 to="/admin" 
                 className={`nav-link admin-link ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
@@ -235,6 +244,18 @@ const Navigation = () => {
             <UserProfile 
               userId={userId} 
               onProfileUpdated={handleProfileUpdated} 
+            />
+          </div>
+        </div>
+      )}
+      
+      {showKnowledgeGraph && userId && (
+        <div className="profile-modal-overlay" onClick={() => setShowKnowledgeGraph(false)}>
+          <div className="profile-modal-content knowledge-graph-modal" onClick={(e) => e.stopPropagation()}>
+            <KnowledgeGraphViewer 
+              userId={userId} 
+              userName={userDisplayName || 'User'}
+              onClose={() => setShowKnowledgeGraph(false)}
             />
           </div>
         </div>

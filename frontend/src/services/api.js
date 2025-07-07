@@ -425,4 +425,41 @@ export const restartResearchEngine = async () => {
   }
 };
 
+// Graph API functions
+export const graphApi = {
+  /**
+   * Fetch graph data for a user or group
+   * @param {string} type - "user" or "group"
+   * @param {string} id - The user or group ID
+   * @returns {Promise} The graph data response
+   */
+  fetchGraphData: async (type, id) => {
+    try {
+      const response = await api.post('/api/graph/fetch', {
+        type,
+        id
+      });
+      return response.data;
+    } catch (error) {
+      console.error('Error fetching graph data:', error);
+      throw error;
+    }
+  },
+
+  /**
+   * Test graph connectivity for a user
+   * @param {string} userId - The user ID
+   * @returns {Promise} The test result
+   */
+  testGraphConnectivity: async (userId) => {
+    try {
+      const response = await api.get(`/api/graph/test/${userId}`);
+      return response.data;
+    } catch (error) {
+      console.error('Error testing graph connectivity:', error);
+      throw error;
+    }
+  }
+};
+
 export default api; 

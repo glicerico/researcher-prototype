@@ -49,6 +49,19 @@ All routes live under `/research/debug/*` and do **not** require admin auth – 
 * `POST /research/debug/update-config` – JSON body with any of: `threshold`, `boredom_rate`, `curiosity_decay`, `tiredness_decay`, `satisfaction_decay`
 * `POST /research/debug/active-topics` – list active topics for all users
 
+## 2.5. Knowledge Graph Debug Endpoints
+
+Routes for debugging the Knowledge Graph feature:
+
+* `POST /api/graph/fetch` – fetch graph data for a user
+  - Request body: `{"type": "user", "id": "user-id"}`
+  - Returns triplets (nodes + edges + relationships)
+
+Common issues:
+- Empty graphs: User needs conversations to populate Zep
+- "Zep service unavailable": Check `ZEP_API_KEY` and `ZEP_ENABLED=true`
+- API errors: Check Zep Cloud service status
+
 ## 3. Logging & Tracing
 
 * **Logging** – configurable via `logging_config.py`; emojis mark graph stages.  Use `configure_logging(level=logging.DEBUG)` for verbose output.
