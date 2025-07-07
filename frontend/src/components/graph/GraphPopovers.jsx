@@ -10,6 +10,25 @@ import { getNodeColor } from '../../utils/graph/nodeColors';
  * Simple Modal component to replace Radix UI Dialog
  */
 const Modal = ({ isOpen, onClose, children, title }) => {
+  // Handle ESC key to close modal
+  React.useEffect(() => {
+    if (!isOpen) return;
+
+    const handleKeyDown = (event) => {
+      if (event.key === 'Escape') {
+        onClose();
+      }
+    };
+
+    // Add event listener when modal is open
+    document.addEventListener('keydown', handleKeyDown);
+
+    // Cleanup event listener when modal closes or component unmounts
+    return () => {
+      document.removeEventListener('keydown', handleKeyDown);
+    };
+  }, [isOpen, onClose]);
+
   if (!isOpen) return null;
 
   return (

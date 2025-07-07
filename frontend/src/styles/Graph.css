@@ -116,23 +116,27 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.8);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 1000;
   animation: fadeIn 0.2s ease-out;
+  backdrop-filter: blur(4px);
 }
 
 .graph-modal-content {
   background-color: var(--bg-primary);
   border-radius: 12px;
-  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3), 0 10px 10px -5px rgba(0, 0, 0, 0.2);
   max-width: 600px;
   width: 90%;
   max-height: 80vh;
   overflow: hidden;
   animation: slideIn 0.3s ease-out;
+  border: 1px solid var(--border-color);
+  /* Ensure solid background in light mode */
+  background-color: #ffffff;
 }
 
 .graph-modal-header {
@@ -445,6 +449,8 @@ body.dark .graph-visualization-container {
 
 body.dark .graph-modal-content {
   background-color: #1e293b;
+  border: 1px solid #334155;
+  box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.6), 0 10px 10px -5px rgba(0, 0, 0, 0.4);
 }
 
 body.dark .graph-legend-dropdown {
