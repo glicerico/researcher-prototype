@@ -264,11 +264,38 @@ export const SessionProvider = ({ children }) => {
   );
 
   const startNewSession = useCallback(() => {
+    if (!userId) return;
+
+    // Generate a new session ID on the frontend to match the backend format
+    const now = new Date();
+    const year = now.getUTCFullYear();
+    const month = String(now.getUTCMonth() + 1).padStart(2, '0');
+    const day = String(now.getUTCDate()).padStart(2, '0');
+    const hours = String(now.getUTCHours()).padStart(2, '0');
+    const minutes = String(now.getUTCMinutes()).padStart(2, '0');
+    const seconds = String(now.getUTCSeconds()).padStart(2, '0');
+    // Mimic python's %f by padding milliseconds to 6 digits
+    const microseconds = String(now.getUTCMilliseconds()).padStart(3, '0') + '000';
+
+    const timestamp = `${year}${month}${day}_${hours}${minutes}${seconds}_${microseconds}`;
+    const newSessionId = `${userId}-${timestamp}`;
+
+    // Reset messages for the new session
     setMessages([
-      { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" }
+      { role: 'system', content: "Hello! I'm your AI assistant. How can I help you today?" },
     ]);
-    setSessionId(null);
-  }, []);
+
+    // Set the new session as active
+    setSessionId(newSessionId);
+
+    // Add to history and persist
+    setSessionHistory((prev) => {
+      if (prev.includes(newSessionId)) return prev;
+      const updated = [...prev, newSessionId];
+      localStorage.setItem(`session_history_${userId}`, JSON.stringify(updated));
+      return updated;
+    });
+  }, [userId]);
 
   const value = {
     // State
