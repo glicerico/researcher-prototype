@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import ModelSelector from './ModelSelector';
@@ -12,6 +12,7 @@ import '../styles/Navigation.css';
 
 const Navigation = () => {
   const location = useLocation();
+  const dropdownRef = useRef(null);
   const { 
     userDisplayName, 
     userId,
@@ -29,6 +30,8 @@ const Navigation = () => {
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
   const [profileUpdateTime, setProfileUpdateTime] = useState(0);
+  const [isDashboardsOpen, setIsDashboardsOpen] = useState(false);
+
 
   const isOnChatPage = location.pathname === '/';
 
@@ -47,6 +50,20 @@ const Navigation = () => {
     
     loadModels();
   }, [isOnChatPage]);
+
+  // Close dropdown on click outside
+  useEffect(() => {
+    const handleClickOutside = (event) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
+        setIsDashboardsOpen(false);
+      }
+    };
+
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, []);
 
   // Load user data when userId changes (for chat page)
   useEffect(() => {
@@ -177,25 +194,36 @@ const Navigation = () => {
               >
                 💬 Chat
               </Link>
-              <Link 
-                to="/topics" 
-                className={`nav-link ${location.pathname === '/topics' ? 'active' : ''}`}
-              >
-                🔍 Research Topics
-              </Link>
-              <Link 
-                to="/research-results" 
-                className={`nav-link ${location.pathname === '/research-results' ? 'active' : ''}`}
-              >
-                📊 Research Results
-              </Link>
-              <button 
-                className={`nav-link knowledge-graph-btn ${showKnowledgeGraph ? 'active' : ''}`}
-                onClick={() => setShowKnowledgeGraph(true)}
-                title="View Knowledge Graph"
-              >
-                🕸️ Knowledge Graph
-              </button>
+              
+              <div className="nav-dropdown" ref={dropdownRef}>
+                <button 
+                  className={`nav-link dropdown-toggle ${isDashboardsOpen ? 'active' : ''}`} 
+                  onClick={() => setIsDashboardsOpen(prev => !prev)}
+                >
+                  <span>📊 Dashboards</span>
+                </button>
+                {isDashboardsOpen && (
+                  <div className="dropdown-menu">
+                    <Link to="/topics" className="dropdown-item" onClick={() => setIsDashboardsOpen(false)}>
+                      🔍 Research Topics
+                    </Link>
+                    <Link to="/research-results" className="dropdown-item" onClick={() => setIsDashboardsOpen(false)}>
+                      📊 Research Results
+                    </Link>
+                    <button
+                      className="dropdown-item"
+                      onClick={() => {
+                        setShowKnowledgeGraph(true);
+                        setIsDashboardsOpen(false);
+                      }}
+                      title="View Knowledge Graph"
+                    >
+                      🕸️ Knowledge Graph
+                    </button>
+                  </div>
+                )}
+              </div>
+
               <Link 
                 to="/admin" 
                 className={`nav-link admin-link ${location.pathname.startsWith('/admin') ? 'active' : ''}`}
