@@ -1,7 +1,7 @@
 """
 Initializer node for setting up user and state.
 """
-import uuid
+from datetime import datetime
 from langchain_core.messages import trim_messages, HumanMessage
 from nodes.base import (
     ChatState, 
@@ -41,7 +41,8 @@ async def initializer_node(state: ChatState) -> ChatState:
     session_id = state.get("session_id", None)
     if not session_id:
         # Generate a new session ID for this conversation thread
-        session_id = f"{user_id}-{str(uuid.uuid4())[:8]}"
+        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+        session_id = f"{user_id}-{timestamp}"
         state["session_id"] = session_id
         logger.info(f"🔄 Initializer: Generated new session ID: {session_id}")
         
