@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 import { 
@@ -14,6 +14,7 @@ const ResearchResultsDashboard = () => {
   const [researchData, setResearchData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
+  const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [expandedTopics, setExpandedTopics] = useState(new Set());
   const [bookmarkedFindings, setBookmarkedFindings] = useState(new Set());
   const [filters, setFilters] = useState({
@@ -23,16 +24,27 @@ const ResearchResultsDashboard = () => {
     sortBy: 'date',
     sortOrder: 'desc'
   });
+  const [sortBy, setSortBy] = useState('date');
+  const [sortOrder, setSortOrder] = useState('desc');
+  const scrollContainerRef = useRef(null);
+  const scrollPositionRef = useRef(null);
 
   // Load research data
-  const loadResearchData = useCallback(async () => {
+  const loadResearchData = useCallback(async (isBackground = false) => {
     if (!userId) {
       setLoading(false);
       return;
     }
 
     try {
-      setLoading(true);
+      if (!isBackground) {
+        setLoading(true);
+      } else {
+        setIsBackgroundRefreshing(true);
+        if (scrollContainerRef.current) {
+          scrollPositionRef.current = scrollContainerRef.current.scrollTop;
+        }
+      }
       setError(null);
       
       const findingsResponse = await getResearchFindings(userId, null, filters.unreadOnly);
@@ -62,12 +74,16 @@ const ResearchResultsDashboard = () => {
       console.error('Error loading research data:', err);
       setError(`Failed to load research data: ${err.message || 'Please try again.'}`);
     } finally {
-      setLoading(false);
+      if (!isBackground) {
+        setLoading(false);
+      } else {
+        setIsBackgroundRefreshing(false);
+      }
     }
   }, [userId, filters.unreadOnly]);
 
   useEffect(() => {
-    loadResearchData();
+    loadResearchData(false);
   }, [loadResearchData]);
 
   // Auto-refresh research data every 10 seconds when user is selected
@@ -75,11 +91,18 @@ const ResearchResultsDashboard = () => {
     if (!userId) return;
 
     const interval = setInterval(() => {
-      loadResearchData();
+      loadResearchData(true);
     }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval);
   }, [userId, loadResearchData]);
+
+  useLayoutEffect(() => {
+    if (scrollContainerRef.current && scrollPositionRef.current !== null) {
+      scrollContainerRef.current.scrollTop = scrollPositionRef.current;
+      scrollPositionRef.current = null; // Reset after use
+    }
+  }, [isBackgroundRefreshing, researchData]);
 
   // Filter and sort topics
   const filteredTopics = useMemo(() => {
@@ -304,42 +327,39 @@ const ResearchResultsDashboard = () => {
   const hasActiveFilters = filters.searchTerm || filters.dateRange !== 'all' || filters.unreadOnly;
 
   return (
-    <div className="research-dashboard">
+    <div className="research-dashboard" ref={scrollContainerRef}>
       {/* Header */}
-      <div className="research-header">
-        <div className="header-content">
-          <h1>Research Results</h1>
-          <p className="header-subtitle">
-            Explore and manage AI-generated research findings from your active topics
-          </p>
+      <header className="research-dashboard-header">
+        <h1>Research Feed</h1>
+        {isBackgroundRefreshing && <div className="background-refresh-indicator">Updating...</div>}
+        <p>Explore findings from the autonomous research engine.</p>
+      </header>
+      
+      {/* Stats Overview */}
+      <div className="stats-overview">
+        <div className="stat-card highlight">
+          <div className="stat-number">{unreadCount}</div>
+          <div className="stat-label">Unread</div>
         </div>
-        
-        {/* Stats Overview */}
-        <div className="stats-overview">
-          <div className="stat-card highlight">
-            <div className="stat-number">{unreadCount}</div>
-            <div className="stat-label">Unread</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">{totalTopics}</div>
-            <div className="stat-label">Topics</div>
-          </div>
-          <div className="stat-card">
-            <div className="stat-number">{totalFindings}</div>
-            <div className="stat-label">Total Findings</div>
-          </div>
+        <div className="stat-card">
+          <div className="stat-number">{totalTopics}</div>
+          <div className="stat-label">Topics</div>
         </div>
+        <div className="stat-card">
+          <div className="stat-number">{totalFindings}</div>
+          <div className="stat-label">Total Findings</div>
+        </div>
+      </div>
 
-        {/* Header Actions */}
-        <div className="header-actions">
-          <button 
-            className="export-btn"
-            onClick={() => exportFindings('text')}
-            disabled={totalFindings === 0}
-          >
-            📄 Export Results
-          </button>
-        </div>
+      {/* Header Actions */}
+      <div className="header-actions">
+        <button 
+          className="export-btn"
+          onClick={() => exportFindings('text')}
+          disabled={totalFindings === 0}
+        >
+          📄 Export Results
+        </button>
       </div>
 
       {/* Error Message */}
