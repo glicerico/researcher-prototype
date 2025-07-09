@@ -315,6 +315,7 @@ class ResearchManager:
                         topic_id,
                         user_id,
                     )
+                    return {"success": True, "updated_topic": updated_topic}
                 else:
                     return {
                         "success": False,
