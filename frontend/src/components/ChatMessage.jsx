@@ -4,11 +4,30 @@ import '../styles/ChatMessage.css';
 
 const ChatMessage = ({ role, content, routingInfo }) => {
   const [showRoutingInfo, setShowRoutingInfo] = useState(false);
-  
+  const [showSources, setShowSources] = useState(false);
+
+  // Split content into main response and sources
+  const parts = content.split('\n\n**Sources:**');
+  const mainContent = parts[0];
+  const sourcesContent = parts.length > 1 ? parts[1] : null;
+
   return (
     <div className={`message ${role}`}>
       <div className="message-content">
-        <ReactMarkdown>{content}</ReactMarkdown>
+        <ReactMarkdown>{mainContent}</ReactMarkdown>
+        {sourcesContent && (
+          <div className="sources-container">
+            <button 
+              className="sources-toggle"
+              onClick={() => setShowSources(!showSources)}
+            >
+              {showSources ? 'Hide Sources' : 'Show Sources'}
+            </button>
+            {showSources && (
+              <ReactMarkdown>{`**Sources:**${sourcesContent}`}</ReactMarkdown>
+            )}
+          </div>
+        )}
       </div>
       
       {role === 'assistant' && routingInfo && (

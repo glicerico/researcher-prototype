@@ -57,15 +57,34 @@
 }
 
 .message-metadata {
-  margin-top: 8px;
-  border-top: 1px dashed var(--border-color);
-  padding-top: 8px;
-  font-size: 0.85em;
+  margin-top: 10px;
+  font-size: 0.8rem;
+  color: #888;
+  text-align: right;
+}
+
+.sources-container {
+  margin-top: 10px;
+}
+
+.sources-toggle {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-bottom: 5px;
+}
+
+.sources-toggle:hover {
+  background-color: #0056b3;
 }
 
 .routing-info-toggle {
   background: none;
-  border: none;
+  border: 1px solid #ccc;
   color: var(--primary-color);
   cursor: pointer;
   font-size: 0.85em;
