@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import '../styles/ChatMessage.css';
 
-const ChatMessage = ({ role, content, routingInfo, followUpQuestions }) => {
+const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUpClick }) => {
   const [showRoutingInfo, setShowRoutingInfo] = useState(false);
   const [showSources, setShowSources] = useState(false);
 
@@ -33,7 +33,11 @@ const ChatMessage = ({ role, content, routingInfo, followUpQuestions }) => {
                 <h4 className="follow-up-header">Suggested Questions:</h4>
                 <div className="follow-up-questions">
                 {followUpQuestions.map((question, index) => (
-                    <button key={index} className="follow-up-question">
+                    <button 
+                        key={index} 
+                        className="follow-up-question"
+                        onClick={() => onFollowUpClick(question)}
+                    >
                     {question}
                     </button>
                 ))}

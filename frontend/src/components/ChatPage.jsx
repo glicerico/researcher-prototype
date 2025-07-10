@@ -23,6 +23,7 @@ const ChatPage = () => {
   // Local state for UI components
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
+  const [chatInputValue, setChatInputValue] = useState('');
   
   // Topics sidebar state
   const [isTopicsSidebarCollapsed, setIsTopicsSidebarCollapsed] = useState(false);
@@ -56,6 +57,7 @@ const ChatPage = () => {
     // Add user message to chat
     const updatedMessages = [...messages, { role: 'user', content: message }];
     updateMessages(updatedMessages);
+    setChatInputValue(''); // Clear the input after sending
     
     // Show typing indicator
     setIsTyping(true);
@@ -134,6 +136,12 @@ const ChatPage = () => {
       setIsTyping(false);
       setIsLoading(false);
     }
+  };
+
+  const handleFollowUpClick = (question) => {
+    setChatInputValue(question);
+    // Optional: focus the input field
+    document.getElementById('user-input')?.focus();
   };
 
   // Add a ref to track user scroll position
@@ -241,6 +249,7 @@ const ChatPage = () => {
               content={msg.content} 
               routingInfo={msg.routingInfo}
               followUpQuestions={msg.follow_up_questions}
+              onFollowUpClick={handleFollowUpClick}
             />
           ))}
           {isTyping && <TypingIndicator />}
@@ -255,11 +264,16 @@ const ChatPage = () => {
             </button>
           )}
         </div>
-        
+
         <ChatInput 
+          value={chatInputValue}
+          onChange={setChatInputValue}
           onSendMessage={handleSendMessage} 
           disabled={isLoading}
         />
+
+        {isTopicsSidebarCollapsed && <div className="sidebar-placeholder" />}
+
       </div>
 
       {/* Conversation Topics Sidebar */}
