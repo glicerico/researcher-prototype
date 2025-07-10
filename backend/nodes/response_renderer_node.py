@@ -12,9 +12,9 @@ from nodes.base import (
     config,
     get_current_datetime_str
 )
+from llm_models import FormattedResponse
 from utils import get_last_user_message
 import re
-
 
 def response_renderer_node(state: ChatState) -> ChatState:
     """Post-processes the LLM output to enforce style, insert follow-up suggestions, and apply user persona settings."""
@@ -87,9 +87,13 @@ def response_renderer_node(state: ChatState) -> ChatState:
     """))
     
     try:
+        # Create structured output model
+        structured_renderer = renderer_llm.with_structured_output(FormattedResponse)
+
         # Process the response with the renderer
-        llm_response = renderer_llm.invoke(renderer_messages)
-        stylized_response = llm_response.content
+        llm_response = structured_renderer.invoke(renderer_messages)
+        stylized_response = llm_response.main_response
+        follow_up_questions = llm_response.follow_up_questions
 
         # Create the URL map from the raw citations list
         citation_url_map = {i + 1: url for i, url in enumerate(citations)}
@@ -119,6 +123,11 @@ def response_renderer_node(state: ChatState) -> ChatState:
                 sources_section = "\n\n**Sources:**\n" + "\n".join(sources_list)
                 final_response += sources_section
         
+        # If there are follow-up questions, append them to the formatted response
+        if follow_up_questions:
+            follow_up_section = "\n\n" + "\n".join(follow_up_questions)
+            final_response += follow_up_section
+
         # Log the formatted response
         display_formatted = final_response[:75] + "..." if len(final_response) > 75 else final_response
         logger.info(f"✨ Renderer: Produced formatted response: \"{display_formatted}\"")
