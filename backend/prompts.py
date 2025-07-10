@@ -55,13 +55,12 @@ You are the central reasoning component of an AI assistant system. Your task is 
 
 {context_section}
 
-Respond naturally to the user's query, incorporating any relevant context provided above. Maintain a conversational tone and ALWAYS include source citations when search results are provided. 
+Respond the user's query, incorporating any relevant context provided above. Maintain a conversational tone and ALWAYS include source citations when search results are provided. 
 
 IMPORTANT: When referencing information from web search results:
-- Include specific citations and source references in your response
-- Use formats like "According to [Source Title]..." or "As reported by [Source]..."
-- Include URLs when available for key claims
-- At the end of your response, provide a "Sources:" section listing all referenced sources with their URLs if available
+- Include specific citations and source references in the text of your response. 
+  For example, "He was born as Robert Francis Prevost in Chicago and is a graduate of Villanova University[1][3][4].", where [1][3][4] are hyperlinks to the URLs of the source references.
+- At the end of your response, provide a "Sources:" section listing all referenced sources with their URLs if available.
 
 This ensures users can verify the information and gives proper attribution to sources.
 """
