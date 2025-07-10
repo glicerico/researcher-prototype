@@ -53,12 +53,6 @@ class FormattedResponse(BaseModel):
         default_factory=list
     )
     
-    @field_validator('sources')
-    def validate_sources(cls, v):
-        if v and len(v) > 10:
-            return v[:10]  # Limit to maximum 10 sources
-        return v
-    
     @field_validator('follow_up_questions')
     def validate_follow_up_questions(cls, v):
         if v and len(v) > 2:
