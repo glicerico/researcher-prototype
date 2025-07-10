@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { getTopSessionTopics, deleteTopicById, enableTopicResearchById, disableTopicResearchById } from '../services/api';
+import { getSessionTopicSuggestions, deleteTopicById, enableTopicResearchById, disableTopicResearchById } from '../services/api';
 import TopicSidebarItem from './TopicSidebarItem';
 import '../styles/ConversationTopics.css';
 
@@ -20,13 +20,32 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
       setLoading(true);
       setError(null);
       
-      const response = await getTopSessionTopics(sessionId, 3);
-      setTopics(response.topics || []);
+      const response = await getSessionTopicSuggestions(sessionId);
+      const allTopics = response.topic_suggestions || [];
+      
+      // Get the 3 latest topics
+      const latestTopics = [...allTopics]
+        .sort((a, b) => b.suggested_at - a.suggested_at)
+        .slice(0, 3);
+        
+      const latestTopicIds = new Set(latestTopics.map(t => t.topic_id));
+
+      // Get the top 2 confidence topics that are NOT already in the latest list
+      const otherTopTopics = [...allTopics]
+        .sort((a, b) => b.confidence_score - a.confidence_score)
+        .filter(t => !latestTopicIds.has(t.topic_id))
+        .slice(0, 2);
+        
+      // Combine and sort for display
+      const finalTopics = [...latestTopics, ...otherTopTopics];
+      finalTopics.sort((a, b) => b.suggested_at - a.suggested_at);
+      
+      setTopics(finalTopics);
       setLastUpdate(Date.now());
       
       // Notify parent component of topic update
       if (onTopicUpdate) {
-        onTopicUpdate(response.topics || []);
+        onTopicUpdate(finalTopics);
       }
     } catch (err) {
       console.error('Error fetching topics:', err);
