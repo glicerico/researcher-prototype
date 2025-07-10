@@ -328,29 +328,13 @@ const FlowVisualization = ({ onEditPrompt }) => {
 
   if (loading) {
     return (
-      <div className="flow-visualization loading">
-        <div className="loading-spinner">
-          <div className="spinner"></div>
-          <p>Loading flow data...</p>
-        </div>
+      <div className="admin-loading">
+        <div className="loading-spinner"></div>
+        <p>Loading flow data...</p>
       </div>
     );
   }
-
-  if (error) {
-    return (
-      <div className="flow-visualization error">
-        <div className="error-message">
-          <h3>Error</h3>
-          <p>{error}</p>
-          <button onClick={loadFlowData} className="btn btn-primary">
-            Retry
-          </button>
-        </div>
-      </div>
-    );
-  }
-
+  
   return (
     <div className="flow-visualization">
       <div className="flow-header">
@@ -358,47 +342,21 @@ const FlowVisualization = ({ onEditPrompt }) => {
         <p>Understand how prompts intervene in conversation flows</p>
       </div>
 
+      {error && (
+        <div className="error-banner">
+          <span className="error-icon">⚠️</span>
+          {error}
+          <button onClick={loadFlowData} className="btn-primary" style={{marginLeft: '1rem'}}>
+            Retry
+          </button>
+        </div>
+      )}
+
       {renderFlowSummary()}
-
-      <div className="flow-controls">
-        <div className="graph-selector">
-          <label>Select Graph:</label>
-          <select 
-            value={selectedGraph} 
-            onChange={(e) => setSelectedGraph(e.target.value)}
-            className="form-select"
-          >
-            <option value="main">Main Chat Flow</option>
-            <option value="research">Research Flow</option>
-          </select>
-        </div>
-        
-        <button 
-          onClick={() => generateDiagrams(true)}
-          disabled={generating}
-          className="btn btn-outline-primary"
-        >
-          {generating ? 'Generating...' : 'Regenerate Diagrams'}
-        </button>
-      </div>
-
-      <div className="flow-content">
-        <div className="flow-main">
-          <div className="diagram-section">
-            <h3>{selectedGraph === 'main' ? 'Main Chat' : 'Research'} Flow Diagram</h3>
-            {renderDiagram()}
-          </div>
-
-          <div className="nodes-section">
-            {renderNodeList()}
-          </div>
-        </div>
-
-        <div className="flow-sidebar">
-          {selectedNode && renderNodeDetails()}
-          {!selectedNode && renderPromptUsage()}
-        </div>
-      </div>
+      {renderDiagram()}
+      {renderNodeList()}
+      {renderNodeDetails()}
+      {renderPromptUsage()}
     </div>
   );
 };
