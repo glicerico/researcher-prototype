@@ -34,15 +34,15 @@ const TopicsFilters = ({ filters, onFiltersChange, topicsCount }) => {
               onChange={(e) => handleFilterChange('searchTerm', e.target.value)}
               className="search-input"
             />
-            {filters.searchTerm && (
-              <button 
-                className="clear-search"
-                onClick={() => handleFilterChange('searchTerm', '')}
-                title="Clear search"
-              >
-                ✕
-              </button>
-            )}
+            <button 
+              className="clear-search"
+              onClick={() => handleFilterChange('searchTerm', '')}
+              title={filters.searchTerm ? "Clear search" : "No search to clear"}
+              aria-label={filters.searchTerm ? "Clear search" : "No search to clear"}
+              disabled={!filters.searchTerm}
+            >
+              ✕
+            </button>
           </div>
         </div>
 
@@ -63,6 +63,7 @@ const TopicsFilters = ({ filters, onFiltersChange, topicsCount }) => {
               className={`sort-order-btn ${filters.sortOrder === 'desc' ? 'desc' : 'asc'}`}
               onClick={() => handleFilterChange('sortOrder', filters.sortOrder === 'desc' ? 'asc' : 'desc')}
               title={`Sort ${filters.sortOrder === 'desc' ? 'ascending' : 'descending'}`}
+              aria-label={`Sort ${filters.sortOrder === 'desc' ? 'ascending' : 'descending'}`}
             >
               {filters.sortOrder === 'desc' ? '↓' : '↑'}
             </button>

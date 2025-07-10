@@ -11,7 +11,7 @@
 .filters-row {
   display: flex;
   gap: 1rem;
-  align-items: end;
+  align-items: flex-end;
   flex-wrap: wrap;
   margin-bottom: 0.75rem;
 }
@@ -20,6 +20,7 @@
   display: flex;
   flex-direction: column;
   gap: 0.375rem;
+  min-width: 0; /* Prevent flex items from overflowing */
 }
 
 .filter-group label {
@@ -28,27 +29,32 @@
   color: var(--text-secondary-color);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+  white-space: nowrap;
 }
 
 /* Search Group */
 .search-group {
-  flex: 1;
-  min-width: 240px;
+  flex: 2;
+  min-width: 280px;
+  max-width: 500px;
 }
 
 .search-input-wrapper {
   position: relative;
+  display: flex;
+  align-items: center;
 }
 
 .search-input {
   width: 100%;
-  padding: 0.625rem 2.5rem 0.625rem 0.75rem;
+  padding: 0.75rem 2.75rem 0.75rem 0.875rem;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.875rem;
   background: var(--input-background-color);
   color: var(--input-text-color);
   transition: all 0.2s ease;
+  box-sizing: border-box;
 }
 
 .search-input:focus {
@@ -60,31 +66,52 @@
 
 .clear-search {
   position: absolute;
-  right: 0.5rem;
+  right: 0.625rem;
   top: 50%;
   transform: translateY(-50%);
   background: none;
   border: none;
   color: var(--text-secondary-color);
   cursor: pointer;
-  padding: 0.25rem;
-  border-radius: 3px;
+  padding: 0.375rem;
+  border-radius: 4px;
   transition: all 0.2s ease;
+  font-size: 0.875rem;
+  line-height: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
 }
 
-.clear-search:hover {
+.clear-search:hover:not(:disabled) {
   background: var(--hover-color);
   color: var(--text-color);
 }
 
+.clear-search:disabled {
+  opacity: 0.3;
+  cursor: not-allowed;
+  color: var(--text-secondary-color);
+}
+
 /* Sort Group */
+.sort-group {
+  flex: 1;
+  min-width: 200px;
+  max-width: 280px;
+}
+
 .sort-controls {
   display: flex;
   gap: 0.5rem;
+  align-items: center;
+  width: 100%;
 }
 
 .sort-controls select {
-  padding: 0.625rem 0.75rem;
+  padding: 0.75rem 0.875rem;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.875rem;
@@ -92,7 +119,9 @@
   color: var(--input-text-color);
   cursor: pointer;
   transition: all 0.2s ease;
-  min-width: 120px;
+  flex: 1;
+  min-width: 0;
+  box-sizing: border-box;
 }
 
 .sort-controls select:focus {
@@ -102,7 +131,7 @@
 }
 
 .sort-order-btn {
-  padding: 0.625rem 0.75rem;
+  padding: 0.75rem;
   border: 1px solid var(--border-color);
   border-radius: 6px;
   background: var(--surface-color);
@@ -111,7 +140,12 @@
   font-size: 1rem;
   font-weight: bold;
   transition: all 0.2s ease;
-  min-width: 40px;
+  width: 44px;
+  height: 44px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
 }
 
 .sort-order-btn:hover {
@@ -133,18 +167,25 @@
 }
 
 /* Clear Group */
+.clear-group {
+  display: flex;
+  align-items: flex-end;
+  flex-shrink: 0;
+}
+
 .clear-filters-btn {
   background: var(--button-background-color);
   color: var(--button-text-color);
   border: none;
   border-radius: 6px;
-  padding: 0.625rem 0.875rem;
+  padding: 0.75rem 1rem;
   font-size: 0.8rem;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
-  margin-top: 1.25rem;
   white-space: nowrap;
+  height: 44px;
+  box-sizing: border-box;
 }
 
 .clear-filters-btn:hover {
@@ -172,24 +213,75 @@
 }
 
 /* Responsive Design */
+@media (max-width: 1024px) {
+  .search-group {
+    flex: 1.5;
+    min-width: 240px;
+    max-width: 400px;
+  }
+  
+  .sort-group {
+    flex: 1;
+    min-width: 180px;
+    max-width: 240px;
+  }
+}
+
 @media (max-width: 768px) {
   .filters-row {
     flex-direction: column;
     align-items: stretch;
-    gap: 0.75rem;
+    gap: 1rem;
   }
 
   .search-group {
     min-width: auto;
+    max-width: none;
+  }
+  
+  .sort-group {
+    min-width: auto;
   }
 
   .sort-controls {
-    flex-direction: column;
+    flex-direction: row;
+    justify-content: space-between;
+  }
+  
+  .sort-controls select {
+    flex: 1;
+    min-width: 0;
   }
 
   .results-summary {
     flex-direction: column;
     align-items: flex-start;
     gap: 0.375rem;
+  }
+}
+
+@media (max-width: 480px) {
+  .topics-filters {
+    padding: 0.875rem;
+  }
+  
+  .search-input {
+    padding: 0.625rem 2.5rem 0.625rem 0.75rem;
+  }
+  
+  .clear-search {
+    right: 0.5rem;
+    width: 20px;
+    height: 20px;
+  }
+  
+  .sort-controls {
+    gap: 0.375rem;
+  }
+  
+  .sort-order-btn {
+    width: 36px;
+    height: 36px;
+    font-size: 0.875rem;
   }
 } 
