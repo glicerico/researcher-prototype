@@ -112,6 +112,7 @@ const ChatPage = () => {
         role: 'assistant', 
         content: response.response,
         routingInfo,
+        follow_up_questions: response.follow_up_questions || [],
       };
       
       updateMessages(prev => [...prev, assistantMessage]);
@@ -239,6 +240,7 @@ const ChatPage = () => {
               role={msg.role} 
               content={msg.content} 
               routingInfo={msg.routingInfo}
+              followUpQuestions={msg.follow_up_questions}
             />
           ))}
           {isTyping && <TypingIndicator />}

@@ -123,10 +123,9 @@ def response_renderer_node(state: ChatState) -> ChatState:
                 sources_section = "\n\n**Sources:**\n" + "\n".join(sources_list)
                 final_response += sources_section
         
-        # If there are follow-up questions, append them to the formatted response
+        # Add follow-up questions to the workflow context to be used in the API response
         if follow_up_questions:
-            follow_up_section = "\n\n" + "\n".join(follow_up_questions)
-            final_response += follow_up_section
+            state["workflow_context"]["follow_up_questions"] = follow_up_questions
 
         # Log the formatted response
         display_formatted = final_response[:75] + "..." if len(final_response) > 75 else final_response

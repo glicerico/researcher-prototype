@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import '../styles/ChatMessage.css';
 
-const ChatMessage = ({ role, content, routingInfo }) => {
+const ChatMessage = ({ role, content, routingInfo, followUpQuestions }) => {
   const [showRoutingInfo, setShowRoutingInfo] = useState(false);
   const [showSources, setShowSources] = useState(false);
 
@@ -27,6 +27,18 @@ const ChatMessage = ({ role, content, routingInfo }) => {
               <ReactMarkdown>{`**Sources:**${sourcesContent}`}</ReactMarkdown>
             )}
           </div>
+        )}
+        {followUpQuestions && followUpQuestions.length > 0 && (
+            <div className="follow-up-container">
+                <h4 className="follow-up-header">Suggested Questions:</h4>
+                <div className="follow-up-questions">
+                {followUpQuestions.map((question, index) => (
+                    <button key={index} className="follow-up-question">
+                    {question}
+                    </button>
+                ))}
+                </div>
+            </div>
         )}
       </div>
       
