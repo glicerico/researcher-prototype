@@ -36,7 +36,6 @@
 .search-group {
   flex: 2;
   min-width: 280px;
-  max-width: 500px;
 }
 
 .search-input-wrapper {
@@ -55,6 +54,7 @@
   color: var(--input-text-color);
   transition: all 0.2s ease;
   box-sizing: border-box;
+  min-width: 280px;
 }
 
 .search-input:focus {
@@ -98,9 +98,7 @@
 
 /* Sort Group */
 .sort-group {
-  flex: 1;
-  min-width: 200px;
-  max-width: 280px;
+  flex: 0 1 280px;
 }
 
 .sort-controls {
