@@ -42,6 +42,7 @@ class ChatResponse(BaseModel):
     user_id: Optional[str] = None
     session_id: Optional[str] = None  # Return the session ID used
     suggested_topics: List[TopicSuggestion] = []  # Research-worthy topics from conversation
+    follow_up_questions: List[str] = []  # Optional follow up questions
 
 
 class UserSummary(BaseModel):

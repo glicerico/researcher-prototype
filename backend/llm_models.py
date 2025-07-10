@@ -46,22 +46,12 @@ class TopicSuggestions(BaseModel):
 
 
 class FormattedResponse(BaseModel):
-    """Formatted assistant response with proper style and tone."""
-    main_response: str = Field(description="The formatted main response content, styled according to the specified tone and style")
-    sources: Optional[List[str]] = Field(
-        default=None,
-        description="Optional list of sources, citations, or references mentioned in the response. Include all URLs, source titles, and attribution information exactly as provided in the original response."
+    """A formatted response with optional follow-up questions."""
+    main_response: str = Field(description="The main, formatted response content.")
+    follow_up_questions: List[str] = Field(
+        description="A list of 1-2 relevant follow-up questions.",
+        default_factory=list
     )
-    follow_up_questions: Optional[List[str]] = Field(
-        default=None, 
-        description="Optional list of 1-2 relevant follow-up questions that naturally extend from the response content. Only include if they add value."
-    )
-    
-    @field_validator('sources')
-    def validate_sources(cls, v):
-        if v and len(v) > 10:
-            return v[:10]  # Limit to maximum 10 sources
-        return v
     
     @field_validator('follow_up_questions')
     def validate_follow_up_questions(cls, v):

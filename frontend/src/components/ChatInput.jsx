@@ -1,14 +1,11 @@
-import React, { useState } from 'react';
+import React from 'react';
 import '../styles/ChatInput.css';
 
-const ChatInput = ({ onSendMessage, disabled = false }) => {
-  const [message, setMessage] = useState('');
-
+const ChatInput = ({ value, onChange, onSendMessage, disabled = false }) => {
   const handleSubmit = (e) => {
     e.preventDefault();
-    if (message.trim() && !disabled) {
-      onSendMessage(message);
-      setMessage('');
+    if (value.trim() && !disabled) {
+      onSendMessage(value);
     }
   };
 
@@ -23,8 +20,8 @@ const ChatInput = ({ onSendMessage, disabled = false }) => {
     <div className={`chat-input-container ${disabled ? 'disabled' : ''}`}>
       <textarea
         id="user-input"
-        value={message}
-        onChange={(e) => setMessage(e.target.value)}
+        value={value}
+        onChange={(e) => onChange(e.target.value)}
         onKeyDown={handleKeyDown}
         placeholder={disabled ? "Processing..." : "Type your message here..."}
         rows={3}
@@ -33,7 +30,7 @@ const ChatInput = ({ onSendMessage, disabled = false }) => {
       <button 
         id="send-button" 
         onClick={handleSubmit}
-        disabled={disabled || !message.trim()}
+        disabled={disabled || !value.trim()}
         className={disabled ? 'disabled' : ''}
       >
         {disabled ? 'Wait...' : 'Send'}

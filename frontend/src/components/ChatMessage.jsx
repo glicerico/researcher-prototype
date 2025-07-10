@@ -1,12 +1,50 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import '../styles/ChatMessage.css';
 
-const ChatMessage = ({ role, content, routingInfo }) => {
+const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUpClick }) => {
   const [showRoutingInfo, setShowRoutingInfo] = useState(false);
-  
+  const [showSources, setShowSources] = useState(false);
+
+  // Split content into main response and sources
+  const parts = content.split('\n\n**Sources:**');
+  const mainContent = parts[0];
+  const sourcesContent = parts.length > 1 ? parts[1] : null;
+
   return (
     <div className={`message ${role}`}>
-      <div className="message-content">{content}</div>
+      <div className="message-content">
+        <ReactMarkdown>{mainContent}</ReactMarkdown>
+        {sourcesContent && (
+          <div className="sources-container">
+            <button 
+              className="sources-toggle"
+              onClick={() => setShowSources(!showSources)}
+            >
+              {showSources ? 'Hide Sources' : 'Show Sources'}
+            </button>
+            {showSources && (
+              <ReactMarkdown>{`**Sources:**${sourcesContent}`}</ReactMarkdown>
+            )}
+          </div>
+        )}
+        {followUpQuestions && followUpQuestions.length > 0 && (
+            <div className="follow-up-container">
+                <h4 className="follow-up-header">Suggested Questions:</h4>
+                <div className="follow-up-questions">
+                {followUpQuestions.map((question, index) => (
+                    <button 
+                        key={index} 
+                        className="follow-up-question"
+                        onClick={() => onFollowUpClick(question)}
+                    >
+                    {question}
+                    </button>
+                ))}
+                </div>
+            </div>
+        )}
+      </div>
       
       {role === 'assistant' && routingInfo && (
         <div className="message-metadata">

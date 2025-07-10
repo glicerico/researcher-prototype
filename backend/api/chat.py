@@ -92,6 +92,7 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
             user_id=user_id,
             session_id=result.get("session_id"),
             suggested_topics=[],
+            follow_up_questions=result.get("workflow_context", {}).get("follow_up_questions", []),
         )
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
