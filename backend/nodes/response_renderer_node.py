@@ -8,11 +8,12 @@ from nodes.base import (
     AIMessage, 
     SystemMessage,
     ChatOpenAI,
-    FormattedResponse,
     RESPONSE_RENDERER_SYSTEM_PROMPT,
     config,
     get_current_datetime_str
 )
+from utils import get_last_user_message
+import re
 
 
 def response_renderer_node(state: ChatState) -> ChatState:
@@ -31,6 +32,10 @@ def response_renderer_node(state: ChatState) -> ChatState:
             content=f"I apologize, but I encountered an error generating a response: {error}"
         ))
         return state
+    
+    # Retrieve citation data from the workflow context
+    citations = state.get("workflow_context", {}).get("citations", [])
+    search_sources = state.get("workflow_context", {}).get("search_sources", [])
     
     # Log the raw response
     display_raw = raw_response[:75] + "..." if len(raw_response) > 75 else raw_response
@@ -51,9 +56,6 @@ def response_renderer_node(state: ChatState) -> ChatState:
         max_tokens=1500,  # Allow for extra tokens for formatting and follow-ups 
         api_key=config.OPENAI_API_KEY
     )
-    
-    # Create structured output model
-    structured_renderer = renderer_llm.with_structured_output(FormattedResponse)
     
     # Create a system prompt for the renderer
     system_message = SystemMessage(content=RESPONSE_RENDERER_SYSTEM_PROMPT.format(
@@ -85,34 +87,46 @@ def response_renderer_node(state: ChatState) -> ChatState:
     """))
     
     try:
-        # Process the response with the structured renderer
-        formatted_result = structured_renderer.invoke(renderer_messages)
+        # Process the response with the renderer
+        llm_response = renderer_llm.invoke(renderer_messages)
+        stylized_response = llm_response.content
+
+        # Create the URL map from the raw citations list
+        citation_url_map = {i + 1: url for i, url in enumerate(citations)}
         
-        # Extract the formatted response and any follow-up questions
-        formatted_response = formatted_result.main_response
-        sources = formatted_result.sources
-        follow_up_questions = formatted_result.follow_up_questions
+        # Replace citation markers [n] with markdown hyperlinks
+        def replace_citation(match):
+            citation_num = int(match.group(1))
+            url = citation_url_map.get(citation_num)
+            if url:
+                # Wrap the citation number in another set of brackets to keep them in the link text
+                return f"[[{citation_num}]]({url})"
+            return match.group(0) # Return original if no URL found
         
-        # If there are sources, append them to the formatted response
-        if sources and len(sources) > 0:
-            formatted_response += "\n\n**Sources:**\n"
-            for source in sources:
-                formatted_response += f"- {source}\n"
+        # Apply the replacement to the stylized response
+        final_response = re.sub(r'\[(\d+)\]', replace_citation, stylized_response)
         
-        # If there are follow-up questions, append them to the formatted response
-        if follow_up_questions and len(follow_up_questions) > 0:
-            formatted_response += "\n\n"
-            for i, question in enumerate(follow_up_questions, 1):
-                formatted_response += f"{i}. {question}\n"
+        # Format and append the sources section
+        if search_sources:
+            sources_list = []
+            for s in search_sources:
+                title = s.get("title", "Unknown Title")
+                url = s.get("url")
+                if url:
+                    sources_list.append(f"- [{title}]({url})")
+            
+            if sources_list:
+                sources_section = "\n\n**Sources:**\n" + "\n".join(sources_list)
+                final_response += sources_section
         
         # Log the formatted response
-        display_formatted = formatted_response[:75] + "..." if len(formatted_response) > 75 else formatted_response
+        display_formatted = final_response[:75] + "..." if len(final_response) > 75 else final_response
         logger.info(f"✨ Renderer: Produced formatted response: \"{display_formatted}\"")
         
-        logger.debug(f"Renderer processed response. Original length: {len(raw_response)}, Formatted length: {len(formatted_response)}")
+        logger.debug(f"Renderer processed response. Original length: {len(raw_response)}, Formatted length: {len(final_response)}")
         
         # Create the final assistant message
-        assistant_message = AIMessage(content=formatted_response)
+        assistant_message = AIMessage(content=final_response)
         
         # Add the rendered response to the messages in state
         state["messages"].append(assistant_message)

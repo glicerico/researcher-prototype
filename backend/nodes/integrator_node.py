@@ -51,53 +51,19 @@ def integrator_node(state: ChatState) -> ChatState:
             citations = search_results_data.get("citations", [])  # List of URL strings
             search_sources = search_results_data.get("search_results", []) # List of objects
 
-            # Create a mapping from citation index (1-based) to URL
-            citation_url_map = {i + 1: url for i, url in enumerate(citations)}
+            # --- Data for Renderer ---
+            # Pass the raw citation data directly to the renderer.
+            state["workflow_context"]["citations"] = citations
+            state["workflow_context"]["search_sources"] = search_sources
+            logger.info("🧠 Integrator: Passing raw citation data and sources to the renderer.")
 
-            # Replace [n] with markdown links in the main text
-            import re
-            def replace_citation(match):
-                citation_num = int(match.group(1))
-                url = citation_url_map.get(citation_num)
-                if url:
-                    return f"[{citation_num}]({url})"
-                return match.group(0)  # Return original if no URL found
-
-            if isinstance(search_result_text, str):
-                search_result_text = re.sub(r'\[(\d+)\]', replace_citation, search_result_text)
-
-            # Create a URL-to-Title map from search_sources to enrich the citations list
-            url_to_title_map = {s.get("url"): s.get("title", "Unknown Title") for s in search_sources if s.get("url")}
-            
-            # Format citations section with markdown links
-            citations_section = ""
-            if citations:
-                citations_list = []
-                for i, url in enumerate(citations):
-                    title = url_to_title_map.get(url, f"Source [{i+1}]")
-                    citations_list.append(f"- [{title}]({url})")
-                if citations_list:
-                    citations_section = f"CITATIONS:\n" + "\n".join(citations_list)
-                    logger.info(f"🧠 Integrator: Including {len(citations_list)} citations")
-
-            # Format sources section (this might be redundant but retained for completeness)
-            sources_section = ""
-            if search_sources:
-                sources_list = []
-                for s in search_sources:
-                    title = s.get("title", "Unknown Title")
-                    url = s.get("url")
-                    if url:
-                        sources_list.append(f"- [{title}]({url})")
-                if sources_list:
-                    sources_section = f"SOURCES:\n" + "\n".join(sources_list)
-                    logger.info(f"🧠 Integrator: Including {len(sources_list)} source references")
-            
-            # Directly construct the search context string
-            search_context = f"CURRENT INFORMATION FROM WEB SEARCH:\nThe following information was retrieved from a recent web search related to the user's query:\n\n{search_result_text}\n\n{citations_section}\n\n{sources_section}\n\nUse this information to provide accurate, up-to-date responses. When referencing specific facts or claims, cite the relevant sources using markdown hyperlinks."
+            # --- Context for Integrator LLM ---
+            # Build a simple, clean context for the integrator's LLM prompt.
+            # The search_result_text already has [n] markers. We pass it as-is.
+            search_context = f"CURRENT INFORMATION FROM WEB SEARCH:\nThe following text was retrieved from a web search. It contains citation markers like [1], [2], etc.\n\n---\n\n{search_result_text}\n\n---\n\nUse this information to answer the user's query, making sure to preserve the citation markers as they are."
             context_sections.append(search_context)
-            logger.info("🧠 Integrator: Added enhanced search results with hyperlinked citations and sources to system context")
-    
+            logger.info("🧠 Integrator: Added search results with original citation markers to system context")
+
     # Add analysis results to context if available
     analysis_results = state.get("module_results", {}).get("analyzer", {})
     if analysis_results.get("success", False):

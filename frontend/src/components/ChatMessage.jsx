@@ -1,24 +1,15 @@
 import React, { useState } from 'react';
+import ReactMarkdown from 'react-markdown';
 import '../styles/ChatMessage.css';
-
-const linkify = (text) => {
-  const urlRegex = /(https?:\/\/[^\s]+)/g;
-  return text.split(urlRegex).map((part, i) => {
-    if (part.match(urlRegex)) {
-      return <a key={i} href={part} target="_blank" rel="noopener noreferrer">{part}</a>;
-    }
-    return part;
-  });
-};
 
 const ChatMessage = ({ role, content, routingInfo }) => {
   const [showRoutingInfo, setShowRoutingInfo] = useState(false);
   
-  const linkedContent = linkify(content);
-
   return (
     <div className={`message ${role}`}>
-      <div className="message-content">{linkedContent}</div>
+      <div className="message-content">
+        <ReactMarkdown>{content}</ReactMarkdown>
+      </div>
       
       {role === 'assistant' && routingInfo && (
         <div className="message-metadata">
