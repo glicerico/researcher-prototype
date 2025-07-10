@@ -210,6 +210,11 @@
   flex-wrap: wrap;
 }
 
+.topic-actions.compact {
+  margin-bottom: 0;
+  flex-wrap: nowrap;
+}
+
 .action-btn {
   display: inline-flex;
   align-items: center;
@@ -222,6 +227,16 @@
   cursor: pointer;
   transition: all 0.2s ease;
   white-space: nowrap;
+}
+
+.topic-actions.compact .action-btn {
+  padding: 0.25rem;
+  gap: 0;
+}
+
+.topic-actions.compact .btn-icon {
+  margin: 0;
+  font-size: 0.9rem;
 }
 
 .action-btn:disabled {

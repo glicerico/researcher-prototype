@@ -5,6 +5,7 @@ const TopicSidebarItem = ({ topic, index, onEnableResearch, onDisableResearch, o
   const [isExpanded, setIsExpanded] = useState(false);
   const [actionLoading, setActionLoading] = useState(null);
 
+  // Handlers for expanded view (no event propagation stoppage)
   const handleEnableResearch = async () => {
     setActionLoading('enable');
     try {
@@ -33,6 +34,23 @@ const TopicSidebarItem = ({ topic, index, onEnableResearch, onDisableResearch, o
       }
     }
   };
+  
+  // Click handlers for compact view buttons to stop event propagation
+  const handleEnableResearchClick = (e) => {
+    e.stopPropagation();
+    handleEnableResearch();
+  };
+  
+  const handleDisableResearchClick = (e) => {
+    e.stopPropagation();
+    handleDisableResearch();
+  };
+
+  const handleDeleteClick = (e) => {
+    e.stopPropagation();
+    handleDelete();
+  };
+
 
   const confidencePercentage = Math.round(topic.confidence_score * 100);
   const confidenceClass = 
@@ -42,8 +60,8 @@ const TopicSidebarItem = ({ topic, index, onEnableResearch, onDisableResearch, o
   return (
     <div className={`topic-list-item ${topic.is_active_research ? 'active-research' : ''} ${isExpanded ? 'expanded' : ''}`}>
       {/* Compact Header - Always Visible */}
-      <div className="topic-compact-header" onClick={() => setIsExpanded(!isExpanded)}>
-        <div className="topic-compact-info">
+      <div className="topic-compact-header">
+        <div className="topic-compact-info" onClick={() => setIsExpanded(!isExpanded)}>
           <div className="topic-compact-title">
             <span className="topic-name-compact" title={topic.name}>
               {topic.name}
@@ -60,8 +78,38 @@ const TopicSidebarItem = ({ topic, index, onEnableResearch, onDisableResearch, o
         </div>
         
         <div className="topic-compact-actions">
+          <div className="topic-actions compact">
+            {!topic.is_active_research ? (
+                <button
+                  className="action-btn research-btn"
+                  onClick={handleEnableResearchClick}
+                  disabled={actionLoading === 'enable'}
+                  title="Start researching this topic"
+                >
+                  {actionLoading === 'enable' ? <span className="btn-loading">⏳</span> : <span className="btn-icon">🔬</span>}
+                </button>
+              ) : (
+                <button
+                  className="action-btn stop-research-btn"
+                  onClick={handleDisableResearchClick}
+                  disabled={actionLoading === 'disable'}
+                  title="Stop researching this topic"
+                >
+                  {actionLoading === 'disable' ? <span className="btn-loading">⏳</span> : <span className="btn-icon">⏹️</span>}
+                </button>
+              )}
+              <button
+                className="action-btn delete-btn"
+                onClick={handleDeleteClick}
+                disabled={actionLoading === 'delete'}
+                title="Remove this topic"
+              >
+                {actionLoading === 'delete' ? <span className="btn-loading">⏳</span> : <span className="btn-icon">🗑️</span>}
+              </button>
+          </div>
           <button
             className="expand-toggle"
+            onClick={() => setIsExpanded(!isExpanded)}
             title={isExpanded ? 'Show less' : 'Show more'}
           >
             <span className="expand-icon">{isExpanded ? '▲' : '▼'}</span>

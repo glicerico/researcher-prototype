@@ -132,7 +132,7 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
   return (
     <div className="conversation-topics">
       <div className="topics-header">
-        <h3>Research Topics</h3>
+        <h3>Proposed Research Topics</h3>
         <div className="header-actions">
           <button
             className="refresh-button"
