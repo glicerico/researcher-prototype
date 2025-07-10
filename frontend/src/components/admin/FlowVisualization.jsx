@@ -342,6 +342,28 @@ const FlowVisualization = ({ onEditPrompt }) => {
         <p>Understand how prompts intervene in conversation flows</p>
       </div>
 
+      <div className="flow-controls">
+        <div className="graph-selector">
+          <label htmlFor="graph-select">Select Flow:</label>
+          <select
+            id="graph-select"
+            value={selectedGraph}
+            onChange={(e) => setSelectedGraph(e.target.value)}
+            className="form-select"
+          >
+            <option value="main">Main Chat Flow</option>
+            <option value="research">Research Flow</option>
+          </select>
+        </div>
+        <button
+          onClick={() => generateDiagrams(true)}
+          disabled={generating}
+          className="btn-secondary"
+        >
+          {generating ? 'Generating...' : '🔄 Regenerate Diagrams'}
+        </button>
+      </div>
+
       {error && (
         <div className="error-banner">
           <span className="error-icon">⚠️</span>
