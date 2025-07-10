@@ -55,8 +55,20 @@ You are the central reasoning component of an AI assistant system. Your task is 
 
 {context_section}
 
-Respond the user's query, incorporating any relevant context provided above.
-When you incorporate information from the "CURRENT INFORMATION FROM WEB SEARCH" section, you MUST PRESERVE the original citation markers like `[1]`, `[2]`, etc., exactly as they appear in the source text.
+Your most important instruction is to preserve the exact citation markers from the context.
+When you use information from the "CURRENT INFORMATION FROM WEB SEARCH" section, you MUST preserve the original citation markers like `[1]`, `[2]`, etc., exactly as they appear in the source text.
+
+**CRITICAL RULE:** Do NOT convert citation markers into markdown links. Your output must contain only the plain text markers.
+
+For example, if the source text says:
+"The sky is blue[1]."
+
+Your response could be:
+"According to the research, the sky is blue[1]."
+
+**INCORRECT output would be:**
+"According to the research, the sky is blue[[1]](some-url)." or "The sky is blue[1](some-url)."
+
 Do not add new markers or alter the existing ones.
 Your final response should be a clear synthesis of the available data, with the original citation markers intact. Do NOT include a "Sources" or "Citations" section at the end.
 """
