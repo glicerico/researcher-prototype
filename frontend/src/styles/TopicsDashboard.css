@@ -4,6 +4,7 @@
   margin: 0 auto;
   padding: 1.5rem;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  box-sizing: border-box;
 }
 
 /* Loading State */
