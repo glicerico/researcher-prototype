@@ -991,7 +991,30 @@
   gap: 16px;
 }
 .summary-grid {
+  display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.summary-card {
+  background: var(--background-color);
+  padding: 1.5rem;
+  border-radius: var(--card-border-radius);
+  border: 1px solid var(--border-color);
+  box-shadow: var(--box-shadow);
+}
+
+.summary-card h4 {
+  margin-top: 0;
+  font-size: 1.1rem;
+  color: var(--primary-color);
+  margin-bottom: 1rem;
+}
+
+.summary-card p {
+  margin: 4px 0;
+  font-size: 14px;
+  color: var(--text-secondary-color);
 }
 @media (max-width: 768px) {
   .nodes-grid,
