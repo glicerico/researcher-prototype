@@ -24,8 +24,6 @@ const ResearchResultsDashboard = () => {
     sortBy: 'date',
     sortOrder: 'desc'
   });
-  const [sortBy, setSortBy] = useState('date');
-  const [sortOrder, setSortOrder] = useState('desc');
   const scrollContainerRef = useRef(null);
   const scrollPositionRef = useRef(null);
 
