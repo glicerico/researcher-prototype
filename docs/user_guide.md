@@ -16,7 +16,7 @@ Welcome!  This guide walks you through everyday use of the **Researcher-Prototyp
 
 ## 2. Managing Users
 
-• **User menu (top-left)** – click the avatar to open the user manager.  
+• **User menu (top-right)** – click the avatar to open the user manager.  
 • **Create** – give a display name and press *Create*.  
 • **Switch** – select any user from the dropdown; each user has isolated chat history, personality and research topics.  
 • **Delete** – remove the selected user (cannot delete **Guest**).
@@ -25,14 +25,14 @@ Welcome!  This guide walks you through everyday use of the **Researcher-Prototyp
 
 ## 3. Personalising the Assistant
 
-Open the **Personality** panel (sparkle ✨ icon).
+Click the **User Settings** button, to display the current settings.
+Click Edit to modify:
 
 | Setting | Description |
 |---------|-------------|
 | Style   | *helpful*, *concise*, *expert*, *creative*, *friendly* |
 | Tone    | *friendly*, *professional*, *casual*, *enthusiastic*, *direct* |
 | Presets | One-click combos such as *Friendly Helper* |
-| Extra   | Add custom traits via JSON – for power users |
 
 Changes apply instantly and are stored in your profile.
 
@@ -44,7 +44,7 @@ Changes apply instantly and are stored in your profile.
 2. A typing indicator shows the assistant is thinking.  
 3. Messages are saved automatically; scroll to review.  
 4. Click **Show Routing Info** next to any assistant reply to see which module (chat / search / analyzer) handled the request, the router's reason, complexity score and the lightweight model it used.  
-5. Use **↑ / ↓** keys to cycle through your recent inputs (handy for editing).
+5. Use **↑ / ↓** keys to cycle through your recent inputs.
 
 ---
 
@@ -55,19 +55,23 @@ Changes apply instantly and are stored in your profile.
 After each message the system may suggest **Topics** related to your conversation (right-hand sidebar).
 
 * **🔬 Research this topic** – subscribes the topic for autonomous research.  
-* **❌ Dismiss** – removes it from the list.
+* **🗑️ Dismiss** – removes it from the list.
 
 ### Topics dashboard
 
-Click **Topics** in the header to open a full dashboard where you can:
+Click **Research Topics** in the **Dashboard** dropdown to open a full dashboard where you can:
+
+* **▶️ Enable Engine** – Enable/disable the autonomous researcher.
+* **🚀 Research Now** – trigger immediate research; ignores motivation threshold.
+* **💡 View Drives** -  Monitor the real-time values for the **boredom**, **curiosity**, **tiredness** and **satisfaction** parameters.  When boredom + curiosity ≥ threshold a new research cycle is launched automatically.
+* **⏰ Research timing** – See the current estimated research frequency, or select a quick preset to change it.
 
 * View all topics (active + inactive) per user.
-* **🚀 Research Now** – trigger immediate research; ignores motivation threshold.
 * **Toggle switch** – start/stop research for a topic.
 
 ### Reviewing Findings
 
-Findings appear underneath each topic with:
+Click **Research Results** in the **Dashboard** dropdown to open a full dashboard where findings appear underneath each topic with:
 
 * **Summary**
 * Quality bars (recency, relevance, depth, credibility, novelty)
@@ -75,27 +79,11 @@ Findings appear underneath each topic with:
 * Mark-as-read / delete buttons
 
 ---
-
-## 6. Motivation Dashboard
-
-Press the 💡 icon to open real-time bars for **boredom**, **curiosity**, **tiredness** and **satisfaction**.  When boredom + curiosity ≥ threshold a new research cycle is launched automatically.
-
----
-
 ## 7. Knowledge Graph Visualization
 
+Click **Knowledge Graph** in the **Dashboard** dropdown.
+
 The Knowledge Graph shows your personal knowledge network stored in Zep as an interactive visualization. The graph automatically arranges itself naturally and remembers your viewing preferences.
-
-### Accessing the Graph
-
-1. Go to **User Settings** (click your avatar in the top-left).
-2. Click the **Knowledge Graph** button.
-3. The graph loads automatically with:
-   - **Natural layout**: Nodes arrange themselves organically
-   - **Auto-centering**: Graph fits perfectly in view
-   - **Entity legend**: Hover to see color codes for different types
-
-### Smart Interactions
 
 **Navigation:**
 * **Zoom**: Mouse wheel or pinch gesture (your zoom level is remembered!)
@@ -113,8 +101,6 @@ The Knowledge Graph shows your personal knowledge network stored in Zep as an in
 * **Close details**: Press **ESC** key or click outside the modal
 * **Full information**: Modals show complete entity/relationship details
 
-### What the Graph Shows
-
 The Knowledge Graph builds from your conversations and research, displaying:
 
 * **Entities**: People, places, organizations, concepts from your chats
@@ -122,14 +108,6 @@ The Knowledge Graph builds from your conversations and research, displaying:
 * **Facts**: Specific information about connections
 * **Attributes**: Detailed properties of each entity
 * **Timeline**: When information was created/updated
-
-### User-Friendly Features
-
-* **Zoom memory**: Your preferred zoom level stays as you explore
-* **Smart centering**: Only auto-centers when you haven't zoomed manually
-* **Smooth animations**: Natural transitions between views
-* **Mobile support**: Works on phones and tablets
-* **Keyboard friendly**: ESC key consistently closes dialogs
 
 > **Note**: The graph grows over time as you chat and research. New users start with empty graphs that populate through conversations.
 
