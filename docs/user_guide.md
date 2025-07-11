@@ -19,7 +19,6 @@ Welcome!  This guide walks you through everyday use of the **Researcher-Prototyp
 • **User menu (top-right)** – click the avatar to open the user manager.  
 • **Create** – give a display name and press *Create*.  
 • **Switch** – select any user from the dropdown; each user has isolated chat history, personality and research topics.  
-• **Delete** – remove the selected user (cannot delete **Guest**).
 
 ---
 
@@ -43,8 +42,7 @@ Changes apply instantly and are stored in your profile.
 1. Type your message and hit **Enter**.  
 2. A typing indicator shows the assistant is thinking.  
 3. Messages are saved automatically; scroll to review.  
-4. Click **Show Routing Info** next to any assistant reply to see which module (chat / search / analyzer) handled the request, the router's reason, complexity score and the lightweight model it used.  
-5. Use **↑ / ↓** keys to cycle through your recent inputs.
+4. Click **Show RoutingInfo** next to any assistant reply to see which module (chat / search / analyzer) handled the request, the router's reason, complexity score and the lightweight model it used.  
 
 ---
 
@@ -74,7 +72,7 @@ Click **Research Topics** in the **Dashboard** dropdown to open a full dashboard
 Click **Research Results** in the **Dashboard** dropdown to open a full dashboard where findings appear underneath each topic with:
 
 * **Summary**
-* Quality bars (recency, relevance, depth, credibility, novelty)
+* Quality score
 * Source link (if available)
 * Mark-as-read / delete buttons
 
@@ -98,7 +96,7 @@ The Knowledge Graph shows your personal knowledge network stored in Zep as an in
 * **Clear selection**: Single-click empty background
 
 **Modal Controls:**
-* **Close details**: Press **ESC** key or click outside the modal
+* **Close details**: Click outside the modal
 * **Full information**: Modals show complete entity/relationship details
 
 The Knowledge Graph builds from your conversations and research, displaying:
@@ -132,8 +130,6 @@ For advanced users / administrators.
 |----------|--------|
 | **Enter** | Send message |
 | **Shift + Enter** | New line without sending |
-| **↑ / ↓** | Cycle through previous inputs |
-| **Esc**   | Close modals and Knowledge Graph details |
 | **Double-click background** | Reset Knowledge Graph zoom to fit |
 
 ---
