@@ -113,11 +113,11 @@ def response_renderer_node(state: ChatState) -> ChatState:
         # Format and append the sources section
         if search_sources:
             sources_list = []
-            for s in search_sources:
+            for i, s in enumerate(search_sources, 1):  # Start numbering from 1
                 title = s.get("title", "Unknown Title")
                 url = s.get("url")
                 if url:
-                    sources_list.append(f"- [{title}]({url})")
+                    sources_list.append(f"[{i}]. [{title}]({url})")
             
             if sources_list:
                 sources_section = "\n\n**Sources:**\n" + "\n".join(sources_list)
