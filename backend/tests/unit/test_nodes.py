@@ -315,8 +315,7 @@ class TestResponseRendererNode:
             mock_structured = MagicMock()
             mock_formatted_response = FormattedResponse(
                 main_response="Hello! How can I help you today?",
-                sources=[],
-                follow_up_questions=None
+                follow_up_questions=[]
             )
             mock_structured.invoke.return_value = mock_formatted_response
             mock_llm.with_structured_output.return_value = mock_structured
@@ -335,7 +334,11 @@ class TestResponseRendererNode:
         sample_chat_state["current_module"] = "search"
         sample_chat_state["personality"] = {"style": "professional", "tone": "formal"}
         sample_chat_state["workflow_context"] = {
-            "integrator_response": "Recent AI developments include new techniques."
+            "integrator_response": "Recent AI developments include new techniques.",
+            "search_sources": [
+                {"title": "AI News Today", "url": "https://example.com/ai-news"},
+                {"title": "Tech Report", "url": "https://example.com/tech"}
+            ]
         }
 
         with patch('nodes.response_renderer_node.ChatOpenAI') as mock_openai:
@@ -343,7 +346,6 @@ class TestResponseRendererNode:
             mock_structured = MagicMock()
             mock_formatted_response = FormattedResponse(
                 main_response="Recent AI developments include new machine learning techniques.",
-                sources=["AI News Today - https://example.com/ai-news", "Tech Report - https://example.com/tech"],
                 follow_up_questions=["What specific AI techniques are most promising?", "How will this impact industry?"]
             )
             mock_structured.invoke.return_value = mock_formatted_response
@@ -360,14 +362,15 @@ class TestResponseRendererNode:
             # Check main response
             assert "Recent AI developments include new machine learning techniques." in response_content
             
-            # Check sources were appended
+            # Check sources were appended with numbered format
             assert "**Sources:**" in response_content
-            assert "AI News Today - https://example.com/ai-news" in response_content
-            assert "Tech Report - https://example.com/tech" in response_content
+            assert "1. [AI News Today](https://example.com/ai-news)" in response_content
+            assert "2. [Tech Report](https://example.com/tech)" in response_content
             
-            # Check follow-up questions were appended
-            assert "1. What specific AI techniques are most promising?" in response_content
-            assert "2. How will this impact industry?" in response_content
+            # Check follow-up questions were added to workflow context
+            assert "follow_up_questions" in result["workflow_context"]
+            assert "What specific AI techniques are most promising?" in result["workflow_context"]["follow_up_questions"]
+            assert "How will this impact industry?" in result["workflow_context"]["follow_up_questions"]
 
     def test_response_renderer_no_integrator_response(self, sample_chat_state):
         """Test response renderer when no integrator response exists."""
@@ -414,8 +417,7 @@ class TestResponseRendererNode:
             mock_structured = MagicMock()
             mock_formatted_response = FormattedResponse(
                 main_response="Hello! How can I help you today?",
-                sources=[],
-                follow_up_questions=None
+                follow_up_questions=[]
             )
             mock_structured.invoke.return_value = mock_formatted_response
             mock_llm.with_structured_output.return_value = mock_structured
