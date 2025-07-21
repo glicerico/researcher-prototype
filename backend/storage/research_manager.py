@@ -271,6 +271,7 @@ class ResearchManager:
 
                 # Find the topic by ID
                 updated_topic = None
+                found_session_id = None
                 for sid, session_topics in topics_data.get("sessions", {}).items():
                     for topic in session_topics:
                         if topic.get("topic_id") == topic_id:
@@ -288,9 +289,14 @@ class ResearchManager:
                                     del topic["research_enabled_at"]
 
                             updated_topic = topic.copy()
+                            found_session_id = sid
 
                     if updated_topic:
                         break
+
+                if updated_topic and found_session_id:
+                    # Add session_id to the updated_topic for API response
+                    updated_topic["session_id"] = found_session_id
 
                 if not updated_topic:
                     return {"success": False, "error": f"Topic with ID {topic_id} not found", "updated_topic": None}
