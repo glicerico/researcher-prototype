@@ -4,11 +4,11 @@ import '../styles/EngineSettings.css';
 
 const EngineSettings = ({ onClose }) => {
   const [settings, setSettings] = useState({
-    threshold: 1.0,
-    boredom_rate: 0.001,
-    curiosity_decay: 0.0005,
-    tiredness_decay: 0.0005,
-    satisfaction_decay: 0.0005
+    threshold: 2.0,
+    boredom_rate: 0.0005,
+    curiosity_decay: 0.0002,
+    tiredness_decay: 0.0002,
+    satisfaction_decay: 0.0002
   });
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
