@@ -71,7 +71,7 @@ Key parameters (Engine Settings modal):
 * **Curiosity decay** – how fast curiosity fades when idle.
 * **Tiredness & Satisfaction decay** – recovery rates after research.
 
-Preset buttons (*Aggressive*, *Balanced*, *Conservative*, *Very Patient*) apply sensible combos.
+Preset buttons (*Balanced*, *Conservative*, *Very Patient*) apply sensible combos.
 
 ---
 

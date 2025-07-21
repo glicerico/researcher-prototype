@@ -55,15 +55,6 @@ const EngineSettings = ({ onClose }) => {
 
   // Preset configurations
   const presets = {
-    aggressive: {
-      name: 'Aggressive Research',
-      description: 'Research every 1-2 minutes',
-      threshold: 0.3,
-      boredom_rate: 0.01,
-      curiosity_decay: 0.005,
-      tiredness_decay: 0.01,
-      satisfaction_decay: 0.005
-    },
     balanced: {
       name: 'Balanced Research',
       description: 'Research every 10-15 minutes',
