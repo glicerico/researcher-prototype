@@ -49,7 +49,7 @@ class FormattedResponse(BaseModel):
     """A formatted response with optional follow-up questions."""
     main_response: str = Field(description="The main, formatted response content.")
     follow_up_questions: List[str] = Field(
-        description="A list of 1-2 relevant follow-up questions.",
+        description="A list of 1-2 relevant follow-up questions phrased as if the user is asking them (e.g., 'What are the key benefits of this approach?' rather than 'Would you like to know about the key benefits?').",
         default_factory=list
     )
     
