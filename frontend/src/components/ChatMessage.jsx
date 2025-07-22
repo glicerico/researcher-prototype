@@ -30,7 +30,7 @@ const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUp
         )}
         {followUpQuestions && followUpQuestions.length > 0 && (
             <div className="follow-up-container">
-                <h4 className="follow-up-header">Suggested Questions:</h4>
+                <h4 className="follow-up-header">Suggested Follow-Up Questions:</h4>
                 <div className="follow-up-questions">
                 {followUpQuestions.map((question, index) => (
                     <button 
