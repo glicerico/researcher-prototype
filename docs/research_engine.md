@@ -21,9 +21,13 @@ Diagram of drives:
 ```mermaid
 stateDiagram-v2
     [*] --> Idle
-    Idle -->|boredom ↑| Motivated
-    Motivated -->|spawns research| Researching
-    Researching -->|tiredness ↑ satisfaction ↑| Idle
+    Idle --> Motivated : "boredom ↑"
+    Motivated --> Researching : "spawns research"
+    Researching --> Idle : "tiredness ↑<br/>satisfaction ↑"
+    
+    note right of Idle : "Boredom accumulates<br/>over time"
+    note right of Motivated : "High motivation<br/>triggers research"
+    note right of Researching : "Research active<br/>tiredness builds"
 ```
 
 ## Controlling the Engine
