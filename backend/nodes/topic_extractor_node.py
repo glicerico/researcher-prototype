@@ -135,21 +135,6 @@ def topic_extractor_node(state: ChatState) -> ChatState:
                 recent_messages.append(f"{msg.__class__.__name__}: {content}")
         logger.debug(f"🔍 Topic Extractor: Recent conversation context: {'; '.join(recent_messages)}")
         
-        # Log the system prompt being used (first 500 chars)
-        system_prompt = messages_for_llm[0].content
-        logger.info(f"🔍 Topic Extractor: System prompt preview: {system_prompt[:500]}...")
-        
-        # Log if memory context was included in the prompt
-        if "CONVERSATION MEMORY" in system_prompt:
-            logger.info("🔍 Topic Extractor: Memory context INCLUDED in system prompt")
-        else:
-            logger.info("🔍 Topic Extractor: Memory context NOT included in system prompt")
-        
-        # Log all messages being sent to the LLM
-        for i, msg in enumerate(messages_for_llm):
-            msg_content = msg.content[:200] + "..." if len(msg.content) > 200 else msg.content
-            logger.debug(f"🔍 Topic Extractor: Message {i} ({msg.__class__.__name__}): {msg_content}")
-        
         # Get structured response from LLM
         topic_suggestions = structured_extractor.invoke(messages_for_llm)
         
