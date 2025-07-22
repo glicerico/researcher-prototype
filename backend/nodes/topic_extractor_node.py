@@ -84,7 +84,7 @@ def topic_extractor_node(state: ChatState) -> ChatState:
     memory_context_section = ""
     if memory_context:
         # Limit memory context to avoid overwhelming the prompt
-        memory_preview = memory_context[:300] + "..." if len(memory_context) > 300 else memory_context
+        memory_preview = memory_context[:1000] + "..." if len(memory_context) > 1000 else memory_context
         memory_context_section = f"CONVERSATION MEMORY (for context only):\n{memory_preview}\n\nUse this to understand the user's interests and conversation style, but focus on the current question."
         logger.debug("🔍 Topic Extractor: Including limited memory context")
     else:
