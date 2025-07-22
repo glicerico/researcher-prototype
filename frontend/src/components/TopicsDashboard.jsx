@@ -10,6 +10,7 @@ import {
   deleteSessionTopics, 
   deleteTopicById, 
   cleanupTopics,
+  deleteNonActivatedTopics,
   enableTopicResearchById,
   disableTopicResearchById,
   getResearchEngineStatus,
@@ -297,6 +298,38 @@ const TopicsDashboard = () => {
     }
   };
 
+  // Handle delete non-activated topics
+  const handleDeleteNonActivated = async () => {
+    const nonActivatedCount = topics.filter(topic => !topic.is_active_research).length;
+    
+    if (nonActivatedCount === 0) {
+      setError('No inactive topics found to delete.');
+      return;
+    }
+    
+    if (!window.confirm(`Delete all ${nonActivatedCount} topics that are not activated for research? This action cannot be undone.`)) {
+      return;
+    }
+    
+    try {
+      setLoading(true);
+      const result = await deleteNonActivatedTopics();
+      
+      if (result.success) {
+        await loadData(); // Reload to reflect changes
+        // Clear any previous error message
+        setError(null);
+      } else {
+        setError('Failed to delete inactive topics. Please try again.');
+      }
+    } catch (err) {
+      console.error('Error deleting non-activated topics:', err);
+      setError('Failed to delete inactive topics. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Handle individual topic deletion
   const handleDeleteTopic = async (topicId, topicName) => {
     if (!window.confirm(`Delete topic "${topicName}"?`)) {
@@ -398,6 +431,7 @@ const TopicsDashboard = () => {
         immediateResearchLoading={immediateResearchLoading}
         onShowMotivation={() => setShowMotivation(true)}
         onShowEngineSettings={() => setShowEngineSettings(true)}
+        onDeleteNonActivated={handleDeleteNonActivated}
       />
       
       {error && (

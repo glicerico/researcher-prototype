@@ -357,6 +357,15 @@
   background: rgba(245, 158, 11, 0.1);
 }
 
+.topics-dashboard .topics-header .delete-non-activated-btn {
+  background: transparent;
+  color: var(--color-danger);
+  border-color: var(--color-danger);
+}
+.topics-dashboard .topics-header .delete-non-activated-btn:hover:not(:disabled) {
+  background: rgba(220, 53, 69, 0.1);
+}
+
 .topics-dashboard .topics-header .action-buttons button:disabled {
   opacity: 0.5;
   cursor: not-allowed;

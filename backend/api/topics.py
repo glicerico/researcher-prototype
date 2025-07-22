@@ -339,3 +339,27 @@ async def delete_topic_by_id(topic_id: str, user_id: str = Depends(get_or_create
     except Exception as e:
         logger.error(f"Error deleting topic by ID {topic_id} for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error deleting topic: {str(e)}")
+
+
+@router.delete("/topics/non-activated")
+async def delete_non_activated_topics(user_id: str = Depends(get_or_create_user_id)):
+    """Delete all topics that are not activated for research."""
+    try:
+        # Use the new method to delete non-activated topics
+        result = research_manager.delete_non_activated_topics(user_id)
+
+        if result["success"]:
+            return {
+                "success": True,
+                "message": result["message"],
+                "topics_deleted": result["topics_deleted"],
+                "sessions_affected": result["sessions_affected"],
+            }
+        else:
+            raise HTTPException(status_code=500, detail=result["error"])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting non-activated topics for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error deleting non-activated topics: {str(e)}")

@@ -240,6 +240,17 @@ export const deleteTopicById = async (topicId) => {
   }
 };
 
+// NEW: Delete all non-activated research topics
+export const deleteNonActivatedTopics = async () => {
+  try {
+    const response = await api.delete('/topics/non-activated');
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting non-activated topics:', error);
+    throw error;
+  }
+};
+
 // NEW: ID-based topic research functions (SAFE - no index mismatch)
 export const enableTopicResearchById = async (topicId) => {
   try {

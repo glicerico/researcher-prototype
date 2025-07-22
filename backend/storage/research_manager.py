@@ -843,3 +843,100 @@ class ResearchManager:
             except Exception as e:
                 logger.error(f"Error deleting session {session_id} for user {user_id}: {str(e)}")
                 return {"success": False, "error": str(e), "topics_deleted": 0}
+
+    def delete_non_activated_topics(self, user_id: str) -> Dict[str, Any]:
+        """
+        Delete all topics that are not activated for research.
+
+        Args:
+            user_id: The ID of the user
+
+        Returns:
+            Dictionary with success status and deletion info
+        """
+        with self._get_user_lock(user_id):
+            try:
+                # Ensure migration from profile.json if needed
+                self.migrate_topics_from_profile(user_id)
+
+                # Load topics data
+                topics_data = self.get_user_topics(user_id)
+
+                if not topics_data.get("sessions"):
+                    return {
+                        "success": True,
+                        "message": "No topics found to delete",
+                        "topics_deleted": 0,
+                        "sessions_affected": 0,
+                    }
+
+                topics_deleted = 0
+                sessions_affected = 0
+                sessions_to_remove = []
+
+                # Process each session
+                for session_id, session_topics in list(topics_data["sessions"].items()):
+                    original_count = len(session_topics)
+                    
+                    # Keep only topics that are activated for research
+                    active_topics = [
+                        topic for topic in session_topics 
+                        if topic.get("is_active_research", False)
+                    ]
+                    
+                    deleted_count = original_count - len(active_topics)
+                    topics_deleted += deleted_count
+                    
+                    if deleted_count > 0:
+                        sessions_affected += 1
+                    
+                    # Update session with only active topics, or mark for removal if empty
+                    if active_topics:
+                        topics_data["sessions"][session_id] = active_topics
+                    else:
+                        sessions_to_remove.append(session_id)
+
+                # Remove empty sessions
+                for session_id in sessions_to_remove:
+                    del topics_data["sessions"][session_id]
+
+                # Update metadata
+                topics_data["metadata"]["total_topics"] = sum(
+                    len(topics) for topics in topics_data["sessions"].values()
+                )
+                topics_data["metadata"]["active_research_topics"] = sum(
+                    1
+                    for session_topics in topics_data["sessions"].values()
+                    for topic in session_topics
+                    if topic.get("is_active_research", False)
+                )
+
+                # Save updated topics
+                success = self.save_user_topics(user_id, topics_data)
+
+                if success:
+                    logger.info(
+                        f"Deleted {topics_deleted} non-activated topics across {sessions_affected} sessions for user {user_id}"
+                    )
+                    return {
+                        "success": True,
+                        "message": f"Deleted {topics_deleted} non-activated topics across {sessions_affected} sessions",
+                        "topics_deleted": topics_deleted,
+                        "sessions_affected": sessions_affected,
+                    }
+                else:
+                    return {
+                        "success": False,
+                        "error": "Failed to save after deleting non-activated topics",
+                        "topics_deleted": 0,
+                        "sessions_affected": 0,
+                    }
+
+            except Exception as e:
+                logger.error(f"Error deleting non-activated topics for user {user_id}: {str(e)}")
+                return {
+                    "success": False,
+                    "error": str(e),
+                    "topics_deleted": 0,
+                    "sessions_affected": 0,
+                }

@@ -16,7 +16,8 @@ const TopicsHeader = ({
   onImmediateResearch,
   immediateResearchLoading,
   onShowMotivation,
-  onShowEngineSettings
+  onShowEngineSettings,
+  onDeleteNonActivated
 }) => {
 
 
@@ -186,6 +187,16 @@ const TopicsHeader = ({
             title="Remove old topics and duplicates"
           >
             🧹 Cleanup
+          </button>
+
+          {/* Delete Non-Activated Topics */}
+          <button 
+            className="delete-non-activated-btn"
+            onClick={onDeleteNonActivated}
+            disabled={loading}
+            title="Delete all topics that are not activated for research"
+          >
+            🗑️ Delete Inactive
           </button>
         </div>
       </div>

@@ -578,14 +578,84 @@ class TestDeleteTopicById:
             assert "Database connection failed" in response.json()["detail"]
 
     def test_delete_topic_by_id_exception(self, client, mock_research_manager):
-        """Test exception handling in topic deletion."""
+        """Test topic deletion with unexpected exception."""
         with patch('api.topics.research_manager', mock_research_manager):
-            mock_research_manager.delete_topic_by_id.side_effect = Exception("Unexpected error")
+            mock_research_manager.delete_topic_by_id.side_effect = Exception("Database error")
             
             response = client.delete("/topics/topic/topic_123")
             
             assert response.status_code == 500
             assert "Error deleting topic" in response.json()["detail"]
+
+
+class TestDeleteNonActivatedTopics:
+    """Test deleting all non-activated research topics."""
+
+    def test_delete_non_activated_topics_success(self, client, mock_research_manager):
+        """Test successful deletion of non-activated topics."""
+        with patch('api.topics.research_manager', mock_research_manager):
+            mock_research_manager.delete_non_activated_topics.return_value = {
+                "success": True,
+                "message": "Deleted 5 non-activated topics across 3 sessions",
+                "topics_deleted": 5,
+                "sessions_affected": 3
+            }
+            
+            response = client.delete("/topics/non-activated")
+            
+            assert response.status_code == 200
+            data = response.json()
+            
+            assert data["success"] is True
+            assert data["topics_deleted"] == 5
+            assert data["sessions_affected"] == 3
+            assert "Deleted 5 non-activated topics" in data["message"]
+            
+            mock_research_manager.delete_non_activated_topics.assert_called_once_with("test_user")
+
+    def test_delete_non_activated_topics_no_topics(self, client, mock_research_manager):
+        """Test deletion when no non-activated topics exist."""
+        with patch('api.topics.research_manager', mock_research_manager):
+            mock_research_manager.delete_non_activated_topics.return_value = {
+                "success": True,
+                "message": "No topics found to delete",
+                "topics_deleted": 0,
+                "sessions_affected": 0
+            }
+            
+            response = client.delete("/topics/non-activated")
+            
+            assert response.status_code == 200
+            data = response.json()
+            
+            assert data["success"] is True
+            assert data["topics_deleted"] == 0
+            assert data["sessions_affected"] == 0
+
+    def test_delete_non_activated_topics_failure(self, client, mock_research_manager):
+        """Test failed deletion of non-activated topics."""
+        with patch('api.topics.research_manager', mock_research_manager):
+            mock_research_manager.delete_non_activated_topics.return_value = {
+                "success": False,
+                "error": "Failed to save after deleting non-activated topics",
+                "topics_deleted": 0,
+                "sessions_affected": 0
+            }
+            
+            response = client.delete("/topics/non-activated")
+            
+            assert response.status_code == 500
+            assert "Failed to save" in response.json()["detail"]
+
+    def test_delete_non_activated_topics_exception(self, client, mock_research_manager):
+        """Test deletion with unexpected exception."""
+        with patch('api.topics.research_manager', mock_research_manager):
+            mock_research_manager.delete_non_activated_topics.side_effect = Exception("Database error")
+            
+            response = client.delete("/topics/non-activated")
+            
+            assert response.status_code == 500
+            assert "Error deleting non-activated topics" in response.json()["detail"]
 
 
 class TestParameterValidation:
