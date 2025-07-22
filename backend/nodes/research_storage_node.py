@@ -90,11 +90,26 @@ def research_storage_node(state: ChatState) -> ChatState:
     research_content = search_results.get("result", "")
     current_time = time.time()
     
+    # Get formatted content from response renderer if available
+    formatted_content = None
+    if state.get("messages") and len(state["messages"]) > 0:
+        # The response renderer adds the final formatted message to the messages list
+        last_message = state["messages"][-1]
+        if hasattr(last_message, 'content'):
+            formatted_content = last_message.content
+    
+    # Get citation information from search results
+    citations = search_results.get("citations", [])
+    search_sources = search_results.get("search_results", [])
+    
     finding = {
-        "findings_content": research_content,
+        "findings_content": research_content,  # Raw content from search
+        "formatted_content": formatted_content,  # Formatted content with clickable citations
         "research_time": current_time,
         "quality_score": overall_quality_score,
         "source_urls": quality_assessment.get("source_urls", []),
+        "citations": citations,  # Direct citation URLs from Perplexity
+        "search_sources": search_sources,  # Structured source information
         "research_query": research_query,
         "key_insights": quality_assessment.get("key_insights", []),
         "findings_summary": quality_assessment.get("findings_summary", "")

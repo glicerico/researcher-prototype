@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffect } from 'react';
 import { Link } from 'react-router-dom';
+import ReactMarkdown from 'react-markdown';
 import { useSession } from '../context/SessionContext';
 import { 
   getResearchFindings,
@@ -566,7 +567,12 @@ const ResearchResultsDashboard = () => {
                           </div>
 
                           <div className="finding-content">
-                            {finding.findings_summary && (
+                            {/* Display formatted content with citations if available, otherwise fallback to summary */}
+                            {finding.formatted_content ? (
+                              <div className="finding-formatted-content">
+                                <ReactMarkdown>{finding.formatted_content}</ReactMarkdown>
+                              </div>
+                            ) : finding.findings_summary && (
                               <div className="finding-summary">
                                 <p>{finding.findings_summary}</p>
                               </div>
@@ -583,7 +589,25 @@ const ResearchResultsDashboard = () => {
                               </div>
                             )}
 
-                            {finding.source_urls && finding.source_urls.length > 0 && (
+                            {/* Display structured search sources if available, otherwise fallback to source URLs */}
+                            {finding.search_sources && finding.search_sources.length > 0 ? (
+                              <div className="search-sources">
+                                <h4>Sources</h4>
+                                <div className="sources-list">
+                                  {finding.search_sources.map((source, i) => (
+                                    <a 
+                                      key={i} 
+                                      href={source.url} 
+                                      target="_blank" 
+                                      rel="noopener noreferrer"
+                                      className="source-link"
+                                    >
+                                      [{i + 1}]. {source.title || `Source ${i + 1}`}
+                                    </a>
+                                  ))}
+                                </div>
+                              </div>
+                            ) : finding.source_urls && finding.source_urls.length > 0 && (
                               <div className="source-urls">
                                 <h4>Sources</h4>
                                 <div className="urls-list">

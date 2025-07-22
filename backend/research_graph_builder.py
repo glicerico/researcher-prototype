@@ -21,6 +21,8 @@ from nodes.research_storage_node import research_storage_node
 
 # Import reused nodes from existing graph
 from nodes.search_node import search_node
+from nodes.integrator_node import integrator_node
+from nodes.response_renderer_node import response_renderer_node
 
 
 def setup_research_tracing():
@@ -47,6 +49,8 @@ def create_research_graph():
     builder.add_node("research_initializer", research_initializer_node)
     builder.add_node("research_query_generator", research_query_generator_node)
     builder.add_node("search", search_node)  # Reuse existing search node
+    builder.add_node("integrator", integrator_node)
+    builder.add_node("response_renderer", response_renderer_node)
     builder.add_node("research_quality_assessor", research_quality_assessor_node)
     builder.add_node("research_deduplication", research_deduplication_node)
     builder.add_node("research_storage", research_storage_node)
@@ -58,7 +62,9 @@ def create_research_graph():
     # Initialize -> Generate Query -> Search -> Assess Quality -> Check Duplicates -> Store
     builder.add_edge("research_initializer", "research_query_generator")
     builder.add_edge("research_query_generator", "search")
-    builder.add_edge("search", "research_quality_assessor")
+    builder.add_edge("search", "integrator")
+    builder.add_edge("integrator", "response_renderer")
+    builder.add_edge("response_renderer", "research_quality_assessor")
     builder.add_edge("research_quality_assessor", "research_deduplication")
     builder.add_edge("research_deduplication", "research_storage")
     
