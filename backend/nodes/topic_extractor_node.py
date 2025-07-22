@@ -46,44 +46,63 @@ def topic_extractor_node(state: ChatState) -> ChatState:
     # Log conversation length for debugging
     logger.info(f"🔍 Topic Extractor: Analyzing conversation with {len(messages)} messages")
     
-    # Get existing topics for this user to avoid duplicates
-    existing_topics_section = ""
+    # Get ACTIVE research topics for this user to provide context for better suggestions
+    active_topics_section = ""
     if user_id:
         try:
             all_existing_topics = research_manager.get_all_topic_suggestions(user_id)
             if all_existing_topics:
-                # Create a formatted list of existing topics
-                topic_list = []
+                # Only include topics that the user has actively chosen to research
+                active_topics = []
                 for session_id, topics in all_existing_topics.items():
                     for topic in topics:
-                        topic_name = topic.get("topic_name", "Unknown")
-                        description = topic.get("description", "")
-                        confidence = topic.get("confidence_score", 0)
-                        topic_list.append(f"• {topic_name} (confidence: {confidence:.2f}) - {description}")
+                        if topic.get("is_active_research", False):  # Only active research topics
+                            topic_name = topic.get("topic_name", "Unknown")
+                            description = topic.get("description", "")
+                            active_topics.append(f"• {topic_name} - {description}")
                 
-                if topic_list:
-                    existing_topics_list = "\n".join(topic_list[:20])  # Limit to top 20 to avoid huge prompts
-                    existing_topics_section = f"EXISTING RESEARCH TOPICS:\nThe user is already tracking the following research topics:\n\n{existing_topics_list}\n\nAvoid suggesting topics that are too similar to these. Instead, look for complementary research areas or more specific sub-topics that would add value to their research portfolio."
-                    logger.debug(f"🔍 Topic Extractor: Including {len(topic_list)} existing topics in context")
+                if active_topics:
+                    # Limit to top 5 active research topics to provide context
+                    active_topics_list = "\n".join(active_topics[:5])
+                    active_topics_section = f"USER'S ACTIVE RESEARCH INTERESTS:\nThe user is currently researching these topics:\n\n{active_topics_list}\n\nUse this to understand the user's research interests, but ONLY suggest new topics that are related to the current conversation."
+                    logger.debug(f"🔍 Topic Extractor: Including {len(active_topics)} active research topics for context")
                 else:
-                    existing_topics_section = ""
+                    active_topics_section = ""
+                    logger.debug("🔍 Topic Extractor: No active research topics found")
             else:
-                existing_topics_section = ""
+                active_topics_section = ""
                 logger.debug("🔍 Topic Extractor: No existing topics found for user")
         except Exception as e:
-            logger.warning(f"🔍 Topic Extractor: Error retrieving existing topics: {str(e)}")
-            existing_topics_section = ""
+            logger.warning(f"🔍 Topic Extractor: Error retrieving active research topics: {str(e)}")
+            active_topics_section = ""
     else:
-        existing_topics_section = ""
-        logger.debug("🔍 Topic Extractor: No user_id available for existing topics lookup")
+        active_topics_section = ""
+        logger.debug("🔍 Topic Extractor: No user_id available for active topics lookup")
     
-    # Create system message with formatted prompt including existing topics
-    system_message_content = TOPIC_EXTRACTOR_SYSTEM_PROMPT.format(
+    # Create system message with formatted prompt including active topics and memory context
+    memory_context = state.get("memory_context")
+    memory_context_section = ""
+    if memory_context:
+        # Limit memory context to avoid overwhelming the prompt
+        memory_preview = memory_context[:300] + "..." if len(memory_context) > 300 else memory_context
+        memory_context_section = f"CONVERSATION MEMORY (for context only):\n{memory_preview}\n\nUse this to understand the user's interests and conversation style, but focus on the current question."
+        logger.debug("🔍 Topic Extractor: Including limited memory context")
+    else:
+        logger.debug("🔍 Topic Extractor: No memory context available")
+    
+    # Create the full system prompt
+    full_prompt = TOPIC_EXTRACTOR_SYSTEM_PROMPT.format(
         current_time=current_time_str,
-        existing_topics_section=existing_topics_section,
+        existing_topics_section=active_topics_section,
         min_confidence=min_confidence,
         max_suggestions=max_suggestions
     )
+    
+    # Add memory context section if available
+    if memory_context_section:
+        full_prompt = full_prompt + "\n\n" + memory_context_section
+    
+    system_message_content = full_prompt
     
     # Initialize the model for topic extraction
     llm = ChatOpenAI(
@@ -96,12 +115,40 @@ def topic_extractor_node(state: ChatState) -> ChatState:
     # Create structured output model
     structured_extractor = llm.with_structured_output(TopicSuggestions)
     
-    # Prepare messages for the LLM
+    # Prepare messages for the LLM - DO NOT include memory context to avoid confusion
+    # Topic extraction should focus ONLY on the current conversation content
     messages_for_llm = [SystemMessage(content=system_message_content)]
-    messages_for_llm.extend(messages)
+    
+    # Only include the current conversation messages (not memory context)
+    # This ensures topic extraction focuses on what's actually being discussed now
+    current_messages = state.get("messages", [])
+    messages_for_llm.extend(current_messages)
     
     try:
         logger.debug(f"Sending {len(messages_for_llm)} messages to Topic Extractor")
+        
+        # Log the current conversation content for debugging
+        recent_messages = []
+        for msg in messages[-3:]:  # Last 3 messages
+            if hasattr(msg, 'content'):
+                content = msg.content[:100] + "..." if len(msg.content) > 100 else msg.content
+                recent_messages.append(f"{msg.__class__.__name__}: {content}")
+        logger.debug(f"🔍 Topic Extractor: Recent conversation context: {'; '.join(recent_messages)}")
+        
+        # Log the system prompt being used (first 500 chars)
+        system_prompt = messages_for_llm[0].content
+        logger.info(f"🔍 Topic Extractor: System prompt preview: {system_prompt[:500]}...")
+        
+        # Log if memory context was included in the prompt
+        if "CONVERSATION MEMORY" in system_prompt:
+            logger.info("🔍 Topic Extractor: Memory context INCLUDED in system prompt")
+        else:
+            logger.info("🔍 Topic Extractor: Memory context NOT included in system prompt")
+        
+        # Log all messages being sent to the LLM
+        for i, msg in enumerate(messages_for_llm):
+            msg_content = msg.content[:200] + "..." if len(msg.content) > 200 else msg.content
+            logger.debug(f"🔍 Topic Extractor: Message {i} ({msg.__class__.__name__}): {msg_content}")
         
         # Get structured response from LLM
         topic_suggestions = structured_extractor.invoke(messages_for_llm)
