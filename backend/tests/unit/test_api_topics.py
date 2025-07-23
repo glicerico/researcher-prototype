@@ -658,6 +658,152 @@ class TestDeleteNonActivatedTopics:
             assert "Error deleting non-activated topics" in response.json()["detail"]
 
 
+class TestCreateCustomTopic:
+    """Test creating custom research topics."""
+
+    def test_create_custom_topic_success(self, client, mock_research_manager):
+        """Test successful custom topic creation."""
+        with patch('api.topics.research_manager', mock_research_manager):
+            mock_research_manager.add_custom_topic.return_value = {
+                "success": True,
+                "topic": {
+                    "topic_id": "custom_123",
+                    "topic_name": "Quantum Computing",
+                    "description": "Latest advances in quantum computing technology",
+                    "confidence_score": 0.8,
+                    "session_id": "custom_topics",
+                    "is_active_research": False,
+                    "is_custom": True,
+                    "suggested_at": 1234567890
+                }
+            }
+            
+            topic_data = {
+                "name": "Quantum Computing",
+                "description": "Latest advances in quantum computing technology",
+                "confidence_score": 0.8,
+                "enable_research": False
+            }
+            
+            response = client.post("/topics/custom", json=topic_data)
+            
+            assert response.status_code == 200
+            data = response.json()
+            
+            assert data["success"] is True
+            assert "Successfully created custom topic" in data["message"]
+            assert data["topic"]["name"] == "Quantum Computing"
+            assert data["topic"]["topic_id"] == "custom_123"
+            assert data["topic"]["is_custom"] is True
+            
+            mock_research_manager.add_custom_topic.assert_called_once_with(
+                user_id="test_user",
+                topic_name="Quantum Computing", 
+                description="Latest advances in quantum computing technology",
+                confidence_score=0.8,
+                enable_research=False
+            )
+
+    def test_create_custom_topic_with_research_enabled(self, client, mock_research_manager):
+        """Test custom topic creation with research enabled."""
+        with patch('api.topics.research_manager', mock_research_manager):
+            mock_research_manager.add_custom_topic.return_value = {
+                "success": True,
+                "topic": {
+                    "topic_id": "custom_456",
+                    "topic_name": "AI Ethics",
+                    "description": "Ethical considerations in artificial intelligence development",
+                    "confidence_score": 0.9,
+                    "session_id": "custom_topics",
+                    "is_active_research": True,
+                    "is_custom": True,
+                    "suggested_at": 1234567890
+                }
+            }
+            
+            topic_data = {
+                "name": "AI Ethics",
+                "description": "Ethical considerations in artificial intelligence development",
+                "confidence_score": 0.9,
+                "enable_research": True
+            }
+            
+            response = client.post("/topics/custom", json=topic_data)
+            
+            assert response.status_code == 200
+            data = response.json()
+            
+            assert data["success"] is True
+            assert data["topic"]["is_active_research"] is True
+
+    def test_create_custom_topic_duplicate_name(self, client, mock_research_manager):
+        """Test custom topic creation with duplicate name."""
+        with patch('api.topics.research_manager', mock_research_manager):
+            mock_research_manager.add_custom_topic.return_value = {
+                "success": False,
+                "error": "A topic named 'Existing Topic' already exists",
+                "topic": None
+            }
+            
+            topic_data = {
+                "name": "Existing Topic",
+                "description": "This topic already exists",
+            }
+            
+            response = client.post("/topics/custom", json=topic_data)
+            
+            assert response.status_code == 409
+            assert "already exists" in response.json()["detail"]
+
+    def test_create_custom_topic_validation_error(self, client, mock_research_manager):
+        """Test custom topic creation with validation errors."""
+        with patch('api.topics.research_manager', mock_research_manager):
+            # Test empty name
+            topic_data = {
+                "name": "",
+                "description": "Valid description",
+            }
+            
+            response = client.post("/topics/custom", json=topic_data)
+            assert response.status_code == 422  # Pydantic validation error
+            
+            # Test short description
+            topic_data = {
+                "name": "Valid Name",
+                "description": "Short",
+            }
+            
+            response = client.post("/topics/custom", json=topic_data)
+            assert response.status_code == 422  # Pydantic validation error
+
+    def test_create_custom_topic_invalid_confidence_score(self, client, mock_research_manager):
+        """Test custom topic creation with invalid confidence score."""
+        with patch('api.topics.research_manager', mock_research_manager):
+            topic_data = {
+                "name": "Valid Topic",
+                "description": "Valid description for testing purposes",
+                "confidence_score": 1.5  # Invalid: > 1.0
+            }
+            
+            response = client.post("/topics/custom", json=topic_data)
+            assert response.status_code == 422  # Pydantic validation error
+
+    def test_create_custom_topic_server_error(self, client, mock_research_manager):
+        """Test custom topic creation with server error."""
+        with patch('api.topics.research_manager', mock_research_manager):
+            mock_research_manager.add_custom_topic.side_effect = Exception("Database error")
+            
+            topic_data = {
+                "name": "Test Topic",
+                "description": "Test description for error scenario",
+            }
+            
+            response = client.post("/topics/custom", json=topic_data)
+            
+            assert response.status_code == 500
+            assert "Error creating custom topic" in response.json()["detail"]
+
+
 class TestParameterValidation:
     """Test parameter validation in endpoints."""
 

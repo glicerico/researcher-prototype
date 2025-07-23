@@ -251,6 +251,17 @@ export const deleteNonActivatedTopics = async () => {
   }
 };
 
+// NEW: Create custom research topic
+export const createCustomTopic = async (topicData) => {
+  try {
+    const response = await api.post('/topics/custom', topicData);
+    return response.data;
+  } catch (error) {
+    console.error('Error creating custom topic:', error);
+    throw error;
+  }
+};
+
 // NEW: ID-based topic research functions (SAFE - no index mismatch)
 export const enableTopicResearchById = async (topicId) => {
   try {

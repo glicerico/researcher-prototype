@@ -1,11 +1,21 @@
 from fastapi import APIRouter, Depends, HTTPException, Query
 import time
+from pydantic import BaseModel, Field
+from typing import Optional
 
 from dependencies import get_or_create_user_id, research_manager
 from logging_config import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)
+
+
+class CustomTopicRequest(BaseModel):
+    """Request model for creating a custom research topic."""
+    name: str = Field(..., min_length=1, max_length=100, description="Name of the research topic")
+    description: str = Field(..., min_length=10, max_length=500, description="Description of what the topic covers")
+    confidence_score: Optional[float] = Field(default=0.8, ge=0.0, le=1.0, description="Confidence score between 0.0 and 1.0")
+    enable_research: Optional[bool] = Field(default=False, description="Whether to enable research immediately")
 
 
 @router.get("/topics/suggestions/{session_id}")
@@ -363,3 +373,48 @@ async def delete_non_activated_topics(user_id: str = Depends(get_or_create_user_
     except Exception as e:
         logger.error(f"Error deleting non-activated topics for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error deleting non-activated topics: {str(e)}")
+
+
+@router.post("/topics/custom")
+async def create_custom_topic(request: CustomTopicRequest, user_id: str = Depends(get_or_create_user_id)):
+    """Create a custom research topic."""
+    try:
+        # Use the research manager method to add the custom topic
+        result = research_manager.add_custom_topic(
+            user_id=user_id,
+            topic_name=request.name,
+            description=request.description,
+            confidence_score=request.confidence_score,
+            enable_research=request.enable_research
+        )
+
+        if result["success"]:
+            created_topic = result["topic"]
+            return {
+                "success": True,
+                "message": f"Successfully created custom topic: {created_topic['topic_name']}",
+                "topic": {
+                    "topic_id": created_topic["topic_id"],
+                    "name": created_topic["topic_name"],
+                    "description": created_topic["description"],
+                    "confidence_score": created_topic["confidence_score"],
+                    "session_id": created_topic["session_id"],
+                    "is_active_research": created_topic["is_active_research"],
+                    "is_custom": created_topic.get("is_custom", True),
+                    "suggested_at": created_topic["suggested_at"],
+                }
+            }
+        else:
+            # Handle specific error cases
+            if "already exists" in result["error"]:
+                raise HTTPException(status_code=409, detail=result["error"])
+            elif "required" in result["error"]:
+                raise HTTPException(status_code=400, detail=result["error"])
+            else:
+                raise HTTPException(status_code=500, detail=result["error"])
+
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error creating custom topic for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating custom topic: {str(e)}")

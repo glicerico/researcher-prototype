@@ -940,3 +940,99 @@ class ResearchManager:
                     "topics_deleted": 0,
                     "sessions_affected": 0,
                 }
+
+    def add_custom_topic(self, user_id: str, topic_name: str, description: str, confidence_score: float = 0.8, enable_research: bool = False) -> Dict[str, Any]:
+        """
+        Add a custom research topic for a user.
+
+        Args:
+            user_id: The ID of the user
+            topic_name: Name of the custom topic
+            description: Description of what the topic covers
+            confidence_score: Confidence score (0.0-1.0), defaults to 0.8 for custom topics
+            enable_research: Whether to enable research immediately
+
+        Returns:
+            Dictionary with success status and topic info
+        """
+        with self._get_user_lock(user_id):
+            try:
+                # Validate inputs
+                if not topic_name or not topic_name.strip():
+                    return {"success": False, "error": "Topic name is required", "topic": None}
+                
+                if not description or not description.strip():
+                    return {"success": False, "error": "Topic description is required", "topic": None}
+                
+                if not (0.0 <= confidence_score <= 1.0):
+                    return {"success": False, "error": "Confidence score must be between 0.0 and 1.0", "topic": None}
+
+                # Ensure migration from profile.json if needed
+                self.migrate_topics_from_profile(user_id)
+
+                # Load topics data
+                topics_data = self.get_user_topics(user_id)
+
+                # Check for duplicate topic names across all sessions
+                existing_topic_names = set()
+                for session_topics in topics_data.get("sessions", {}).values():
+                    for topic in session_topics:
+                        existing_topic_names.add(topic.get("topic_name", "").lower())
+
+                if topic_name.strip().lower() in existing_topic_names:
+                    return {"success": False, "error": f"A topic named '{topic_name}' already exists", "topic": None}
+
+                # Create the custom topic
+                current_time = time.time()
+                custom_session_id = "custom_topics"  # Use a special session for custom topics
+                
+                new_topic = {
+                    "topic_id": str(uuid.uuid4()),
+                    "topic_name": topic_name.strip(),
+                    "description": description.strip(),
+                    "confidence_score": confidence_score,
+                    "suggested_at": current_time,
+                    "conversation_context": "Custom topic added by user",
+                    "is_active_research": enable_research,
+                    "research_count": 0,
+                    "is_custom": True,  # Flag to identify custom topics
+                }
+
+                if enable_research:
+                    new_topic["research_enabled_at"] = current_time
+
+                # Add to custom topics session
+                if custom_session_id not in topics_data["sessions"]:
+                    topics_data["sessions"][custom_session_id] = []
+                
+                topics_data["sessions"][custom_session_id].append(new_topic)
+
+                # Update metadata
+                topics_data["metadata"]["total_topics"] = sum(
+                    len(topics) for topics in topics_data["sessions"].values()
+                )
+                if enable_research:
+                    topics_data["metadata"]["active_research_topics"] = sum(
+                        1
+                        for session_topics in topics_data["sessions"].values()
+                        for topic in session_topics
+                        if topic.get("is_active_research", False)
+                    )
+
+                # Save updated topics
+                success = self.save_user_topics(user_id, topics_data)
+
+                if success:
+                    # Add session_id for API response
+                    new_topic["session_id"] = custom_session_id
+                    
+                    logger.info(
+                        f"Added custom topic '{topic_name}' for user {user_id} (research: {'enabled' if enable_research else 'disabled'})"
+                    )
+                    return {"success": True, "topic": new_topic}
+                else:
+                    return {"success": False, "error": "Failed to save custom topic", "topic": None}
+
+            except Exception as e:
+                logger.error(f"Error adding custom topic for user {user_id}: {str(e)}")
+                return {"success": False, "error": str(e), "topic": None}

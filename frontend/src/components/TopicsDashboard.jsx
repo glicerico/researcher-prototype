@@ -4,6 +4,7 @@ import TopicsHeader from './TopicsHeader';
 import TopicsFilters from './TopicsFilters';
 import MotivationStats from './MotivationStats';
 import EngineSettings from './EngineSettings';
+import AddTopicForm from './AddTopicForm';
 import { 
   getAllTopicSuggestions,
   getTopicStatistics,
@@ -11,6 +12,7 @@ import {
   deleteTopicById, 
   cleanupTopics,
   deleteNonActivatedTopics,
+  createCustomTopic,
   enableTopicResearchById,
   disableTopicResearchById,
   getResearchEngineStatus,
@@ -33,6 +35,7 @@ const TopicsDashboard = () => {
   const [activeTopicsCount, setActiveTopicsCount] = useState(0);
   const [showMotivation, setShowMotivation] = useState(false);
   const [showEngineSettings, setShowEngineSettings] = useState(false);
+  const [showAddTopicForm, setShowAddTopicForm] = useState(false);
   const [filters, setFilters] = useState({
     searchTerm: '',
     sessionFilter: 'all',
@@ -330,6 +333,30 @@ const TopicsDashboard = () => {
     }
   };
 
+  // Handle showing add topic form
+  const handleShowAddTopicForm = () => {
+    setShowAddTopicForm(true);
+  };
+
+  // Handle closing add topic form
+  const handleCloseAddTopicForm = () => {
+    setShowAddTopicForm(false);
+  };
+
+  // Handle topic added successfully
+  const handleTopicAdded = (newTopic) => {
+    // Refresh data to show the new topic
+    loadData();
+    
+    // Update active topics count if the topic was created with research enabled
+    if (newTopic.is_active_research) {
+      setActiveTopicsCount(prev => prev + 1);
+    }
+    
+    // Clear any previous error messages
+    setError(null);
+  };
+
   // Handle individual topic deletion
   const handleDeleteTopic = async (topicId, topicName) => {
     if (!window.confirm(`Delete topic "${topicName}"?`)) {
@@ -432,6 +459,7 @@ const TopicsDashboard = () => {
         onShowMotivation={() => setShowMotivation(true)}
         onShowEngineSettings={() => setShowEngineSettings(true)}
         onDeleteNonActivated={handleDeleteNonActivated}
+        onAddCustomTopic={handleShowAddTopicForm}
       />
       
       {error && (
@@ -580,6 +608,14 @@ const TopicsDashboard = () => {
       
       {showEngineSettings && (
         <EngineSettings onClose={() => setShowEngineSettings(false)} />
+      )}
+      
+      {showAddTopicForm && (
+        <AddTopicForm 
+          isOpen={showAddTopicForm}
+          onClose={handleCloseAddTopicForm}
+          onTopicAdded={handleTopicAdded}
+        />
       )}
     </div>
   );

@@ -17,7 +17,8 @@ const TopicsHeader = ({
   immediateResearchLoading,
   onShowMotivation,
   onShowEngineSettings,
-  onDeleteNonActivated
+  onDeleteNonActivated,
+  onAddCustomTopic
 }) => {
 
 
@@ -157,6 +158,16 @@ const TopicsHeader = ({
         </div>
 
         <div className="action-buttons">
+          {/* Add Custom Topic */}
+          <button 
+            className="add-custom-topic-btn"
+            onClick={onAddCustomTopic}
+            disabled={loading}
+            title="Add a custom research topic"
+          >
+            ➕ Add Topic
+          </button>
+
           {/* Selection Controls */}
           {totalCount > 0 && (
             <button 
