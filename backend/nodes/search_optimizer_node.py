@@ -72,20 +72,17 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         
         # Extract the refined query from the structured result
         refined_query = search_result.query
-        search_type = search_result.search_type
         
         # Log the refined query
         display_refined = refined_query[:75] + "..." if len(refined_query) > 75 else refined_query
-        logger.info(f"🔬 Search Optimizer: Produced refined query: \"{display_refined}\" (type: {search_type})")
+        logger.info(f"🔬 Search Optimizer: Produced refined query: \"{display_refined}\"")
         
-        # Store both the refined query and search type in the workflow context
+        # Store the refined query in the workflow context
         state["workflow_context"]["refined_search_query"] = refined_query
-        state["workflow_context"]["search_type"] = search_type
         logger.info(f"Refined search query with context: {refined_query}")
         
     except Exception as e:
         logger.error(f"Error in search_prompt_optimizer_node (with context): {str(e)}. Using original query as fallback.")
         state["workflow_context"]["refined_search_query"] = last_user_message_content
-        state["workflow_context"]["search_type"] = "unknown"
         
     return state 
