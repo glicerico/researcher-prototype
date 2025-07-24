@@ -43,12 +43,11 @@ from prompts import (
     TOPIC_EXTRACTOR_SYSTEM_PROMPT
 )
 
-# Import all model classes from llm_models.py and models.py
+# Internal imports - LLM models
 from llm_models import (
     RoutingAnalysis,
-    SearchQuery,
-    AnalysisTask,
-    FormattedResponse,
+    AnalysisTask, 
+    FormattedResponse, 
     TopicSuggestions,
     TopicSuggestionItem,
     ResearchQualityAssessment,

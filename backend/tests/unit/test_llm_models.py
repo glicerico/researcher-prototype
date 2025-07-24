@@ -1,3 +1,6 @@
+"""
+Tests for LLM models using Pydantic for structured output.
+"""
 import pytest
 from pydantic import ValidationError
 
@@ -6,10 +9,9 @@ import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
 from llm_models import (
-    RoutingAnalysis,
-    SearchQuery, 
-    AnalysisTask,
-    FormattedResponse,
+    RoutingAnalysis, 
+    AnalysisTask, 
+    FormattedResponse, 
     TopicSuggestions,
     TopicSuggestionItem,
     ResearchQualityAssessment,
@@ -66,39 +68,6 @@ class TestRoutingAnalysis:
         
         with pytest.raises(ValidationError):
             RoutingAnalysis(decision="chat", reason="Test")
-
-
-class TestSearchQuery:
-    """Test SearchQuery model."""
-
-    def test_search_query_valid(self):
-        """Test creating valid SearchQuery."""
-        query = SearchQuery(
-            query="latest AI developments",
-            search_type="news"  # required field
-        )
-        
-        assert query.query == "latest AI developments"
-        assert query.search_type == "news"
-
-    def test_search_query_types(self):
-        """Test different search types."""
-        search_types = ["factual", "news", "concept"]
-        
-        for search_type in search_types:
-            query = SearchQuery(
-                query="test query",
-                search_type=search_type
-            )
-            assert query.search_type == search_type
-
-    def test_search_query_required_fields(self):
-        """Test that all fields are required."""
-        with pytest.raises(ValidationError):
-            SearchQuery()
-        
-        with pytest.raises(ValidationError):
-            SearchQuery(query="test query")
 
 
 class TestAnalysisTask:

@@ -8,7 +8,6 @@ from nodes.base import (
     AIMessage, 
     SystemMessage,
     ChatOpenAI, 
-    SearchQuery,
     SEARCH_OPTIMIZER_SYSTEM_PROMPT,
     config,
     get_current_datetime_str
@@ -63,15 +62,10 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         api_key=config.OPENAI_API_KEY
     )
     
-    # Create structured output model
-    structured_optimizer = optimizer_llm.with_structured_output(SearchQuery)
-    
     try:
-        # Invoke the structured optimizer
-        search_result = structured_optimizer.invoke(context_messages_for_llm)
-        
-        # Extract the refined query from the structured result
-        refined_query = search_result.query
+        # Invoke the optimizer to get a refined query directly
+        response = optimizer_llm.invoke(context_messages_for_llm)
+        refined_query = response.content.strip()
         
         # Log the refined query
         display_refined = refined_query[:75] + "..." if len(refined_query) > 75 else refined_query
