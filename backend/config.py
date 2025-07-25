@@ -34,10 +34,46 @@ LANGCHAIN_PROJECT = os.getenv("LANGCHAIN_PROJECT", "researcher-prototype")
 
 # Other models that can be supported
 SUPPORTED_MODELS = {
-    "gpt-4o-mini": "OpenAI GPT-4o-mini",
-    "gpt-4o": "OpenAI GPT-4o",
-    # Add more models as needed
+    "gpt-4o-mini": {
+        "name": "GPT-4o Mini", 
+        "provider": "OpenAI",
+        "enabled": True
+    },
+    "gpt-4o": {
+        "name": "GPT-4o", 
+        "provider": "OpenAI",
+        "enabled": os.getenv("GPT_4O_ENABLED", "true").lower() == "true"
+    },
+    "gpt-4-turbo": {
+        "name": "GPT-4 Turbo", 
+        "provider": "OpenAI",
+        "enabled": os.getenv("GPT_4_TURBO_ENABLED", "true").lower() == "true"
+    },
+    "gpt-3.5-turbo": {
+        "name": "GPT-3.5 Turbo", 
+        "provider": "OpenAI",
+        "enabled": os.getenv("GPT_35_TURBO_ENABLED", "true").lower() == "true"
+    },
 }
+
+def get_available_models():
+    """Get list of available models based on configuration."""
+    return {
+        model_id: model_info 
+        for model_id, model_info in SUPPORTED_MODELS.items() 
+        if model_info.get("enabled", True)
+    }
+
+def get_default_model():
+    """Get the default model, ensuring it's available."""
+    default = DEFAULT_MODEL
+    available = get_available_models()
+    
+    if default not in available:
+        # Fallback to first available model if default is not available
+        default = next(iter(available.keys())) if available else DEFAULT_MODEL
+    
+    return default
 
 # Message management configuration
 MAX_MESSAGES_IN_STATE = int(os.getenv("MAX_MESSAGES_IN_STATE", "4"))

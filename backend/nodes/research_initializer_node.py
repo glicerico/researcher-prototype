@@ -9,6 +9,7 @@ from nodes.base import (
     logger, 
     get_current_datetime_str
 )
+from ..config import DEFAULT_MODEL
 
 
 def research_initializer_node(state: ChatState) -> ChatState:
@@ -40,7 +41,7 @@ def research_initializer_node(state: ChatState) -> ChatState:
     state["user_id"] = user_id
     
     # Set research-specific parameters
-    state["model"] = research_context.get("model", "gpt-4o-mini")
+    state["model"] = research_context.get("model", DEFAULT_MODEL)
     state["temperature"] = 0.3  # Lower temperature for more focused research
     state["max_tokens"] = 2000
     state["personality"] = {"style": "research", "tone": "analytical"}

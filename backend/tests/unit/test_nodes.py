@@ -10,6 +10,7 @@ from nodes.router_node import router_node
 from nodes.integrator_node import integrator_node  
 from nodes.response_renderer_node import response_renderer_node
 from llm_models import RoutingAnalysis, FormattedResponse
+from backend.config import DEFAULT_MODEL
 
 
 @pytest.fixture

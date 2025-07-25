@@ -67,6 +67,15 @@ jest.mock('./ConversationTopics', () => {
   };
 });
 
+// Mock API functions
+const mockGetModels = jest.fn().mockResolvedValue({
+  models: {
+    'gpt-4o-mini': { name: 'GPT-4o Mini', provider: 'OpenAI' },
+    'gpt-4o': { name: 'GPT-4o', provider: 'OpenAI' }
+  },
+  default_model: 'gpt-4o-mini'
+});
+
 describe('ChatPage Comprehensive Tests', () => {
   let mockSessionContext;
   
@@ -74,13 +83,18 @@ describe('ChatPage Comprehensive Tests', () => {
     jest.clearAllMocks();
     
     mockSessionContext = {
-      sessionId: 'test-session-123',
-      messages: [],
-      personality: null,
-      selectedModel: 'gpt-4o-mini',
+      userId: 'test-user',
+      sessionId: 'test-session',
+      messages: [
+        { role: 'system', content: 'Hello! I\'m your AI assistant.' }
+      ],
+      personality: { style: 'helpful', tone: 'friendly' },
+      userDisplayName: 'Test User',
+      conversationTopics: [],
+      sessionHistory: [],
       updateSessionId: jest.fn(),
       updateMessages: jest.fn(),
-      updateConversationTopics: jest.fn()
+      updateConversationTopics: jest.fn(),
     };
     
     useSession.mockReturnValue(mockSessionContext);

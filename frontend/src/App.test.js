@@ -1,9 +1,12 @@
 import { render, screen } from '@testing-library/react';
 import App from './App';
 
-// Mock only the API module for unit tests
+// Mock the api module
 jest.mock('./services/api', () => ({
-  getModels: jest.fn().mockResolvedValue({ models: { 'gpt-4o-mini': 'GPT-4o-mini' } }),
+  getModels: jest.fn().mockResolvedValue({ 
+    models: { 'gpt-4o-mini': { name: 'GPT-4o Mini', provider: 'OpenAI' } },
+    default_model: 'gpt-4o-mini'
+  }),
   getUsers: jest.fn().mockResolvedValue([]),
   getUserProfile: jest.fn().mockResolvedValue(null),
 }));

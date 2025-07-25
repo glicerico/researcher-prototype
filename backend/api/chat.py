@@ -101,13 +101,14 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
 
 @router.get("/models")
 async def get_models():
+    from ..config import get_available_models, get_default_model
+    
+    available_models = get_available_models()
+    default_model = get_default_model()
+    
     return {
-        "models": {
-            "gpt-4o": {"name": "GPT-4o", "provider": "OpenAI"},
-            "gpt-4o-mini": {"name": "GPT-4o Mini", "provider": "OpenAI"},
-            "gpt-4-turbo": {"name": "GPT-4 Turbo", "provider": "OpenAI"},
-            "gpt-3.5-turbo": {"name": "GPT-3.5 Turbo", "provider": "OpenAI"},
-        }
+        "models": available_models,
+        "default_model": default_model
     }
 
 
