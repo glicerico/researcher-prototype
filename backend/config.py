@@ -36,33 +36,25 @@ LANGCHAIN_PROJECT = os.getenv("LANGCHAIN_PROJECT", "researcher-prototype")
 SUPPORTED_MODELS = {
     "gpt-4o-mini": {
         "name": "GPT-4o Mini", 
-        "provider": "OpenAI",
-        "enabled": True
+        "provider": "OpenAI"
     },
     "gpt-4o": {
         "name": "GPT-4o", 
-        "provider": "OpenAI",
-        "enabled": os.getenv("GPT_4O_ENABLED", "true").lower() == "true"
+        "provider": "OpenAI"
     },
     "gpt-4-turbo": {
         "name": "GPT-4 Turbo", 
-        "provider": "OpenAI",
-        "enabled": os.getenv("GPT_4_TURBO_ENABLED", "true").lower() == "true"
+        "provider": "OpenAI"
     },
     "gpt-3.5-turbo": {
         "name": "GPT-3.5 Turbo", 
-        "provider": "OpenAI",
-        "enabled": os.getenv("GPT_35_TURBO_ENABLED", "true").lower() == "true"
+        "provider": "OpenAI"
     },
 }
 
 def get_available_models():
     """Get list of available models based on configuration."""
-    return {
-        model_id: model_info 
-        for model_id, model_info in SUPPORTED_MODELS.items() 
-        if model_info.get("enabled", True)
-    }
+    return SUPPORTED_MODELS.copy()
 
 def get_default_model():
     """Get the default model, ensuring it's available."""
