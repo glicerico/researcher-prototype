@@ -101,7 +101,7 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
 
 @router.get("/models")
 async def get_models():
-    from ..config import get_available_models, get_default_model
+    from config import get_available_models, get_default_model
     
     available_models = get_available_models()
     default_model = get_default_model()

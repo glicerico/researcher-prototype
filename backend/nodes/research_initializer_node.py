@@ -5,11 +5,11 @@ import time
 from typing import Dict, Any
 from langchain_core.messages import HumanMessage, SystemMessage
 from nodes.base import (
-    ChatState, 
-    logger, 
+    ChatState,
+    logger,
     get_current_datetime_str
 )
-from ..config import DEFAULT_MODEL
+from config import DEFAULT_MODEL
 
 
 def research_initializer_node(state: ChatState) -> ChatState:

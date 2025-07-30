@@ -32,10 +32,25 @@ OPTIMIZATION GUIDELINES:
 
 EXAMPLES OF GOOD OPTIMIZATION:
 - "climate models" → "climate prediction models urban planning 2025"
-- "AI developments" → "generative AI commercial healthcare applications 2025"
+- "AI developments" → "generative AI commercial healthcare applications 2025" 
 - "energy efficiency" → "heat pump energy efficiency ratings residential HVAC comparison"
 
-Analyze the conversation context and the LATEST user question, then create a single, well-optimized search query that will find the most relevant and authoritative sources.
+**CRITICAL OUTPUT FORMAT REQUIREMENT:**
+You must return your response as valid JSON with no additional text, explanation, or commentary.
+
+REQUIRED JSON FORMAT:
+{{"query": "your optimized search query here"}}
+
+GOOD OUTPUT EXAMPLE:
+{{"query": "Ethereum ETH all-time high price January 2025"}}
+
+BAD OUTPUT EXAMPLES:
+- Any text before or after the JSON
+- Invalid JSON syntax
+- Multiple fields in the JSON object
+- Explanatory text like "Here's the query: {{...}}"
+
+Analyze the conversation context and the LATEST user question, then return ONLY valid JSON containing the optimized search query.
 
 {memory_context_section}
 """

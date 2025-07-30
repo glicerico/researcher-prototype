@@ -1,6 +1,7 @@
 """
 Search optimizer node for refining user queries into more effective search queries.
 """
+import json
 from nodes.base import (
     ChatState, 
     logger, 
@@ -65,7 +66,21 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
     try:
         # Invoke the optimizer to get a refined query directly
         response = optimizer_llm.invoke(context_messages_for_llm)
-        refined_query = response.content.strip()
+        response_content = response.content.strip()
+        
+        # Parse JSON response to extract the query
+        try:
+            response_json = json.loads(response_content)
+            refined_query = response_json.get("query", "")
+            
+            if not refined_query:
+                logger.warning("🔬 Search Optimizer: Empty query in JSON response, using original query")
+                refined_query = last_user_message_content
+                
+        except json.JSONDecodeError as json_error:
+            logger.warning(f"🔬 Search Optimizer: Failed to parse JSON response: {json_error}. Response was: {response_content[:100]}...")
+            # Fallback: try to extract query from malformed response or use original
+            refined_query = response_content if response_content else last_user_message_content
         
         # Log the refined query
         display_refined = refined_query[:75] + "..." if len(refined_query) > 75 else refined_query

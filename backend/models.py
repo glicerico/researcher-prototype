@@ -1,6 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
-from .config import DEFAULT_MODEL
+from config import DEFAULT_MODEL
 
 
 class PersonalityConfig(BaseModel):
