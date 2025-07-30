@@ -1,5 +1,6 @@
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, List
+from config import DEFAULT_MODEL
 
 
 class PersonalityConfig(BaseModel):
@@ -25,7 +26,7 @@ class TopicSuggestion(BaseModel):
 class ChatRequest(BaseModel):
     """Request model for chat endpoint."""
     messages: List[Message]
-    model: str = "gpt-4o-mini"
+    model: str = DEFAULT_MODEL
     temperature: float = 0.7
     max_tokens: int = 1000
     personality: Optional[PersonalityConfig] = None

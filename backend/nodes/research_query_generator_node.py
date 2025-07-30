@@ -63,7 +63,6 @@ def research_query_generator_node(state: ChatState) -> ChatState:
         
         # Store the generated query in workflow context
         state["workflow_context"]["refined_search_query"] = research_query
-        state["workflow_context"]["search_type"] = "research"
         
         # Update the synthetic messages with the generated query
         if state.get("messages") and len(state["messages"]) > 1:
@@ -86,7 +85,6 @@ def research_query_generator_node(state: ChatState) -> ChatState:
         # Fallback to a simple query
         fallback_query = f"Recent developments and new information about {topic_name}"
         state["workflow_context"]["refined_search_query"] = fallback_query
-        state["workflow_context"]["search_type"] = "research"
         
         # Update the synthetic messages with the fallback query
         if state.get("messages") and len(state["messages"]) > 1:

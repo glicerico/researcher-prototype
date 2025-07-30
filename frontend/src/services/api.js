@@ -42,11 +42,10 @@ export const getModels = async () => {
 };
 
 // Send a chat message
-export const sendChatMessage = async (messages, model, temperature = 0.7, maxTokens = 1000, personality = null, sessionId = null) => {
+export const sendChatMessage = async (messages, temperature = 0.7, maxTokens = 1000, personality = null, sessionId = null) => {
   try {
     const payload = {
       messages,
-      model,
       temperature,
       max_tokens: maxTokens,
     };

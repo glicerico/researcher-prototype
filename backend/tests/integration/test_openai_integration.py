@@ -2,6 +2,19 @@
 import os
 import pytest
 from graph_builder import create_chat_graph
+from unittest.mock import AsyncMock, patch
+from backend.config import DEFAULT_MODEL
+
+@pytest.fixture
+def sample_state():
+    return {
+        "messages": [],
+        "user_id": "test_user",
+        "session_id": "test_session", 
+        "model": DEFAULT_MODEL,
+        "temperature": 0.0,  # Use 0 for deterministic results
+        "max_tokens": 20
+    }
 
 @pytest.mark.integration
 @pytest.mark.skipif(not os.getenv("OPENAI_API_KEY"), 

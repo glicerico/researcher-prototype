@@ -1,6 +1,7 @@
 """
 Search optimizer node for refining user queries into more effective search queries.
 """
+import json
 from nodes.base import (
     ChatState, 
     logger, 
@@ -8,7 +9,6 @@ from nodes.base import (
     AIMessage, 
     SystemMessage,
     ChatOpenAI, 
-    SearchQuery,
     SEARCH_OPTIMIZER_SYSTEM_PROMPT,
     config,
     get_current_datetime_str
@@ -63,29 +63,35 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         api_key=config.OPENAI_API_KEY
     )
     
-    # Create structured output model
-    structured_optimizer = optimizer_llm.with_structured_output(SearchQuery)
-    
     try:
-        # Invoke the structured optimizer
-        search_result = structured_optimizer.invoke(context_messages_for_llm)
+        # Invoke the optimizer to get a refined query directly
+        response = optimizer_llm.invoke(context_messages_for_llm)
+        response_content = response.content.strip()
         
-        # Extract the refined query from the structured result
-        refined_query = search_result.query
-        search_type = search_result.search_type
+        # Parse JSON response to extract the query
+        try:
+            response_json = json.loads(response_content)
+            refined_query = response_json.get("query", "")
+            
+            if not refined_query:
+                logger.warning("🔬 Search Optimizer: Empty query in JSON response, using original query")
+                refined_query = last_user_message_content
+                
+        except json.JSONDecodeError as json_error:
+            logger.warning(f"🔬 Search Optimizer: Failed to parse JSON response: {json_error}. Response was: {response_content[:100]}...")
+            # Fallback: try to extract query from malformed response or use original
+            refined_query = response_content if response_content else last_user_message_content
         
         # Log the refined query
         display_refined = refined_query[:75] + "..." if len(refined_query) > 75 else refined_query
-        logger.info(f"🔬 Search Optimizer: Produced refined query: \"{display_refined}\" (type: {search_type})")
+        logger.info(f"🔬 Search Optimizer: Produced refined query: \"{display_refined}\"")
         
-        # Store both the refined query and search type in the workflow context
+        # Store the refined query in the workflow context
         state["workflow_context"]["refined_search_query"] = refined_query
-        state["workflow_context"]["search_type"] = search_type
         logger.info(f"Refined search query with context: {refined_query}")
         
     except Exception as e:
         logger.error(f"Error in search_prompt_optimizer_node (with context): {str(e)}. Using original query as fallback.")
         state["workflow_context"]["refined_search_query"] = last_user_message_content
-        state["workflow_context"]["search_type"] = "unknown"
         
     return state 

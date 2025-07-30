@@ -1,8 +1,11 @@
 import os
 import sys
 import pytest
+import asyncio
 from fastapi.testclient import TestClient
 from langchain_core.messages import HumanMessage, AIMessage
+from unittest.mock import Mock, AsyncMock
+from backend.config import DEFAULT_MODEL
 
 # Add the parent directory to the path so we can import from backend
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -39,4 +42,20 @@ def test_chat_state():
         "model": "gpt-4o-mini",
         "temperature": 0.7,
         "max_tokens": 1000
+    }
+
+
+@pytest.fixture
+def sample_chat_state():
+    """Sample chat state for testing."""
+    return {
+        "messages": [],
+        "user_id": "test_user",
+        "session_id": "test_session",
+        "model": DEFAULT_MODEL,
+        "temperature": 0.7,
+        "max_tokens": 1000,
+        "current_module": None,
+        "module_results": {},
+        "workflow_context": {},
     } 

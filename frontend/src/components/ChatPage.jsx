@@ -14,7 +14,6 @@ const ChatPage = () => {
     sessionId,
     messages,
     personality,
-    selectedModel,
     updateSessionId,
     updateMessages,
     updateConversationTopics,
@@ -89,7 +88,6 @@ const ChatPage = () => {
       // Send message to API with user ID
       const response = await sendChatMessage(
         apiMessages, 
-        selectedModel,
         0.7,  // temperature
         1000,  // max tokens
         personality, // Include personality in the request

@@ -1,6 +1,9 @@
+import json
+import asyncio
 from logging_config import get_logger
 from nodes.topic_extractor_node import topic_extractor_node
 from dependencies import research_manager
+from config import DEFAULT_MODEL
 
 logger = get_logger(__name__)
 
@@ -16,7 +19,7 @@ async def extract_and_store_topics_async(state: dict, user_id: str, session_id: 
             "messages": state.get("messages", []),
             "user_id": user_id,
             "session_id": session_id,
-            "model": state.get("model", "gpt-4o-mini"),
+            "model": state.get("model", DEFAULT_MODEL),
             "module_results": {},
             "workflow_context": {},
             # Include memory context but the prompt will ensure it's used appropriately

@@ -7,6 +7,11 @@ import sys
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from langchain_core.messages import AIMessage  # noqa: E402
+from fastapi.testclient import TestClient
+from backend.app import app
+from backend.config import DEFAULT_MODEL, get_available_models
+
+client = TestClient(app)
 
 
 def test_root_endpoint(client):
@@ -16,13 +21,24 @@ def test_root_endpoint(client):
     assert "status" in response.json()
 
 
-def test_models_endpoint(client):
-    """Test that the models endpoint returns the supported models."""
+def test_models_endpoint():
+    """Test the /models endpoint returns available models."""
     response = client.get("/models")
     assert response.status_code == 200
-    assert "models" in response.json()
-    models = response.json()["models"]
-    assert "gpt-4o-mini" in models
+    
+    data = response.json()
+    assert "models" in data
+    assert "default_model" in data
+    
+    # Check that models from config are present
+    available_models = get_available_models()
+    models = data["models"]
+    
+    for model_id in available_models:
+        assert model_id in models
+    
+    # Check default model is valid
+    assert data["default_model"] in models
 
 
 @patch("nodes.router_node.ChatOpenAI")
@@ -52,7 +68,7 @@ def test_chat_endpoint(mock_renderer_openai, mock_integrator_openai, mock_router
     # Convert the test state to the format expected by the API
     api_request = {
         "messages": [{"role": "user", "content": "Hello, how are you?"}],
-        "model": "gpt-4o-mini",
+        "model": DEFAULT_MODEL,
         "temperature": 0.7,
         "max_tokens": 1000,
     }
@@ -64,13 +80,13 @@ def test_chat_endpoint(mock_renderer_openai, mock_integrator_openai, mock_router
     assert response.status_code == 200
     response_data = response.json()
     assert response_data["response"] == "This is a test response"
-    assert response_data["model"] == "gpt-4o-mini"
+    assert response_data["model"] == DEFAULT_MODEL
 
 
 def test_invalid_request(client):
     """Test that an invalid request returns an error."""
     # Missing required field (messages)
-    request_data = {"model": "gpt-4o-mini", "temperature": 0.7}
+    request_data = {"model": DEFAULT_MODEL, "temperature": 0.7}
 
     response = client.post("/chat", json=request_data)
 

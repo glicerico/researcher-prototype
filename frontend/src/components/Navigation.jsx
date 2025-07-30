@@ -1,12 +1,11 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
-import ModelSelector from './ModelSelector';
 import UserDropdown from './UserDropdown';
 import UserProfile from './UserProfile';
 import UserSelector from './UserSelector';
 import KnowledgeGraphViewer from './graph/KnowledgeGraphViewer';
-import { getModels, getCurrentUser } from '../services/api';
+import { getCurrentUser } from '../services/api';
 import { generateDisplayName } from '../utils/userUtils';
 import '../styles/Navigation.css';
 
@@ -16,40 +15,20 @@ const Navigation = () => {
   const { 
     userDisplayName, 
     userId,
-    selectedModel,
     updateUserId,
     updateUserDisplayName,
     updatePersonality,
-    updateMessages,
-    updateSelectedModel
+    updateMessages
   } = useSession();
 
   // Chat-specific state (only used on chat page)
-  const [models, setModels] = useState({});
   const [showUserSelector, setShowUserSelector] = useState(false);
   const [showUserProfile, setShowUserProfile] = useState(false);
   const [showKnowledgeGraph, setShowKnowledgeGraph] = useState(false);
   const [profileUpdateTime, setProfileUpdateTime] = useState(0);
   const [isDashboardsOpen, setIsDashboardsOpen] = useState(false);
 
-
   const isOnChatPage = location.pathname === '/';
-
-  // Load available models on component mount (for chat page)
-  useEffect(() => {
-    if (!isOnChatPage) return;
-    
-    const loadModels = async () => {
-      try {
-        const modelData = await getModels();
-        setModels(modelData.models || {});
-      } catch (error) {
-        console.error('Error loading models:', error);
-      }
-    };
-    
-    loadModels();
-  }, [isOnChatPage]);
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -236,11 +215,6 @@ const Navigation = () => {
 
           {isOnChatPage && (
             <div className="chat-controls">
-              <ModelSelector 
-                models={models} 
-                selectedModel={selectedModel} 
-                onSelectModel={updateSelectedModel} 
-              />
               <UserDropdown 
                 onUserSelected={handleUserSelected} 
                 currentUserId={userId} 

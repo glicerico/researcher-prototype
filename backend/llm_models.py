@@ -1,18 +1,15 @@
+"""
+Pydantic models for LLM structured output parsing.
+"""
 from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional
 
 
 class RoutingAnalysis(BaseModel):
-    """Analysis for router to determine which module to use."""
-    decision: str = Field(description="The chosen module name (chat, search, or analyzer)")
-    reason: str = Field(description="A brief explanation of why this module was chosen")
-    complexity: int = Field(description="Rate the complexity from 1-10 (1=very simple, 10=very complex)")
-
-
-class SearchQuery(BaseModel):
-    """Refined search query optimized for search engines."""
-    query: str = Field(description="The optimized search query based on the user's question. Should be concise, focused on keywords, and contain the essential information needed for search.")
-    search_type: str = Field(description="The type of search this is: 'factual' for facts and information, 'news' for current events, 'concept' for explanations of ideas or concepts")
+    """Analysis of user input to route to appropriate module."""
+    decision: str = Field(description="The routing decision: 'chat', 'search', or 'analyzer'")
+    reason: str = Field(description="Brief explanation of why this routing decision was made")
+    complexity: str = Field(description="Estimated complexity level: 'simple', 'moderate', or 'complex'")
 
 
 class AnalysisTask(BaseModel):
