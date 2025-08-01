@@ -38,12 +38,8 @@ const ChatPage = () => {
       const message = e.data;
       setStatusMessage(message);
       
-      // Clear the status message after a short delay if it's "Complete"
-      if (message === 'Complete') {
-        setTimeout(() => {
-          setStatusMessage('');
-        }, 2000); // Clear after 2 seconds
-      }
+      // Note: Status is now cleared immediately when response is displayed,
+      // so we don't need to handle "Complete" messages specially here
     };
     es.onerror = () => es.close();
     return () => es.close();
@@ -137,12 +133,18 @@ const ChatPage = () => {
       
       updateMessages(prev => [...prev, assistantMessage]);
       
+      // Clear status message immediately when response is displayed
+      setStatusMessage('');
+      
       // Update conversation topics if they exist in the response
       if (response.topics && response.topics.length > 0) {
         updateConversationTopics(response.topics);
       }
     } catch (error) {
       console.error('Error sending message:', error);
+      
+      // Clear status message on error
+      setStatusMessage('');
       
       // Add error message to chat
       const errorMessage = { 
