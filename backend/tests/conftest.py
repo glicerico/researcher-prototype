@@ -5,11 +5,11 @@ import asyncio
 from fastapi.testclient import TestClient
 from langchain_core.messages import HumanMessage, AIMessage
 from unittest.mock import Mock, AsyncMock
-from backend.config import DEFAULT_MODEL
 
 # Add the parent directory to the path so we can import from backend
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
+from config import DEFAULT_MODEL
 from app import app
 from graph_builder import create_chat_graph
 

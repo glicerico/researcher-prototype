@@ -8,8 +8,8 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from langchain_core.messages import AIMessage  # noqa: E402
 from fastapi.testclient import TestClient
-from backend.app import app
-from backend.config import DEFAULT_MODEL, get_available_models
+from app import app
+from config import DEFAULT_MODEL, get_available_models
 
 client = TestClient(app)
 

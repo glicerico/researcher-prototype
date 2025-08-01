@@ -3,7 +3,7 @@ import os
 import pytest
 from graph_builder import create_chat_graph
 from unittest.mock import AsyncMock, patch
-from backend.config import DEFAULT_MODEL
+from config import DEFAULT_MODEL
 
 @pytest.fixture
 def sample_state():
