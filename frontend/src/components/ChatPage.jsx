@@ -5,7 +5,7 @@ import ChatInput from './ChatInput';
 import TypingIndicator from './TypingIndicator';
 import SessionHistory from './SessionHistory';
 import ConversationTopics from './ConversationTopics';
-import { sendChatMessage, triggerUserActivity } from '../services/api';
+import { sendChatMessage, triggerUserActivity, API_URL } from '../services/api';
 import '../App.css';
 
 const ChatPage = () => {
@@ -23,11 +23,21 @@ const ChatPage = () => {
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [chatInputValue, setChatInputValue] = useState('');
+  const [statusMessage, setStatusMessage] = useState('');
   
   // Topics sidebar state
   const [isTopicsSidebarCollapsed, setIsTopicsSidebarCollapsed] = useState(false);
   
   const messagesEndRef = useRef(null);
+
+  // Subscribe to backend status updates via SSE
+  useEffect(() => {
+    if (!sessionId) return;
+    const es = new EventSource(`${API_URL}/status/${sessionId}`);
+    es.onmessage = (e) => setStatusMessage(e.data);
+    es.onerror = () => es.close();
+    return () => es.close();
+  }, [sessionId]);
 
   // Generate a system message based on personality
   const getSystemMessage = useCallback(() => {
@@ -252,9 +262,12 @@ const ChatPage = () => {
           ))}
           {isTyping && <TypingIndicator />}
           <div ref={messagesEndRef} />
-          
+          {statusMessage && (
+            <div className="status-update" role="status">{statusMessage}</div>
+          )}
+
           {userScrolling && (
-            <button 
+            <button
               className="scroll-to-latest-button"
               onClick={scrollToLatest}
             >

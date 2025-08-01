@@ -12,6 +12,7 @@ from nodes.base import (
     ROUTER_SYSTEM_PROMPT,
     config,
     get_current_datetime_str,
+    queue_status,
 )
 from utils import get_last_user_message
 
@@ -19,6 +20,7 @@ from utils import get_last_user_message
 def router_node(state: ChatState) -> ChatState:
     """Uses a lightweight LLM to analyze the user's message and determine routing."""
     logger.info("🔀 Router: Analyzing message to determine processing path")
+    queue_status(state.get("session_id"), "Routing request...")
 
     # Get the last user message
     logger.debug(f"🔀 Router: Length of messages in router: {len(state['messages'])}")

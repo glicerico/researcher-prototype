@@ -26,7 +26,14 @@ class MotivationConfigUpdate(BaseModel):
     satisfaction_decay: Optional[float] = None
 
 
-from dependencies import storage_manager, profile_manager, research_manager, zep_manager, get_or_create_user_id, _motivation_config_override
+from dependencies import (
+    storage_manager,
+    profile_manager,
+    research_manager,
+    zep_manager,
+    get_or_create_user_id,
+    _motivation_config_override,
+)
 from autonomous_research_engine import initialize_autonomous_researcher
 
 # Global motivation config override (persists across reinitializations)
@@ -44,7 +51,9 @@ async def lifespan(app: FastAPI):
     try:
         logger.info("🔬 Initializing Autonomous Research Engine...")
         logger.info(f"App startup - Config override: {_motivation_config_override}")
-        app.state.autonomous_researcher = initialize_autonomous_researcher(profile_manager, research_manager, _motivation_config_override)
+        app.state.autonomous_researcher = initialize_autonomous_researcher(
+            profile_manager, research_manager, _motivation_config_override
+        )
         await app.state.autonomous_researcher.start()
         logger.info("🔬 Autonomous Research Engine initialized successfully")
     except Exception as e:
@@ -84,6 +93,7 @@ from api.topics import router as topics_router
 from api.research import router as research_router
 from api.admin import router as admin_router
 from api.graph import router as graph_router
+from api.status import router as status_router
 
 app.include_router(chat_router)
 app.include_router(users_router)
@@ -91,6 +101,7 @@ app.include_router(topics_router)
 app.include_router(research_router)
 app.include_router(admin_router)
 app.include_router(graph_router)
+app.include_router(status_router)
 
 # Mount static files for diagrams
 static_dir = "static"
