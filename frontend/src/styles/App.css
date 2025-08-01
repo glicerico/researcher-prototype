@@ -108,6 +108,13 @@ body {
   background-color: var(--primary-hover-color);
 }
 
+.status-update {
+  text-align: center;
+  color: var(--text-secondary-color);
+  padding: 0.25rem 0;
+  font-size: 0.875rem;
+}
+
 /* Container styles for user selector and profile */
 .selector-container, .profile-container {
   position: relative;

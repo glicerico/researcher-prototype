@@ -7,6 +7,7 @@ from graph_builder import chat_graph
 from dependencies import get_or_create_user_id, profile_manager, zep_manager
 from services.chat_service import extract_and_store_topics_async
 from logging_config import get_logger
+from status_manager import queue_status
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -83,7 +84,7 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
             except Exception as e:
                 logger.warning(f"Failed to start background topic extraction: {str(e)}")
 
-        return ChatResponse(
+        response_obj = ChatResponse(
             response=assistant_message.content,
             model=request.model,
             usage={},
@@ -94,6 +95,8 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
             suggested_topics=[],
             follow_up_questions=result.get("workflow_context", {}).get("follow_up_questions", []),
         )
+        queue_status(result.get("session_id"), "Complete")
+        return response_obj
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))
@@ -102,14 +105,11 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
 @router.get("/models")
 async def get_models():
     from config import get_available_models, get_default_model
-    
+
     available_models = get_available_models()
     default_model = get_default_model()
-    
-    return {
-        "models": available_models,
-        "default_model": default_model
-    }
+
+    return {"models": available_models, "default_model": default_model}
 
 
 @router.get("/personality-presets")
