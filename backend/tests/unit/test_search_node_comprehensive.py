@@ -23,7 +23,7 @@ class TestSearchNode:
     
     @patch('nodes.search_node.config.PERPLEXITY_API_KEY', 'test-api-key')
     @patch('nodes.search_node.requests.post')
-    def test_search_node_success_with_original_query(self, mock_post):
+    async def test_search_node_success_with_original_query(self, mock_post):
         """Test successful search using original user query."""
         # Mock successful API response
         mock_response = Mock()
@@ -35,7 +35,7 @@ class TestSearchNode:
         }
         mock_post.return_value = mock_response
         
-        result = search_node(self.base_state)
+        result = await search_node(self.base_state)
         
         # Verify API was called correctly
         mock_post.assert_called_once()
@@ -54,7 +54,7 @@ class TestSearchNode:
     
     @patch('nodes.search_node.config.PERPLEXITY_API_KEY', 'test-api-key')
     @patch('nodes.search_node.requests.post')
-    def test_search_node_success_with_refined_query(self, mock_post):
+    async def test_search_node_success_with_refined_query(self, mock_post):
         """Test successful search using refined query from workflow context."""
         # State with refined query
         state_with_refined = self.base_state.copy()
@@ -72,7 +72,7 @@ class TestSearchNode:
         }
         mock_post.return_value = mock_response
         
-        result = search_node(state_with_refined)
+        result = await search_node(state_with_refined)
         
         # Verify refined query was used
         call_args = mock_post.call_args
@@ -85,16 +85,16 @@ class TestSearchNode:
         assert search_results["success"] is True
         assert search_results["query_used"] == "NYC weather forecast today temperature"
     
-    def test_search_node_no_api_key(self):
+    async def test_search_node_no_api_key(self):
         """Test behavior when Perplexity API key is not configured."""
         with patch('nodes.search_node.config.PERPLEXITY_API_KEY', None):
-            result = search_node(self.base_state)
+            result = await search_node(self.base_state)
             
             search_results = result["module_results"]["search"]
             assert search_results["success"] is False
             assert "API key not configured" in search_results["error"]
     
-    def test_search_node_no_query_available(self):
+    async def test_search_node_no_query_available(self):
         """Test behavior when no query is available (no messages or refined query)."""
         empty_state = {
             "messages": [],
@@ -102,13 +102,13 @@ class TestSearchNode:
             "workflow_context": {}
         }
         
-        result = search_node(empty_state)
+        result = await search_node(empty_state)
         
         search_results = result["module_results"]["search"]
         assert search_results["success"] is False
         assert "No query found for search" in search_results["error"]
     
-    def test_search_node_no_user_messages(self):
+    async def test_search_node_no_user_messages(self):
         """Test behavior when messages exist but no user messages."""
         state_no_user = {
             "messages": [
@@ -118,7 +118,7 @@ class TestSearchNode:
             "workflow_context": {}
         }
         
-        result = search_node(state_no_user)
+        result = await search_node(state_no_user)
         
         search_results = result["module_results"]["search"]
         assert search_results["success"] is False
@@ -126,7 +126,7 @@ class TestSearchNode:
     
     @patch('nodes.search_node.config.PERPLEXITY_API_KEY', 'test-api-key')
     @patch('nodes.search_node.requests.post')
-    def test_search_node_api_error_response(self, mock_post):
+    async def test_search_node_api_error_response(self, mock_post):
         """Test handling of API error responses."""
         # Mock API error response
         mock_response = Mock()
@@ -134,7 +134,7 @@ class TestSearchNode:
         mock_response.text = "Bad Request: Invalid query"
         mock_post.return_value = mock_response
         
-        result = search_node(self.base_state)
+        result = await search_node(self.base_state)
         
         search_results = result["module_results"]["search"]
         assert search_results["success"] is False
@@ -144,14 +144,14 @@ class TestSearchNode:
     
     @patch('nodes.search_node.config.PERPLEXITY_API_KEY', 'test-api-key')
     @patch('nodes.search_node.requests.post')
-    def test_search_node_api_401_unauthorized(self, mock_post):
+    async def test_search_node_api_401_unauthorized(self, mock_post):
         """Test handling of 401 Unauthorized response."""
         mock_response = Mock()
         mock_response.status_code = 401
         mock_response.text = "Unauthorized: Invalid API key"
         mock_post.return_value = mock_response
         
-        result = search_node(self.base_state)
+        result = await search_node(self.base_state)
         
         search_results = result["module_results"]["search"]
         assert search_results["success"] is False
@@ -160,11 +160,11 @@ class TestSearchNode:
     
     @patch('nodes.search_node.config.PERPLEXITY_API_KEY', 'test-api-key')
     @patch('nodes.search_node.requests.post')
-    def test_search_node_network_exception(self, mock_post):
+    async def test_search_node_network_exception(self, mock_post):
         """Test handling of network exceptions."""
         mock_post.side_effect = ConnectionError("Network connection failed")
         
-        result = search_node(self.base_state)
+        result = await search_node(self.base_state)
         
         search_results = result["module_results"]["search"]
         assert search_results["success"] is False
@@ -172,14 +172,14 @@ class TestSearchNode:
     
     @patch('nodes.search_node.config.PERPLEXITY_API_KEY', 'test-api-key')
     @patch('nodes.search_node.requests.post')
-    def test_search_node_json_decode_error(self, mock_post):
+    async def test_search_node_json_decode_error(self, mock_post):
         """Test handling of JSON decode errors."""
         mock_response = Mock()
         mock_response.status_code = 200
         mock_response.json.side_effect = ValueError("Invalid JSON")
         mock_post.return_value = mock_response
         
-        result = search_node(self.base_state)
+        result = await search_node(self.base_state)
         
         search_results = result["module_results"]["search"]
         assert search_results["success"] is False
@@ -188,7 +188,7 @@ class TestSearchNode:
     @patch('nodes.search_node.config.PERPLEXITY_API_KEY', 'test-api-key')
     @patch('nodes.search_node.config.PERPLEXITY_MODEL', 'llama-3.1-sonar-small-128k-online')
     @patch('nodes.search_node.requests.post')
-    def test_search_node_api_request_structure(self, mock_post):
+    async def test_search_node_api_request_structure(self, mock_post):
         """Test that API request is structured correctly."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -199,7 +199,7 @@ class TestSearchNode:
         }
         mock_post.return_value = mock_response
         
-        search_node(self.base_state)
+        await search_node(self.base_state)
         
         # Verify request structure
         call_args = mock_post.call_args
@@ -217,7 +217,7 @@ class TestSearchNode:
     
     @patch('nodes.search_node.config.PERPLEXITY_API_KEY', 'test-api-key')
     @patch('nodes.search_node.requests.post')
-    def test_search_node_long_query_truncation_in_logs(self, mock_post):
+    async def test_search_node_long_query_truncation_in_logs(self, mock_post):
         """Test that long queries are truncated in log messages."""
         # Create a very long query
         long_query = "What is the weather " * 20  # 100+ characters
@@ -237,7 +237,7 @@ class TestSearchNode:
         mock_post.return_value = mock_response
         
         # Should not raise exception and should handle long query
-        result = search_node(state_long_query)
+        result = await search_node(state_long_query)
         
         search_results = result["module_results"]["search"]
         assert search_results["success"] is True
@@ -245,7 +245,7 @@ class TestSearchNode:
     
     @patch('nodes.search_node.config.PERPLEXITY_API_KEY', 'test-api-key')
     @patch('nodes.search_node.requests.post')
-    def test_search_node_empty_response_content(self, mock_post):
+    async def test_search_node_empty_response_content(self, mock_post):
         """Test handling of empty response content."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -256,7 +256,7 @@ class TestSearchNode:
         }
         mock_post.return_value = mock_response
         
-        result = search_node(self.base_state)
+        result = await search_node(self.base_state)
         
         search_results = result["module_results"]["search"]
         assert search_results["success"] is True
@@ -264,7 +264,7 @@ class TestSearchNode:
     
     @patch('nodes.search_node.config.PERPLEXITY_API_KEY', 'test-api-key')
     @patch('nodes.search_node.requests.post')
-    def test_search_node_missing_response_fields(self, mock_post):
+    async def test_search_node_missing_response_fields(self, mock_post):
         """Test handling of missing optional fields in response."""
         mock_response = Mock()
         mock_response.status_code = 200
@@ -274,7 +274,7 @@ class TestSearchNode:
         }
         mock_post.return_value = mock_response
         
-        result = search_node(self.base_state)
+        result = await search_node(self.base_state)
         
         search_results = result["module_results"]["search"]
         assert search_results["success"] is True
@@ -284,7 +284,7 @@ class TestSearchNode:
     @patch('nodes.search_node.get_current_datetime_str')
     @patch('nodes.search_node.config.PERPLEXITY_API_KEY', 'test-api-key')
     @patch('nodes.search_node.requests.post')
-    def test_search_node_system_prompt_formatting(self, mock_post, mock_datetime):
+    async def test_search_node_system_prompt_formatting(self, mock_post, mock_datetime):
         """Test that system prompt is formatted with current time."""
         mock_datetime.return_value = "2024-01-15 10:30:00"
         
@@ -297,7 +297,7 @@ class TestSearchNode:
         }
         mock_post.return_value = mock_response
         
-        search_node(self.base_state)
+        await search_node(self.base_state)
         
         # Verify system prompt contains formatted time
         call_args = mock_post.call_args
@@ -306,7 +306,7 @@ class TestSearchNode:
         assert system_message["role"] == "system"
         assert "2024-01-15 10:30:00" in system_message["content"]
     
-    def test_search_node_preserves_existing_module_results(self):
+    async def test_search_node_preserves_existing_module_results(self):
         """Test that search node preserves existing module results."""
         state_with_existing = self.base_state.copy()
         state_with_existing["module_results"] = {
@@ -314,7 +314,7 @@ class TestSearchNode:
         }
         
         with patch('nodes.search_node.config.PERPLEXITY_API_KEY', None):
-            result = search_node(state_with_existing)
+            result = await search_node(state_with_existing)
             
             # Should preserve existing results while adding search results
             assert "router" in result["module_results"]

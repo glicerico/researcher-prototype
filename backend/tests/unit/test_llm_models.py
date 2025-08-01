@@ -108,7 +108,7 @@ class TestFormattedResponse:
         
         assert response.main_response == "This is the main response"
         assert response.sources is None
-        assert response.follow_up_questions is None
+        assert response.follow_up_questions == []
 
     def test_formatted_response_with_sources(self):
         """Test FormattedResponse with sources."""

@@ -9,7 +9,7 @@ class RoutingAnalysis(BaseModel):
     """Analysis of user input to route to appropriate module."""
     decision: str = Field(description="The routing decision: 'chat', 'search', or 'analyzer'")
     reason: str = Field(description="Brief explanation of why this routing decision was made")
-    complexity: str = Field(description="Estimated complexity level: 'simple', 'moderate', or 'complex'")
+    complexity: int = Field(description="Estimated complexity level as integer from 1 (simple) to 10 (complex)", ge=1, le=10)
 
 
 class AnalysisTask(BaseModel):
@@ -43,11 +43,15 @@ class TopicSuggestions(BaseModel):
 
 
 class FormattedResponse(BaseModel):
-    """A formatted response with optional follow-up questions."""
+    """A formatted response with optional follow-up questions and sources."""
     main_response: str = Field(description="The main, formatted response content.")
     follow_up_questions: List[str] = Field(
         description="A list of 1-2 relevant follow-up questions phrased as if the user is asking them (e.g., 'What are the key benefits of this approach?' rather than 'Would you like to know about the key benefits?').",
         default_factory=list
+    )
+    sources: Optional[List[str]] = Field(
+        description="Optional list of source citations or references.",
+        default=None
     )
     
     @field_validator('follow_up_questions')
