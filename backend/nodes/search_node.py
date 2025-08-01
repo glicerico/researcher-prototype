@@ -2,6 +2,7 @@
 Search node for performing web searches and retrieving information.
 """
 
+import asyncio
 from nodes.base import (
     ChatState,
     logger,
@@ -14,10 +15,11 @@ from utils import get_last_user_message
 import requests
 
 
-def search_node(state: ChatState) -> ChatState:
+async def search_node(state: ChatState) -> ChatState:
     """Performs web search for user queries requiring up-to-date information."""
     logger.info("🔍 Search: Preparing to search for information")
     queue_status(state.get("session_id"), "Searching the web...")
+    await asyncio.sleep(0.1)  # Small delay to ensure status is visible
     logger.debug(f"Search node received state: {state}")
 
     # Use the refined query if available, otherwise get the last user message

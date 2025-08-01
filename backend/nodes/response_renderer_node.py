@@ -2,6 +2,7 @@
 Response renderer node that formats and enhances the raw response.
 """
 
+import asyncio
 from nodes.base import (
     ChatState,
     logger,
@@ -19,10 +20,11 @@ from utils import get_last_user_message
 import re
 
 
-def response_renderer_node(state: ChatState) -> ChatState:
+async def response_renderer_node(state: ChatState) -> ChatState:
     """Post-processes the LLM output to enforce style, insert follow-up suggestions, and apply user persona settings."""
     logger.info("✨ Renderer: Post-processing final response")
     queue_status(state.get("session_id"), "Rendering response...")
+    await asyncio.sleep(0.1)  # Small delay to ensure status is visible
     logger.debug("Response Renderer node processing output")
     current_time_str = get_current_datetime_str()
 

@@ -34,7 +34,17 @@ const ChatPage = () => {
   useEffect(() => {
     if (!sessionId) return;
     const es = new EventSource(`${API_URL}/status/${sessionId}`);
-    es.onmessage = (e) => setStatusMessage(e.data);
+    es.onmessage = (e) => {
+      const message = e.data;
+      setStatusMessage(message);
+      
+      // Clear the status message after a short delay if it's "Complete"
+      if (message === 'Complete') {
+        setTimeout(() => {
+          setStatusMessage('');
+        }, 2000); // Clear after 2 seconds
+      }
+    };
     es.onerror = () => es.close();
     return () => es.close();
   }, [sessionId]);

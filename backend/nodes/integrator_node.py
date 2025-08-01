@@ -2,6 +2,7 @@
 Integrator node that combines all available information to generate a coherent response.
 """
 
+import asyncio
 from nodes.base import (
     ChatState,
     logger,
@@ -18,10 +19,11 @@ from utils import get_last_user_message
 # from prompts import SEARCH_CONTEXT_TEMPLATE, ANALYSIS_CONTEXT_TEMPLATE, MEMORY_CONTEXT_TEMPLATE
 
 
-def integrator_node(state: ChatState) -> ChatState:
+async def integrator_node(state: ChatState) -> ChatState:
     """Core thinking component that integrates all available context and generates a response."""
     logger.info("🧠 Integrator: Processing all contextual information")
     queue_status(state.get("session_id"), "Integrating information...")
+    await asyncio.sleep(0.1)  # Small delay to ensure status is visible
     current_time_str = get_current_datetime_str()
     model = state.get("model", config.DEFAULT_MODEL)
     temperature = state.get("temperature", 0.7)

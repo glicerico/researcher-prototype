@@ -2,6 +2,7 @@
 Router node for analyzing and classifying user messages.
 """
 
+import asyncio
 from nodes.base import (
     ChatState,
     logger,
@@ -17,10 +18,11 @@ from nodes.base import (
 from utils import get_last_user_message
 
 
-def router_node(state: ChatState) -> ChatState:
+async def router_node(state: ChatState) -> ChatState:
     """Uses a lightweight LLM to analyze the user's message and determine routing."""
     logger.info("🔀 Router: Analyzing message to determine processing path")
     queue_status(state.get("session_id"), "Routing request...")
+    await asyncio.sleep(0.1)  # Small delay to ensure status is visible
 
     # Get the last user message
     logger.debug(f"🔀 Router: Length of messages in router: {len(state['messages'])}")

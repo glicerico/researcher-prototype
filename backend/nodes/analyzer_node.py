@@ -2,6 +2,7 @@
 Analyzer node for processing complex analytical tasks.
 """
 
+import asyncio
 from nodes.base import (
     ChatState,
     logger,
@@ -11,10 +12,11 @@ from nodes.base import (
 from utils import get_last_user_message
 
 
-def analyzer_node(state: ChatState) -> ChatState:
+async def analyzer_node(state: ChatState) -> ChatState:
     """Analyzer module that processes data-related queries."""
     logger.info("🧩 Analyzer: Processing analysis request")
     queue_status(state.get("session_id"), "Analyzing data...")
+    await asyncio.sleep(0.1)  # Small delay to ensure status is visible
 
     # Get analysis task (either refined or original)
     refined_task = state.get("workflow_context", {}).get("refined_analysis_task")
