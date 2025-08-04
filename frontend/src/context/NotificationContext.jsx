@@ -27,6 +27,124 @@ export const NotificationProvider = ({ children }) => {
     return localStorage.getItem('user_id') || 'anonymous';
   };
 
+  const showToast = useCallback((notification) => {
+    // This will be handled by the toast component
+    // For now, we'll dispatch a custom event
+    window.dispatchEvent(new CustomEvent('showToast', { 
+      detail: notification 
+    }));
+  }, []);
+
+  const handleNewResearchNotification = useCallback((data) => {
+    const { topic_id, result_id, topic_name, timestamp } = data;
+    
+    // Add to notifications list
+    const notification = {
+      id: `research_${result_id}`,
+      type: 'new_research',
+      title: 'New Research Available',
+      message: `New findings for "${topic_name || topic_id}"`,
+      timestamp: new Date(timestamp),
+      data: { topic_id, result_id, topic_name },
+      read: false
+    };
+    
+    setNotifications(prev => [notification, ...prev.slice(0, 49)]); // Keep max 50 notifications
+    setNewResearchCount(prev => prev + 1);
+    
+    // Show toast notification
+    showToast(notification);
+  }, [showToast]);
+
+  const handleResearchCompleteNotification = useCallback((data) => {
+    const { topic_id, results_count, topic_name, timestamp } = data;
+    
+    const notification = {
+      id: `complete_${topic_id}_${timestamp}`,
+      type: 'research_complete',
+      title: 'Research Cycle Complete',
+      message: `Found ${results_count} new results for "${topic_name || topic_id}"`,
+      timestamp: new Date(timestamp),
+      data: { topic_id, results_count, topic_name },
+      read: false
+    };
+    
+    setNotifications(prev => [notification, ...prev.slice(0, 49)]);
+    showToast(notification);
+  }, [showToast]);
+
+  const handleSystemStatusNotification = useCallback((data) => {
+    const { status, details, timestamp } = data;
+    
+    const notification = {
+      id: `system_${timestamp}`,
+      type: 'system_status',
+      title: 'System Update',
+      message: `System status: ${status}`,
+      timestamp: new Date(timestamp),
+      data: { status, details },
+      read: false
+    };
+    
+    setNotifications(prev => [notification, ...prev.slice(0, 49)]);
+    
+    // Only show toast for important system notifications
+    if (status === 'maintenance' || status === 'error') {
+      showToast(notification);
+    }
+  }, [showToast]);
+
+  const handleNotificationMessage = useCallback((message) => {
+    const { type, data } = message;
+    
+    switch (type) {
+      case 'connection_established':
+        console.log('📡 Connection established for user:', data.user_id);
+        break;
+        
+      case 'heartbeat':
+        // Just acknowledge heartbeat, no action needed
+        break;
+        
+      case 'new_research':
+        handleNewResearchNotification(data);
+        break;
+        
+      case 'research_complete':
+        handleResearchCompleteNotification(data);
+        break;
+        
+      case 'system_status':
+        handleSystemStatusNotification(data);
+        break;
+        
+      default:
+        console.log('📡 Unknown notification type:', type);
+    }
+  }, [handleNewResearchNotification, handleResearchCompleteNotification, handleSystemStatusNotification]);
+
+  // Use refs to avoid circular dependency issues
+  const connectWebSocketRef = useRef();
+  const scheduleReconnectRef = useRef();
+
+  const scheduleReconnect = useCallback(() => {
+    if (reconnectAttempts.current >= maxReconnectAttempts) {
+      console.log('📡 Max reconnection attempts reached');
+      setConnectionStatus('failed');
+      return;
+    }
+    
+    const delay = baseReconnectDelay * Math.pow(2, reconnectAttempts.current);
+    reconnectAttempts.current++;
+    
+    console.log(`📡 Scheduling reconnect attempt ${reconnectAttempts.current} in ${delay}ms`);
+    setConnectionStatus('reconnecting');
+    
+    reconnectTimeoutRef.current = setTimeout(() => {
+      connectWebSocketRef.current?.();
+    }, delay);
+  }, []);
+
   const connectWebSocket = useCallback(() => {
     const userId = getUserId();
     
@@ -64,7 +182,7 @@ export const NotificationProvider = ({ children }) => {
         
         // Attempt to reconnect unless it was a deliberate close
         if (event.code !== 1000 && reconnectAttempts.current < maxReconnectAttempts) {
-          scheduleReconnect();
+          scheduleReconnectRef.current?.();
         }
       };
       
@@ -76,123 +194,15 @@ export const NotificationProvider = ({ children }) => {
     } catch (error) {
       console.error('📡 Error creating WebSocket connection:', error);
       setConnectionStatus('error');
-      scheduleReconnect();
+      scheduleReconnectRef.current?.();
     }
-  }, []); // Empty dependency array since getUserId is stable
+  }, [handleNotificationMessage]);
 
-  const scheduleReconnect = () => {
-    if (reconnectAttempts.current >= maxReconnectAttempts) {
-      console.log('📡 Max reconnection attempts reached');
-      setConnectionStatus('failed');
-      return;
-    }
-    
-    const delay = baseReconnectDelay * Math.pow(2, reconnectAttempts.current);
-    reconnectAttempts.current++;
-    
-    console.log(`📡 Scheduling reconnect attempt ${reconnectAttempts.current} in ${delay}ms`);
-    setConnectionStatus('reconnecting');
-    
-    reconnectTimeoutRef.current = setTimeout(() => {
-      connectWebSocket();
-    }, delay);
-  };
+  // Update refs when functions change
+  connectWebSocketRef.current = connectWebSocket;
+  scheduleReconnectRef.current = scheduleReconnect;
 
-  const handleNotificationMessage = (message) => {
-    const { type, data } = message;
-    
-    switch (type) {
-      case 'connection_established':
-        console.log('📡 Connection established for user:', data.user_id);
-        break;
-        
-      case 'heartbeat':
-        // Just acknowledge heartbeat, no action needed
-        break;
-        
-      case 'new_research':
-        handleNewResearchNotification(data);
-        break;
-        
-      case 'research_complete':
-        handleResearchCompleteNotification(data);
-        break;
-        
-      case 'system_status':
-        handleSystemStatusNotification(data);
-        break;
-        
-      default:
-        console.log('📡 Unknown notification type:', type);
-    }
-  };
 
-  const handleNewResearchNotification = (data) => {
-    const { topic_id, result_id, topic_name, timestamp } = data;
-    
-    // Add to notifications list
-    const notification = {
-      id: `research_${result_id}`,
-      type: 'new_research',
-      title: 'New Research Available',
-      message: `New findings for "${topic_name || topic_id}"`,
-      timestamp: new Date(timestamp),
-      data: { topic_id, result_id, topic_name },
-      read: false
-    };
-    
-    setNotifications(prev => [notification, ...prev.slice(0, 49)]); // Keep max 50 notifications
-    setNewResearchCount(prev => prev + 1);
-    
-    // Show toast notification
-    showToast(notification);
-  };
-
-  const handleResearchCompleteNotification = (data) => {
-    const { topic_id, results_count, topic_name, timestamp } = data;
-    
-    const notification = {
-      id: `complete_${topic_id}_${timestamp}`,
-      type: 'research_complete',
-      title: 'Research Cycle Complete',
-      message: `Found ${results_count} new results for "${topic_name || topic_id}"`,
-      timestamp: new Date(timestamp),
-      data: { topic_id, results_count, topic_name },
-      read: false
-    };
-    
-    setNotifications(prev => [notification, ...prev.slice(0, 49)]);
-    showToast(notification);
-  };
-
-  const handleSystemStatusNotification = (data) => {
-    const { status, details, timestamp } = data;
-    
-    const notification = {
-      id: `system_${timestamp}`,
-      type: 'system_status',
-      title: 'System Update',
-      message: `System status: ${status}`,
-      timestamp: new Date(timestamp),
-      data: { status, details },
-      read: false
-    };
-    
-    setNotifications(prev => [notification, ...prev.slice(0, 49)]);
-    
-    // Only show toast for important system notifications
-    if (status === 'maintenance' || status === 'error') {
-      showToast(notification);
-    }
-  };
-
-  const showToast = (notification) => {
-    // This will be handled by the toast component
-    // For now, we'll dispatch a custom event
-    window.dispatchEvent(new CustomEvent('showToast', { 
-      detail: notification 
-    }));
-  };
 
   const markNotificationRead = (notificationId) => {
     setNotifications(prev => 
