@@ -94,6 +94,7 @@ from api.research import router as research_router
 from api.admin import router as admin_router
 from api.graph import router as graph_router
 from api.status import router as status_router
+from api.notifications import router as notifications_router
 
 app.include_router(chat_router)
 app.include_router(users_router)
@@ -102,6 +103,7 @@ app.include_router(research_router)
 app.include_router(admin_router)
 app.include_router(graph_router)
 app.include_router(status_router)
+app.include_router(notifications_router)
 
 # Mount static files for diagrams
 static_dir = "static"

@@ -1,10 +1,13 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
+// Removed unused useNotifications import
 import UserDropdown from './UserDropdown';
 import UserProfile from './UserProfile';
 import UserSelector from './UserSelector';
 import KnowledgeGraphViewer from './graph/KnowledgeGraphViewer';
+import NotificationBadge from './NotificationBadge';
+import NotificationPanel from './NotificationPanel';
 import { getCurrentUser } from '../services/api';
 import { generateDisplayName } from '../utils/userUtils';
 import '../styles/Navigation.css';
@@ -186,8 +189,9 @@ const Navigation = () => {
                     <Link to="/topics" className="dropdown-item" onClick={() => setIsDashboardsOpen(false)}>
                       🔍 Research Topics
                     </Link>
-                    <Link to="/research-results" className="dropdown-item" onClick={() => setIsDashboardsOpen(false)}>
+                    <Link to="/research-results" className="dropdown-item nav-item" onClick={() => setIsDashboardsOpen(false)}>
                       📊 Research Results
+                      <NotificationBadge />
                     </Link>
                     <button
                       className="dropdown-item"
@@ -213,24 +217,28 @@ const Navigation = () => {
             </div>
           </div>
 
-          {isOnChatPage && (
-            <div className="chat-controls">
-              <UserDropdown 
-                onUserSelected={handleUserSelected} 
-                currentUserId={userId} 
-                currentDisplayName={userDisplayName || 'Anonymous User'}
-                profileUpdateTime={profileUpdateTime}
-              />
-              {userId && (
-                <button 
-                  className="profile-button"
-                  onClick={handleToggleUserProfile}
-                >
-                  {showUserProfile ? 'Hide Settings' : 'User Settings'}
-                </button>
-              )}
-            </div>
-          )}
+          <div className="nav-right">
+            <NotificationPanel />
+            
+            {isOnChatPage && (
+              <div className="chat-controls">
+                <UserDropdown 
+                  onUserSelected={handleUserSelected} 
+                  currentUserId={userId} 
+                  currentDisplayName={userDisplayName || 'Anonymous User'}
+                  profileUpdateTime={profileUpdateTime}
+                />
+                {userId && (
+                  <button 
+                    className="profile-button"
+                    onClick={handleToggleUserProfile}
+                  >
+                    {showUserProfile ? 'Hide Settings' : 'User Settings'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </nav>
       

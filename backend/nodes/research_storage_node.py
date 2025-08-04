@@ -2,6 +2,7 @@
 Research storage node for storing qualified research findings and updating topic metadata.
 """
 import time
+import asyncio
 from typing import Dict, Any
 from nodes.base import (
     ChatState, 
@@ -126,6 +127,43 @@ def research_storage_node(state: ChatState) -> ChatState:
             research_manager.update_topic_last_researched(user_id, topic_name, current_time)
             
             logger.info(f"💾 Research Storage: Successfully stored research finding for '{topic_name}'")
+            
+            # Send notification about new research
+            try:
+                from services.notification_manager import notification_service
+                finding_id = f"{user_id}_{topic_name}_{int(current_time)}"
+                
+                # Create a new event loop for this thread if none exists
+                try:
+                    loop = asyncio.get_event_loop()
+                except RuntimeError:
+                    # No event loop in current thread, create a new one
+                    loop = asyncio.new_event_loop()
+                    asyncio.set_event_loop(loop)
+                
+                # Run the notification
+                if loop.is_running():
+                    # If loop is running, schedule as task
+                    asyncio.create_task(notification_service.notify_new_research(
+                        user_id=user_id,
+                        topic_id=topic_name,
+                        result_id=finding_id,
+                        topic_name=topic_name
+                    ))
+                else:
+                    # Run the async function in the loop
+                    loop.run_until_complete(notification_service.notify_new_research(
+                        user_id=user_id,
+                        topic_id=topic_name,
+                        result_id=finding_id,
+                        topic_name=topic_name
+                    ))
+                
+                logger.info(f"📡 Sent new research notification for user {user_id}, topic '{topic_name}'")
+                
+            except Exception as notification_error:
+                logger.warning(f"📡 Failed to send research notification: {notification_error}")
+                # Don't fail the storage operation if notification fails
             
             state["module_results"]["research_storage"] = {
                 "success": True,

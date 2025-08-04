@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback, useMemo, useRef, useLayoutEffe
 import { Link } from 'react-router-dom';
 import ReactMarkdown from 'react-markdown';
 import { useSession } from '../context/SessionContext';
+import { useNotifications } from '../context/NotificationContext';
 import { 
   getResearchFindings,
   markFindingAsRead,
@@ -12,6 +13,7 @@ import '../styles/ResearchResultsDashboard.css';
 
 const ResearchResultsDashboard = () => {
   const { userId } = useSession();
+  const { markResearchNotificationsRead } = useNotifications();
   const [researchData, setResearchData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
@@ -84,6 +86,11 @@ const ResearchResultsDashboard = () => {
   useEffect(() => {
     loadResearchData(false);
   }, [loadResearchData]);
+
+  // Mark research notifications as read when user visits this page (only once)
+  useEffect(() => {
+    markResearchNotificationsRead();
+  }, []); // Empty dependency array - only run once on mount
 
   // Auto-refresh research data every 10 seconds when user is selected
   useEffect(() => {
