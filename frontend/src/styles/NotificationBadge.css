@@ -1,0 +1,53 @@
+.notification-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 18px;
+  height: 18px;
+  padding: 0 6px;
+  background-color: #dc3545;
+  color: white;
+  font-size: 11px;
+  font-weight: 600;
+  border-radius: 9px;
+  position: absolute;
+  top: -8px;
+  right: -8px;
+  cursor: pointer;
+  animation: pulse 2s infinite;
+  box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+  z-index: 10;
+}
+
+.notification-badge:hover {
+  background-color: #c82333;
+  transform: scale(1.1);
+  transition: all 0.2s ease;
+}
+
+@keyframes pulse {
+  0% {
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+  }
+  50% {
+    box-shadow: 0 2px 8px rgba(220, 53, 69, 0.6);
+  }
+  100% {
+    box-shadow: 0 2px 4px rgba(220, 53, 69, 0.3);
+  }
+}
+
+/* For navigation items */
+.nav-item {
+  position: relative;
+}
+
+/* For topic cards */
+.topic-card {
+  position: relative;
+}
+
+.topic-card .notification-badge {
+  top: 10px;
+  right: 10px;
+}

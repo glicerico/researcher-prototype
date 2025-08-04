@@ -1,10 +1,12 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
+import { useNotifications } from '../context/NotificationContext';
 import UserDropdown from './UserDropdown';
 import UserProfile from './UserProfile';
 import UserSelector from './UserSelector';
 import KnowledgeGraphViewer from './graph/KnowledgeGraphViewer';
+import NotificationBadge from './NotificationBadge';
 import { getCurrentUser } from '../services/api';
 import { generateDisplayName } from '../utils/userUtils';
 import '../styles/Navigation.css';
@@ -186,8 +188,9 @@ const Navigation = () => {
                     <Link to="/topics" className="dropdown-item" onClick={() => setIsDashboardsOpen(false)}>
                       🔍 Research Topics
                     </Link>
-                    <Link to="/research-results" className="dropdown-item" onClick={() => setIsDashboardsOpen(false)}>
+                    <Link to="/research-results" className="dropdown-item nav-item" onClick={() => setIsDashboardsOpen(false)}>
                       📊 Research Results
+                      <NotificationBadge />
                     </Link>
                     <button
                       className="dropdown-item"

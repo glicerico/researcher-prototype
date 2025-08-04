@@ -2,6 +2,7 @@
 Research storage node for storing qualified research findings and updating topic metadata.
 """
 import time
+import asyncio
 from typing import Dict, Any
 from nodes.base import (
     ChatState, 
@@ -126,6 +127,36 @@ def research_storage_node(state: ChatState) -> ChatState:
             research_manager.update_topic_last_researched(user_id, topic_name, current_time)
             
             logger.info(f"💾 Research Storage: Successfully stored research finding for '{topic_name}'")
+            
+            # Send notification about new research
+            try:
+                from services.notification_manager import notification_service
+                finding_id = f"{user_id}_{topic_name}_{int(current_time)}"
+                
+                # Run the async notification in the event loop
+                loop = asyncio.get_event_loop()
+                if loop.is_running():
+                    # If we're already in an async context, schedule the task
+                    asyncio.create_task(notification_service.notify_new_research(
+                        user_id=user_id,
+                        topic_id=topic_name,  # Using topic_name as topic_id for now
+                        result_id=finding_id,
+                        topic_name=topic_name
+                    ))
+                else:
+                    # If not in async context, run it
+                    loop.run_until_complete(notification_service.notify_new_research(
+                        user_id=user_id,
+                        topic_id=topic_name,
+                        result_id=finding_id,
+                        topic_name=topic_name
+                    ))
+                
+                logger.info(f"📡 Sent new research notification for user {user_id}, topic '{topic_name}'")
+                
+            except Exception as notification_error:
+                logger.warning(f"📡 Failed to send research notification: {notification_error}")
+                # Don't fail the storage operation if notification fails
             
             state["module_results"]["research_storage"] = {
                 "success": True,
