@@ -11,6 +11,24 @@ A full-stack prototype that pairs a conversational AI with an autonomous backgro
 
 ## Quick Start (dev)
 
+### One-shot (recommended)
+
+```bash
+# install JS dev deps (only needed once)
+npm install
+
+# start both backend (Uvicorn ‑-reload) + frontend (React) in parallel
+npm run dev
+```
+
+That command:
+1. activates the virtual-env inside `backend/venv/`.
+2. launches Uvicorn with auto-reload and a 20-second graceful-shutdown window.
+3. starts the React dev server.
+4. streams both logs side-by-side via [`concurrently`](https://www.npmjs.com/package/concurrently).
+
+### Manual (legacy)
+
 ```bash
 # 1. clone repo & run helper script
 ./setup.sh               # installs backend venv + npm deps
