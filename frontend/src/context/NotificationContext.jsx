@@ -24,7 +24,7 @@ export const NotificationProvider = ({ children }) => {
 
   // Get user ID from localStorage (matches the pattern used in api.js)
   const getUserId = () => {
-    return localStorage.getItem('userId') || 'anonymous';
+    return localStorage.getItem('user_id') || 'anonymous';
   };
 
   const connectWebSocket = () => {
