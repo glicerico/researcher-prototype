@@ -1,0 +1,12 @@
+{
+  "name": "researcher-prototype",
+  "private": true,
+  "scripts": {
+    "dev:back": "bash backend/dev.sh",
+    "dev:front": "cd frontend && npm start",
+    "dev": "concurrently -k -n BACK,FRONT -p \"[{name}]\" \"npm:dev:back\" \"npm:dev:front\""
+  },
+  "devDependencies": {
+    "concurrently": "^8"
+  }
+}
