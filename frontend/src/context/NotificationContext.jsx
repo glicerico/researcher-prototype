@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, useEffect, useRef } from 'react';
+import React, { createContext, useContext, useState, useEffect, useRef, useCallback } from 'react';
 
 const NotificationContext = createContext();
 
@@ -27,7 +27,7 @@ export const NotificationProvider = ({ children }) => {
     return localStorage.getItem('user_id') || 'anonymous';
   };
 
-  const connectWebSocket = () => {
+  const connectWebSocket = useCallback(() => {
     const userId = getUserId();
     
     // Determine WebSocket URL based on current location
@@ -78,7 +78,7 @@ export const NotificationProvider = ({ children }) => {
       setConnectionStatus('error');
       scheduleReconnect();
     }
-  };
+  }, []); // Empty dependency array since getUserId is stable
 
   const scheduleReconnect = () => {
     if (reconnectAttempts.current >= maxReconnectAttempts) {
