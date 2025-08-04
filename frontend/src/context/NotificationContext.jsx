@@ -211,6 +211,23 @@ export const NotificationProvider = ({ children }) => {
     setNewResearchCount(0);
   };
 
+  const markResearchNotificationsRead = () => {
+    setNotifications(prev => 
+      prev.map(notif => 
+        (notif.type === 'new_research' || notif.type === 'research_complete')
+          ? { ...notif, read: true }
+          : notif
+      )
+    );
+    // Recalculate unread count
+    setNewResearchCount(prev => {
+      const researchNotifs = notifications.filter(n => 
+        (n.type === 'new_research' || n.type === 'research_complete') && !n.read
+      );
+      return Math.max(0, prev - researchNotifs.length);
+    });
+  };
+
   const clearNotifications = () => {
     setNotifications([]);
     setNewResearchCount(0);
@@ -252,6 +269,7 @@ export const NotificationProvider = ({ children }) => {
     getUnreadCount,
     markNotificationRead,
     markAllRead,
+    markResearchNotificationsRead,
     clearNotifications,
     reconnect: connectWebSocket
   };

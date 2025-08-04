@@ -7,6 +7,7 @@ import UserProfile from './UserProfile';
 import UserSelector from './UserSelector';
 import KnowledgeGraphViewer from './graph/KnowledgeGraphViewer';
 import NotificationBadge from './NotificationBadge';
+import NotificationPanel from './NotificationPanel';
 import { getCurrentUser } from '../services/api';
 import { generateDisplayName } from '../utils/userUtils';
 import '../styles/Navigation.css';
@@ -216,24 +217,28 @@ const Navigation = () => {
             </div>
           </div>
 
-          {isOnChatPage && (
-            <div className="chat-controls">
-              <UserDropdown 
-                onUserSelected={handleUserSelected} 
-                currentUserId={userId} 
-                currentDisplayName={userDisplayName || 'Anonymous User'}
-                profileUpdateTime={profileUpdateTime}
-              />
-              {userId && (
-                <button 
-                  className="profile-button"
-                  onClick={handleToggleUserProfile}
-                >
-                  {showUserProfile ? 'Hide Settings' : 'User Settings'}
-                </button>
-              )}
-            </div>
-          )}
+          <div className="nav-right">
+            <NotificationPanel />
+            
+            {isOnChatPage && (
+              <div className="chat-controls">
+                <UserDropdown 
+                  onUserSelected={handleUserSelected} 
+                  currentUserId={userId} 
+                  currentDisplayName={userDisplayName || 'Anonymous User'}
+                  profileUpdateTime={profileUpdateTime}
+                />
+                {userId && (
+                  <button 
+                    className="profile-button"
+                    onClick={handleToggleUserProfile}
+                  >
+                    {showUserProfile ? 'Hide Settings' : 'User Settings'}
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
         </div>
       </nav>
       

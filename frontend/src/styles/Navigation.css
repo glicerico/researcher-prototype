@@ -41,6 +41,13 @@
   min-width: 0;
 }
 
+.nav-right {
+  display: flex;
+  align-items: center;
+  gap: 1rem;
+  flex-shrink: 0;
+}
+
 .nav-links {
   display: flex;
   gap: 0.5rem;
