@@ -85,9 +85,12 @@ const ResearchResultsDashboard = () => {
 
   useEffect(() => {
     loadResearchData(false);
-    // Mark research notifications as read when user visits this page
+  }, [loadResearchData]);
+
+  // Mark research notifications as read when user visits this page (only once)
+  useEffect(() => {
     markResearchNotificationsRead();
-  }, [loadResearchData, markResearchNotificationsRead]);
+  }, []); // Empty dependency array - only run once on mount
 
   // Auto-refresh research data every 10 seconds when user is selected
   useEffect(() => {

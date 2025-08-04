@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
 import { Link, useLocation } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
-import { useNotifications } from '../context/NotificationContext';
+// Removed unused useNotifications import
 import UserDropdown from './UserDropdown';
 import UserProfile from './UserProfile';
 import UserSelector from './UserSelector';

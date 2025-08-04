@@ -14,7 +14,7 @@ export const NotificationProvider = ({ children }) => {
   const [notifications, setNotifications] = useState([]);
   const [connectionStatus, setConnectionStatus] = useState('disconnected');
   const [newResearchCount, setNewResearchCount] = useState(0);
-  const [lastSeenTimestamp, setLastSeenTimestamp] = useState(Date.now());
+  // Removed unused lastSeenTimestamp state
   
   const wsRef = useRef(null);
   const reconnectTimeoutRef = useRef(null);
@@ -249,7 +249,7 @@ export const NotificationProvider = ({ children }) => {
         wsRef.current.close(1000, 'Component unmounting');
       }
     };
-  }, []);
+  }, [connectWebSocket]);
 
   // Send periodic heartbeat to keep connection alive
   useEffect(() => {

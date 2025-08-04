@@ -1,10 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { useNotifications } from '../context/NotificationContext';
 import '../styles/NotificationPanel.css';
 
 const NotificationPanel = () => {
   const [isOpen, setIsOpen] = useState(false);
   const panelRef = useRef(null);
+  const navigate = useNavigate();
   const { 
     notifications, 
     getUnreadCount, 
@@ -37,10 +39,15 @@ const NotificationPanel = () => {
       markNotificationRead(notification.id);
     }
     
+    // Close the panel first
+    setIsOpen(false);
+    
     // Navigate to relevant page based on notification type
     if (notification.type === 'new_research' || notification.type === 'research_complete') {
-      // Navigate to research results page
-      window.location.href = '/research-results';
+      // Small delay to ensure panel closes smoothly before navigation
+      setTimeout(() => {
+        navigate('/research-results');
+      }, 100);
     }
   };
 
