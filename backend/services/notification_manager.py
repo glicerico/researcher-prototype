@@ -39,7 +39,7 @@ class ConnectionManager:
     async def send_to_user(self, user_id: str, message: dict):
         """Send a notification to all connections for a specific user."""
         if user_id not in self.active_connections:
-            logger.debug(f"📡 No active connections for user {user_id}")
+            logger.info(f"📡 No active connections for user {user_id} (total users: {len(self.active_connections)})")
             return
         
         # Create a copy of the set to avoid modification during iteration
@@ -89,6 +89,7 @@ class NotificationService:
                 "timestamp": datetime.utcnow().isoformat()
             }
         }
+        logger.info(f"📡 NotificationService: Sending new research notification to user {user_id}")
         await connection_manager.send_to_user(user_id, message)
     
     @staticmethod

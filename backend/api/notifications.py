@@ -5,8 +5,7 @@ import logging
 from fastapi import APIRouter, WebSocket, WebSocketDisconnect, Header, Query
 from typing import Optional
 
-from ..services.notification_manager import connection_manager
-from ..dependencies import get_user_id_from_header
+from services.notification_manager import connection_manager
 
 logger = logging.getLogger(__name__)
 

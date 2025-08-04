@@ -6,7 +6,7 @@ source "$SCRIPT_DIR/venv/bin/activate"
 export PYTHONPATH="$SCRIPT_DIR:$PYTHONPATH"
 
 # Run FastAPI with built-in watcher
-exec uvicorn backend.app:app \
-     --host 0.0.0.0 --port 8000 \
-     --reload --reload-dir backend \
-     --timeout-graceful-shutdown 20
+exec uvicorn app:app \
+    --host 0.0.0.0 --port 8000 \
+    --reload \
+    --timeout-graceful-shutdown 20
