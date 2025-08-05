@@ -64,7 +64,7 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
                         user_id=user_id,
                         user_message=user_message,
                         ai_response=assistant_message.content,
-                        session_id=result.get("session_id"),
+                        thread_id=result.get("session_id"),
                     )
                 )
             except Exception as e:

@@ -52,7 +52,7 @@ async def initializer_node(state: ChatState) -> ChatState:
         # Create session in ZEP when we generate a new session ID
         if zep_manager.is_enabled():
             try:
-                await zep_manager.create_session(session_id, user_id)
+                await zep_manager.create_thread(session_id, user_id)
 
                 # Add an empty message to prime the session and trigger context population
                 await zep_manager.add_message(session_id, "Session initialized", "system")
