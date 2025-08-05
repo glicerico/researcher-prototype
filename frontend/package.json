@@ -17,7 +17,7 @@
     "web-vitals": "^2.1.4"
   },
   "scripts": {
-    "start": "react-scripts start",
+    "start": "NODE_OPTIONS=--no-deprecation react-scripts start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "test:unit": "react-scripts test --testPathPattern='\\.test\\.(js|jsx|ts|tsx)$' --testPathIgnorePatterns='integration' --watchAll=false",

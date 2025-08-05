@@ -133,11 +133,11 @@ def research_storage_node(state: ChatState) -> ChatState:
                 from services.notification_manager import notification_service
                 finding_id = f"{user_id}_{topic_name}_{int(current_time)}"
                 
-                # Create a new event loop for this thread if none exists
+                # Get or create event loop for this thread
                 try:
-                    loop = asyncio.get_event_loop()
+                    loop = asyncio.get_running_loop()
                 except RuntimeError:
-                    # No event loop in current thread, create a new one
+                    # No running event loop, create a new one
                     loop = asyncio.new_event_loop()
                     asyncio.set_event_loop(loop)
                 
