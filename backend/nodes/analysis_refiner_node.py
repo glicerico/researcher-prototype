@@ -21,7 +21,7 @@ from utils import get_last_user_message
 def analysis_task_refiner_node(state: ChatState) -> ChatState:
     """Refines the user's request into a detailed task for the analysis engine, considering conversation context."""
     logger.info("🧩 Analysis Refiner: Refining user request into analysis task")
-    queue_status(state.get("session_id"), "Refining analysis task...")
+    queue_status(state.get("thread_id"), "Refining analysis task...")
     logger.debug("Analysis Task Refiner node refining task with context")
     current_time_str = get_current_datetime_str()
     raw_messages = state.get("messages", [])

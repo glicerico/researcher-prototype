@@ -588,7 +588,7 @@ class TestActiveResearchTopicsEndpoints:
             {
                 "topic_name": "AI Research",
                 "description": "AI developments",
-                "session_id": "session_1",
+                "thread_id": "thread_1",
                 "research_enabled_at": 1640995200,
                 "last_researched": 1640995200,
                 "research_count": 5,
@@ -627,7 +627,7 @@ class TestActiveResearchTopicsEndpoints:
                 "topic_id": "topic_123",
                 "topic_name": "Climate Research",
                 "description": "Climate change research",
-                "session_id": "session_1"
+                "thread_id": "thread_1"
             }
         }
 

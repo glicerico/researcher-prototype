@@ -27,7 +27,7 @@ def sample_chat_state():
         "workflow_context": {},
         "user_id": "test_user",
         "routing_analysis": None,
-        "session_id": "test_session",
+        "thread_id": "test_thread",
         "memory_context": None
     }
 
@@ -46,7 +46,7 @@ def sample_chat_state_with_memory():
         "workflow_context": {},
         "user_id": "test_user",
         "routing_analysis": None,
-        "session_id": "test_session",
+        "thread_id": "test_thread",
         "memory_context": "Previous conversation about machine learning"
     }
 

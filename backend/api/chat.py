@@ -37,7 +37,7 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
             "module_results": {},
             "workflow_context": {},
             "user_id": user_id,
-            "session_id": request.session_id,
+            "thread_id": request.thread_id,
         }
 
         if request.personality:
@@ -64,19 +64,19 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
                         user_id=user_id,
                         user_message=user_message,
                         ai_response=assistant_message.content,
-                        thread_id=result.get("session_id"),
+                        thread_id=result.get("thread_id"),
                     )
                 )
             except Exception as e:
                 logger.warning(f"Failed to store conversation in Zep: {str(e)}")
 
-        if result.get("session_id") and len(request.messages) > 0:
+        if result.get("thread_id") and len(request.messages) > 0:
             try:
                 asyncio.create_task(
                     extract_and_store_topics_async(
                         state=result,
                         user_id=user_id,
-                        session_id=result["session_id"],
+                        session_id=result["thread_id"],
                         conversation_context=request.messages[-1].content[:200]
                         + ("..." if len(request.messages[-1].content) > 200 else ""),
                     )
@@ -91,11 +91,11 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
             module_used=result.get("current_module", "unknown"),
             routing_analysis=result.get("routing_analysis"),
             user_id=user_id,
-            session_id=result.get("session_id"),
+            session_id=result.get("thread_id"),
             suggested_topics=[],
             follow_up_questions=result.get("workflow_context", {}).get("follow_up_questions", []),
         )
-        queue_status(result.get("session_id"), "Complete")
+        queue_status(result.get("thread_id"), "Complete")
         return response_obj
     except Exception as e:
         logger.error(f"Error in chat endpoint: {str(e)}", exc_info=True)

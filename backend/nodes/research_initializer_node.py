@@ -46,16 +46,16 @@ def research_initializer_node(state: ChatState) -> ChatState:
     state["max_tokens"] = 2000
     state["personality"] = {"style": "research", "tone": "analytical"}
     
-    # Generate a research session ID
-    research_session_id = f"research_{user_id}_{topic_name.replace(' ', '_')}_{int(time.time())}"
-    state["session_id"] = research_session_id
+    # Generate a research thread ID
+    research_thread_id = f"research_{user_id}_{topic_name.replace(' ', '_')}_{int(time.time())}"
+    state["thread_id"] = research_thread_id
     
     # Store research metadata
     state["workflow_context"]["research_metadata"] = {
         "topic_name": topic_name,
         "topic_description": topic_description,
         "research_query": research_query,
-        "research_session_id": research_session_id,
+        "research_thread_id": research_thread_id,
         "started_at": time.time(),
         "user_id": user_id
     }
