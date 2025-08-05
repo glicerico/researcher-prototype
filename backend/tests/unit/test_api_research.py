@@ -627,7 +627,7 @@ class TestActiveResearchTopicsEndpoints:
                 "topic_id": "topic_123",
                 "topic_name": "Climate Research",
                 "description": "Climate change research",
-                "thread_id": "thread_1"
+                "session_id": "thread_1"
             }
         }
 

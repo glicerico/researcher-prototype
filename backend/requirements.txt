@@ -15,6 +15,7 @@ PyJWT
 
 # Test dependencies
 pytest
+pytest-asyncio
 pytest-cov
 httpx  # For TestClient
 
