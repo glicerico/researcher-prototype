@@ -38,7 +38,7 @@ def get_node_prompt_mapping() -> Dict[str, Dict[str, Any]]:
         "initializer": {
             "prompt": None,
             "category": "System",
-            "description": "Sets up user state and session",
+            "description": "Sets up user state and thread",
             "color": "#E8F4FD"
         },
         "router": {

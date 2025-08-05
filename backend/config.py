@@ -24,6 +24,7 @@ PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar")
 
 # Zep configuration
 ZEP_API_KEY = os.getenv("ZEP_API_KEY")
+ZEP_API_URL = os.getenv("ZEP_API_URL")
 ZEP_ENABLED = os.getenv("ZEP_ENABLED", "false").lower() == "true"
 
 # LangSmith tracing configuration

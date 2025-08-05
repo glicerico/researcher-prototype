@@ -11,7 +11,7 @@ This page walks you through installing the **Researcher-Prototype** in a develop
 | npm     | 9+  |
 | Graphviz | latest (for optional graph visualisation) |
 | OpenAI account | with API key |
-| Zep Cloud account | with API key (optional, for Knowledge Graph) |
+| Zep account + `zep-python` SDK | API key required (optional, for Knowledge Graph threads) |
 
 > Ubuntu / Debian:
 > ```bash
@@ -31,8 +31,9 @@ pip install -r requirements.txt
 cp .env.example .env
 nano .env                 # paste your OPENAI_API_KEY and adjust anything else
 
-# Optional: Configure Zep for Knowledge Graph
-# Add these to your .env file:
+# Optional: Configure Zep v3 for Knowledge Graph
+# Install the `zep-python` package and add these to your .env file:
+# ZEP_API_URL=https://api.getzep.com
 # ZEP_API_KEY=your_zep_api_key_here
 # ZEP_ENABLED=true
 

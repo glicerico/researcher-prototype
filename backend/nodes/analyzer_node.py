@@ -15,7 +15,7 @@ from utils import get_last_user_message
 async def analyzer_node(state: ChatState) -> ChatState:
     """Analyzer module that processes data-related queries."""
     logger.info("🧩 Analyzer: Processing analysis request")
-    queue_status(state.get("session_id"), "Analyzing data...")
+    queue_status(state.get("thread_id"), "Analyzing data...")
     await asyncio.sleep(0.1)  # Small delay to ensure status is visible
 
     # Get analysis task (either refined or original)

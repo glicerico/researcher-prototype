@@ -30,7 +30,7 @@ class ChatRequest(BaseModel):
     temperature: float = 0.7
     max_tokens: int = 1000
     personality: Optional[PersonalityConfig] = None
-    session_id: Optional[str] = None  # Optional session ID for conversation continuity
+    thread_id: Optional[str] = None  # Optional thread ID for conversation continuity
 
 
 class ChatResponse(BaseModel):
@@ -41,7 +41,7 @@ class ChatResponse(BaseModel):
     module_used: Optional[str] = None
     routing_analysis: Optional[Dict[str, Any]] = None
     user_id: Optional[str] = None
-    session_id: Optional[str] = None  # Return the session ID used
+    thread_id: Optional[str] = None  # Return the thread ID used
     suggested_topics: List[TopicSuggestion] = []  # Research-worthy topics from conversation
     follow_up_questions: List[str] = []  # Optional follow up questions
 

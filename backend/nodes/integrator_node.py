@@ -22,7 +22,7 @@ from utils import get_last_user_message
 async def integrator_node(state: ChatState) -> ChatState:
     """Core thinking component that integrates all available context and generates a response."""
     logger.info("🧠 Integrator: Processing all contextual information")
-    queue_status(state.get("session_id"), "Integrating information...")
+    queue_status(state.get("thread_id"), "Integrating information...")
     await asyncio.sleep(0.1)  # Small delay to ensure status is visible
     current_time_str = get_current_datetime_str()
     model = state.get("model", config.DEFAULT_MODEL)
