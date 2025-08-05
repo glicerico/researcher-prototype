@@ -96,11 +96,11 @@ class ZepManager:
     
     async def create_session(self, session_id: str, user_id: str) -> bool:
         """
-        Create a session in Zep.
+        Create a thread in Zep.
         
         Args:
-            session_id: The session ID
-            user_id: The user ID that owns this session
+            session_id: The thread ID
+            user_id: The user ID that owns this thread
             
         Returns:
             True if successful, False otherwise
@@ -111,7 +111,7 @@ class ZepManager:
         try:
             # Check if session already exists
             try:
-                await self.client.memory.get(session_id)
+                await self.client.thread.get_user_context(thread_id=session_id, mode="basic")
                 logger.debug(f"Session {session_id} already exists in Zep")
                 return True
             except Exception:
@@ -122,18 +122,17 @@ class ZepManager:
             # so we'll create the user first if needed
             await self.create_user(user_id)
             
-            # Create session
-            session = await self.client.memory.add_session(
-                session_id=session_id,
+            # Create thread
+            session = await self.client.thread.create(
+                thread_id=session_id,
                 user_id=user_id,
-                metadata={"created_by": "researcher-prototype"}
             )
             
-            logger.info(f"Created ZEP session: {session_id} for user {user_id}")
+            logger.info(f"Created ZEP thread: {session_id} for user {user_id}")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to create ZEP session {session_id}: {str(e)}")
+            logger.error(f"Failed to create ZEP thread {session_id}: {str(e)}")
             return False
     
     def _parse_user_name(self, user_id: str, display_name: str = None) -> tuple[str, str]:
@@ -211,7 +210,7 @@ class ZepManager:
             if not assistant_success:
                 return False
             
-            logger.debug(f"Stored conversation turn for user {user_id} in session {session_id}")
+            logger.info(f"💾 Stored conversation turn for user {user_id} in session {session_id}")
             return True
             
         except Exception as e:
@@ -220,10 +219,10 @@ class ZepManager:
     
     async def get_memory_context(self, session_id: str) -> Optional[str]:
         """
-        Get memory context for a session.
+        Get memory context for a thread.
         
         Args:
-            session_id: The session ID to get context for
+            session_id: The thread ID to get context for
             
         Returns:
             Memory context string or None if not available
@@ -234,13 +233,13 @@ class ZepManager:
         try:
             # Memory retrieval currently uses session_id as the key, but it does
             # retrieve larger memory context.
-            memory = await self.client.memory.get(session_id=session_id)
+            memory = await self.client.thread.get_user_context(thread_id=session_id)
             return memory.context if memory else None
             
         except Exception as e:
             # Log but don't error - this could be because session doesn't exist yet
             # which is normal for new sessions
-            logger.debug(f"No memory context found for session {session_id}: {str(e)}")
+            logger.debug(f"No memory context found for thread {session_id}: {str(e)}")
             return None
     
     async def search_user_facts(self, user_id: str, query: str, limit: int = 5) -> List[str]:
@@ -282,10 +281,10 @@ class ZepManager:
 
     async def add_message(self, session_id: str, content: str, role_type: str = "system") -> bool:
         """
-        Add a single message to a session.
+        Add a single message to a thread.
         
         Args:
-            session_id: The session ID
+            session_id: The thread ID
             content: The message content
             role_type: The role type (system, user, assistant)
             
@@ -297,20 +296,20 @@ class ZepManager:
         
         try:
             message = Message(
-                role_type=role_type,
+                role=role_type,
                 content=content
             )
             
-            await self.client.memory.add(
-                session_id=session_id,
+            await self.client.thread.add_messages(
+                thread_id=session_id,
                 messages=[message]
             )
             
-            logger.debug(f"Added {role_type} message to session {session_id}")
+            logger.debug(f"Added {role_type} message to thread {session_id}")
             return True
             
         except Exception as e:
-            logger.error(f"Failed to add message to session {session_id}: {str(e)}")
+            logger.error(f"Failed to add message to thread {session_id}: {str(e)}")
             return False
 
     async def get_nodes_by_user_id(self, user_id: str, cursor: Optional[str] = None, limit: int = 100) -> tuple[List[Dict[str, Any]], Optional[str]]:

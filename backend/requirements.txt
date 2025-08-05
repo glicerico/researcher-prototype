@@ -6,7 +6,7 @@ langchain
 langchain-openai
 langgraph
 langsmith
-zep-cloud==2.14.0
+zep-cloud>=3.0.0
 uuid
 pathlib
 #pygraphviz
