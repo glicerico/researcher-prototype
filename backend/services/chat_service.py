@@ -8,17 +8,17 @@ from config import DEFAULT_MODEL
 logger = get_logger(__name__)
 
 
-async def extract_and_store_topics_async(state: dict, user_id: str, session_id: str, conversation_context: str):
+async def extract_and_store_topics_async(state: dict, user_id: str, thread_id: str, conversation_context: str):
     """Background function to extract and store topic suggestions."""
     try:
-        logger.info(f"🔍 Background: Starting topic extraction for session {session_id}")
+        logger.info(f"🔍 Background: Starting topic extraction for thread {thread_id}")
 
         # Create a clean state for topic extraction that includes useful context
         # but avoids overwhelming information that could confuse the LLM
         clean_state = {
             "messages": state.get("messages", []),
             "user_id": user_id,
-            "session_id": session_id,
+            "thread_id": thread_id,
             "model": state.get("model", DEFAULT_MODEL),
             "module_results": {},
             "workflow_context": {},
@@ -40,28 +40,28 @@ async def extract_and_store_topics_async(state: dict, user_id: str, session_id: 
             if raw_topics:
                 success = research_manager.store_topic_suggestions(
                     user_id=user_id,
-                    session_id=session_id,
+                    session_id=thread_id,
                     topics=raw_topics,
                     conversation_context=conversation_context,
                 )
 
                 if success:
                     logger.info(
-                        f"🔍 Background: Stored {len(raw_topics)} topic suggestions for user {user_id}, session {session_id}"
+                        f"🔍 Background: Stored {len(raw_topics)} topic suggestions for user {user_id}, thread {thread_id}"
                     )
                 else:
                     logger.error(
-                        f"🔍 Background: Failed to store topic suggestions for user {user_id}, session {session_id}"
+                        f"🔍 Background: Failed to store topic suggestions for user {user_id}, thread {thread_id}"
                     )
             else:
-                logger.info(f"🔍 Background: No topics extracted for session {session_id}")
+                logger.info(f"🔍 Background: No topics extracted for thread {thread_id}")
         else:
             logger.warning(
-                f"🔍 Background: Topic extraction failed for session {session_id}: {topic_results.get('message', 'Unknown error')}"
+                f"🔍 Background: Topic extraction failed for thread {thread_id}: {topic_results.get('message', 'Unknown error')}"
             )
 
     except Exception as e:
         logger.error(
-            f"🔍 Background: Error in topic extraction for session {session_id}: {str(e)}",
+            f"🔍 Background: Error in topic extraction for thread {thread_id}: {str(e)}",
             exc_info=True,
         )

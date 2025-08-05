@@ -37,7 +37,7 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
             "module_results": {},
             "workflow_context": {},
             "user_id": user_id,
-            "thread_id": request.thread_id,
+            "thread_id": request.session_id,
         }
 
         if request.personality:
@@ -76,7 +76,7 @@ async def chat(request: ChatRequest, user_id: str = Depends(get_or_create_user_i
                     extract_and_store_topics_async(
                         state=result,
                         user_id=user_id,
-                        session_id=result["thread_id"],
+                        thread_id=result["thread_id"],
                         conversation_context=request.messages[-1].content[:200]
                         + ("..." if len(request.messages[-1].content) > 200 else ""),
                     )
