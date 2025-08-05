@@ -9,6 +9,7 @@ sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(
 
 from storage.storage_manager import StorageManager
 from storage.profile_manager import ProfileManager
+from storage.zep_manager import ZepManager
 
 
 class TestStorageManager:
@@ -232,4 +233,84 @@ class TestProfileManager:
             users = pm.list_users()
             assert user1 in users
             assert user2 in users
-            assert len(users) >= 2 
+            assert len(users) >= 2
+
+
+class TestZepManager:
+    """Test ZepManager chunking functionality."""
+    
+    def test_smart_chunk_content_small_message(self):
+        """Test chunking with small message that doesn't need splitting."""
+        zm = ZepManager()
+        content = "This is a small message that fits in one chunk."
+        chunks = zm._smart_chunk_content(content)
+        
+        assert len(chunks) == 1
+        assert chunks[0] == content
+    
+    def test_smart_chunk_content_large_message(self):
+        """Test chunking with large message that needs splitting."""
+        zm = ZepManager()
+        
+        # Create a message larger than 2300 chars
+        paragraph = "This is a test paragraph with multiple sentences. It contains enough text to test the chunking logic properly. "
+        large_content = paragraph * 25  # ~2750 characters
+        
+        chunks = zm._smart_chunk_content(large_content)
+        
+        # Should be split into multiple chunks
+        assert len(chunks) > 1
+        
+        # Each chunk should be under the limit
+        for chunk in chunks:
+            assert len(chunk) <= 2300
+        
+        # All chunks combined should equal original content (roughly)
+        combined_length = sum(len(chunk) for chunk in chunks)
+        # Allow for some variation due to splitting and spacing
+        assert abs(combined_length - len(large_content.strip())) < 100
+    
+    def test_smart_chunk_content_preserves_sentences(self):
+        """Test that chunking preserves sentence boundaries."""
+        zm = ZepManager()
+        
+        sentences = [
+            "First sentence is here.",
+            "Second sentence follows immediately.",  
+            "Third sentence completes the thought."
+        ]
+        content = " ".join(sentences)
+        
+        chunks = zm._smart_chunk_content(content, max_chunk_size=50)  # Force splitting
+        
+        # Should split but preserve complete sentences
+        combined = " ".join(chunks).replace("  ", " ")  # Normalize spaces
+        assert "First sentence is here." in combined
+        assert "Second sentence follows immediately." in combined
+        assert "Third sentence completes the thought." in combined
+    
+    def test_split_by_sentences(self):
+        """Test sentence splitting functionality."""
+        zm = ZepManager()
+        
+        text = "First sentence. Second sentence! Third sentence? Fourth sentence."
+        sentences = zm._split_by_sentences(text)
+        
+        assert len(sentences) == 4
+        assert "First sentence." in sentences[0]
+        assert "Second sentence!" in sentences[1]  
+        assert "Third sentence?" in sentences[2]
+        assert "Fourth sentence." in sentences[3]
+    
+    def test_hard_split(self):
+        """Test hard character splitting as fallback."""
+        zm = ZepManager()
+        
+        text = "a" * 100  # 100 character string
+        chunks = zm._hard_split(text, 30)
+        
+        assert len(chunks) == 4  # 30, 30, 30, 10
+        assert len(chunks[0]) == 30
+        assert len(chunks[1]) == 30
+        assert len(chunks[2]) == 30
+        assert len(chunks[3]) == 10 

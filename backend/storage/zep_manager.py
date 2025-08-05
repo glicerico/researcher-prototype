@@ -281,7 +281,7 @@ class ZepManager:
 
     async def add_message(self, thread_id: str, content: str, role: str = "system") -> bool:
         """
-        Add a single message to a thread.
+        Add a single message to a thread with automatic chunking for large messages.
         
         Args:
             thread_id: The thread ID
@@ -294,23 +294,157 @@ class ZepManager:
         if not self.is_enabled():
             return False
         
+        # Check content length and handle accordingly
+        if len(content) <= 2400:  # Direct send (keeping 100 char buffer)
+            return await self._send_single_message(thread_id, content, role)
+        elif len(content) <= 9500:  # Use graph.add API (keeping 500 char buffer)  
+            return await self._send_via_graph_api(thread_id, content, role)
+        else:  # Chunk into multiple messages
+            return await self._send_chunked_messages(thread_id, content, role)
+    
+    async def _send_single_message(self, thread_id: str, content: str, role: str) -> bool:
+        """Send a single message via thread.add_messages API."""
         try:
-            message = Message(
-                role=role,
-                content=content
-            )
+            message = Message(role=role, content=content)
             
             await self.client.thread.add_messages(
                 thread_id=thread_id,
                 messages=[message]
             )
             
-            logger.debug(f"Added {role} message to thread {thread_id}")
+            logger.debug(f"Added {role} message to thread {thread_id} ({len(content)} chars)")
             return True
             
         except Exception as e:
             logger.error(f"Failed to add message to thread {thread_id}: {str(e)}")
             return False
+    
+    async def _send_via_graph_api(self, thread_id: str, content: str, role: str) -> bool:
+        """Send message via graph.add API for medium-sized messages."""
+        # Note: This would require implementing the graph.add API integration
+        # For now, fall back to chunking
+        logger.info(f"Message too large for thread API ({len(content)} chars), chunking instead")
+        return await self._send_chunked_messages(thread_id, content, role)
+    
+    async def _send_chunked_messages(self, thread_id: str, content: str, role: str) -> bool:
+        """Send large message as multiple chunks."""
+        try:
+            chunks = self._smart_chunk_content(content)
+            total_chunks = len(chunks)
+            
+            if total_chunks == 1:
+                # Single chunk, send normally
+                return await self._send_single_message(thread_id, chunks[0], role)
+            
+            # Send multiple chunks with sequence metadata
+            success_count = 0
+            for i, chunk in enumerate(chunks, 1):
+                chunk_header = f"[Part {i}/{total_chunks}]"
+                chunk_content = f"{chunk_header}\n\n{chunk}"
+                
+                if await self._send_single_message(thread_id, chunk_content, role):
+                    success_count += 1
+                else:
+                    logger.error(f"Failed to send chunk {i}/{total_chunks}")
+            
+            success = success_count == total_chunks
+            if success:
+                logger.info(f"Successfully sent large {role} message as {total_chunks} chunks ({len(content)} chars total)")
+            else:
+                logger.error(f"Only {success_count}/{total_chunks} chunks sent successfully")
+            
+            return success
+            
+        except Exception as e:
+            logger.error(f"Failed to send chunked message: {str(e)}")
+            return False
+    
+    def _smart_chunk_content(self, content: str, max_chunk_size: int = 2300) -> List[str]:
+        """
+        Intelligently chunk content at natural boundaries.
+        
+        Args:
+            content: The content to chunk
+            max_chunk_size: Maximum size per chunk (with buffer for headers)
+            
+        Returns:
+            List of content chunks
+        """
+        if len(content) <= max_chunk_size:
+            return [content]
+        
+        chunks = []
+        current_chunk = ""
+        
+        # Split by paragraphs first (double newlines)
+        paragraphs = content.split('\n\n')
+        
+        for paragraph in paragraphs:
+            # If adding this paragraph would exceed limit
+            if len(current_chunk) + len(paragraph) + 2 > max_chunk_size:
+                if current_chunk:
+                    # Save current chunk and start new one
+                    chunks.append(current_chunk.strip())
+                    current_chunk = ""
+                
+                # If paragraph itself is too large, split by sentences
+                if len(paragraph) > max_chunk_size:
+                    sentences = self._split_by_sentences(paragraph)
+                    for sentence in sentences:
+                        if len(current_chunk) + len(sentence) + 1 > max_chunk_size:
+                            if current_chunk:
+                                chunks.append(current_chunk.strip())
+                                current_chunk = ""
+                        
+                        if len(sentence) > max_chunk_size:
+                            # Last resort: hard split by characters
+                            char_chunks = self._hard_split(sentence, max_chunk_size)
+                            for char_chunk in char_chunks[:-1]:
+                                chunks.append(char_chunk)
+                            current_chunk = char_chunks[-1] if char_chunks else ""
+                        else:
+                            current_chunk += sentence + " "
+                else:
+                    current_chunk = paragraph
+            else:
+                # Add paragraph to current chunk
+                if current_chunk:
+                    current_chunk += "\n\n" + paragraph
+                else:
+                    current_chunk = paragraph
+        
+        # Add final chunk if any content remains
+        if current_chunk.strip():
+            chunks.append(current_chunk.strip())
+        
+        return chunks
+    
+    def _split_by_sentences(self, text: str) -> List[str]:
+        """Split text by sentence boundaries."""
+        import re
+        # Split by sentence endings, but keep the punctuation
+        sentences = re.split(r'([.!?]+\s+)', text)
+        
+        # Recombine sentence with its punctuation
+        result = []
+        for i in range(0, len(sentences) - 1, 2):
+            sentence = sentences[i]
+            if i + 1 < len(sentences):
+                sentence += sentences[i + 1]
+            result.append(sentence.strip())
+        
+        # Handle any remaining text
+        if len(sentences) % 2 == 1:
+            result.append(sentences[-1].strip())
+        
+        return [s for s in result if s]
+    
+    def _hard_split(self, text: str, max_size: int) -> List[str]:
+        """Hard split text by character count as last resort."""
+        chunks = []
+        for i in range(0, len(text), max_size):
+            chunks.append(text[i:i + max_size])
+        return chunks
 
     async def get_nodes_by_user_id(self, user_id: str, cursor: Optional[str] = None, limit: int = 100) -> tuple[List[Dict[str, Any]], Optional[str]]:
         """
