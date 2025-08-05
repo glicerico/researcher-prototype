@@ -2,7 +2,7 @@
 Initializer node for setting up user and state.
 """
 
-from datetime import datetime
+from datetime import datetime, UTC
 from langchain_core.messages import trim_messages, HumanMessage
 from nodes.base import (
     ChatState,
@@ -44,7 +44,7 @@ async def initializer_node(state: ChatState) -> ChatState:
     thread_id = state.get("thread_id", None)
     if not thread_id:
         # Generate a new thread ID for this conversation thread
-        timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
+        timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")
         thread_id = f"{user_id}-{timestamp}"
         state["thread_id"] = thread_id
         logger.info(f"🔄 Initializer: Generated new thread ID: {thread_id}")

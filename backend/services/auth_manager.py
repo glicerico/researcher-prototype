@@ -1,4 +1,4 @@
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, UTC
 import jwt
 from fastapi import HTTPException, status
 from typing import Optional
@@ -20,11 +20,11 @@ class AuthManager:
 
     def create_access_token(self) -> str:
         """Create a new JWT access token for admin."""
-        expire = datetime.utcnow() + timedelta(minutes=self.expire_minutes)
+        expire = datetime.now(UTC) + timedelta(minutes=self.expire_minutes)
         to_encode = {
             "sub": "admin",
             "exp": expire,
-            "iat": datetime.utcnow(),
+            "iat": datetime.now(UTC),
             "type": "access"
         }
         encoded_jwt = jwt.encode(to_encode, self.secret_key, algorithm=self.algorithm)
