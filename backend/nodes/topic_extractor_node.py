@@ -54,7 +54,7 @@ def topic_extractor_node(state: ChatState) -> ChatState:
             if all_existing_topics:
                 # Only include topics that the user has actively chosen to research
                 active_topics = []
-                for session_id, topics in all_existing_topics.items():
+                for thread_id, topics in all_existing_topics.items():
                     for topic in topics:
                         if topic.get("is_active_research", False):  # Only active research topics
                             topic_name = topic.get("topic_name", "Unknown")

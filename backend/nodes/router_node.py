@@ -21,7 +21,7 @@ from utils import get_last_user_message
 async def router_node(state: ChatState) -> ChatState:
     """Uses a lightweight LLM to analyze the user's message and determine routing."""
     logger.info("🔀 Router: Analyzing message to determine processing path")
-    queue_status(state.get("session_id"), "Routing request...")
+    queue_status(state.get("thread_id"), "Routing request...")
     await asyncio.sleep(0.1)  # Small delay to ensure status is visible
 
     # Get the last user message

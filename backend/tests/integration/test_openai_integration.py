@@ -10,7 +10,7 @@ def sample_state():
     return {
         "messages": [],
         "user_id": "test_user",
-        "session_id": "test_session", 
+        "thread_id": "test_thread", 
         "model": DEFAULT_MODEL,
         "temperature": 0.0,  # Use 0 for deterministic results
         "max_tokens": 20

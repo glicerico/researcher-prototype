@@ -51,7 +51,7 @@ def sample_chat_state():
     return {
         "messages": [],
         "user_id": "test_user",
-        "session_id": "test_session",
+        "thread_id": "test_thread",
         "model": DEFAULT_MODEL,
         "temperature": 0.7,
         "max_tokens": 1000,

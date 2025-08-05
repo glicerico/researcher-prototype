@@ -17,8 +17,8 @@ from dependencies import get_or_create_user_id, GUEST_USER_ID
 
 async def initializer_node(state: ChatState) -> ChatState:
     """Handles user and initial state setup, including session management and memory context retrieval."""
-    logger.info("🔄 Initializer: Setting up user state and session")
-    queue_status(state.get("session_id"), "Initializing session...")
+    logger.info("🔄 Initializer: Setting up user state and thread")
+    queue_status(state.get("thread_id"), "Initializing thread...")
 
     # Initialize state objects if they don't exist
     state["workflow_context"] = state.get("workflow_context", {})
@@ -40,43 +40,43 @@ async def initializer_node(state: ChatState) -> ChatState:
         if not state.get("personality"):
             state["personality"] = profile_manager.get_personality(user_id)
 
-    # Handle session ID generation or retrieval
-    session_id = state.get("session_id", None)
-    if not session_id:
-        # Generate a new session ID for this conversation thread
+    # Handle thread ID generation or retrieval
+    thread_id = state.get("thread_id", None)
+    if not thread_id:
+        # Generate a new thread ID for this conversation thread
         timestamp = datetime.utcnow().strftime("%Y%m%d_%H%M%S_%f")
-        session_id = f"{user_id}-{timestamp}"
-        state["session_id"] = session_id
-        logger.info(f"🔄 Initializer: Generated new session ID: {session_id}")
+        thread_id = f"{user_id}-{timestamp}"
+        state["thread_id"] = thread_id
+        logger.info(f"🔄 Initializer: Generated new thread ID: {thread_id}")
 
-        # Create session in ZEP when we generate a new session ID
+        # Create thread in ZEP when we generate a new thread ID
         if zep_manager.is_enabled():
             try:
-                await zep_manager.create_session(session_id, user_id)
+                await zep_manager.create_thread(thread_id, user_id)
 
-                # Add an empty message to prime the session and trigger context population
-                await zep_manager.add_message(session_id, "Session initialized", "system")
-                logger.debug(f"🔄 Initializer: Primed ZEP session {session_id} with initialization message")
+                # Add an empty message to prime the thread and trigger context population
+                await zep_manager.add_message(thread_id, "Thread initialized", "system")
+                logger.debug(f"🔄 Initializer: Primed ZEP thread {thread_id} with initialization message")
 
             except Exception as e:
-                logger.warning(f"Failed to create session in ZEP: {str(e)}")
-                # Don't fail the request if ZEP session creation fails
+                logger.warning(f"Failed to create thread in ZEP: {str(e)}")
+                # Don't fail the request if ZEP thread creation fails
     else:
-        logger.info(f"🔄 Initializer: Using provided session ID: {session_id}")
+        logger.info(f"🔄 Initializer: Using provided thread ID: {thread_id}")
 
     # Retrieve memory context from Zep if available
     memory_context = None
     if zep_manager.is_enabled():
         try:
-            logger.info(f"🧠 Initializer: Retrieving memory context for session {session_id}")
-            memory_context = await zep_manager.get_memory_context(session_id)
+            logger.info(f"🧠 Initializer: Retrieving memory context for thread {thread_id}")
+            memory_context = await zep_manager.get_memory_context(thread_id)
 
             if memory_context:
                 logger.info(f"🧠 Initializer: Retrieved memory context from ZEP.")
                 # Store in workflow context for debugging/inspection
                 state["workflow_context"]["memory_context_retrieved"] = True
             else:
-                logger.info("🧠 Initializer: No memory context found for this session")
+                logger.info("🧠 Initializer: No memory context found for this thread")
                 state["workflow_context"]["memory_context_retrieved"] = False
 
         except Exception as e:

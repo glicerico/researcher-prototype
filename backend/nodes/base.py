@@ -73,5 +73,5 @@ class ChatState(TypedDict):
     workflow_context: Annotated[Dict[str, Any], "Contextual data for the current workflow execution."]
     user_id: Annotated[Optional[str], "The ID of the current user"]
     routing_analysis: Annotated[Optional[Dict[str, Any]], "Analysis from the router"]
-    session_id: Annotated[Optional[str], "The session ID for memory management"]
+    thread_id: Annotated[Optional[str], "The thread ID for memory management"]
     memory_context: Annotated[Optional[str], "Memory context retrieved from Zep"]

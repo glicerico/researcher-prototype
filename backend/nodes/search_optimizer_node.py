@@ -21,7 +21,7 @@ from utils import get_last_user_message
 def search_prompt_optimizer_node(state: ChatState) -> ChatState:
     """Refines the user's query into an optimized search query using an LLM, considering conversation context."""
     logger.info("🔬 Search Optimizer: Refining user query for search")
-    queue_status(state.get("session_id"), "Optimizing search query...")
+    queue_status(state.get("thread_id"), "Optimizing search query...")
     current_time_str = get_current_datetime_str()
 
     # Gather recent conversation history for context (e.g., last 5 messages)
