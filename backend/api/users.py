@@ -210,6 +210,78 @@ async def track_user_engagement(
         raise HTTPException(status_code=500, detail=f"Failed to track engagement: {str(e)}")
 
 
+@router.post("/user/feedback")
+async def submit_user_feedback(
+    feedback_data: dict,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Submit user feedback (thumbs up/down, etc.)."""
+    try:
+        pm = get_personalization_manager()
+        
+        feedback_type = feedback_data.get("type")
+        message_id = feedback_data.get("messageId")
+        feedback = feedback_data.get("feedback")
+        
+        if not all([feedback_type, message_id, feedback]):
+            raise HTTPException(status_code=400, detail="Missing required feedback data")
+        
+        logger.info(f"🌐 API: ✅ User {user_id} submitted {feedback} feedback for {feedback_type}")
+        
+        # Track as engagement event
+        success = pm.track_user_engagement(user_id, "engagement_event", {
+            "type": feedback_type,
+            "message_id": message_id,
+            "feedback": feedback,
+            "timestamp": feedback_data.get("timestamp")
+        })
+        
+        if not success:
+            logger.error(f"🌐 API: ❌ Failed to process feedback for user {user_id}")
+            raise HTTPException(status_code=500, detail="Failed to process feedback")
+        
+        return {"success": True, "message": "Feedback submitted successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"🌐 API: ❌ Error processing feedback for user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to process feedback: {str(e)}")
+
+
+@router.post("/user/link-click")
+async def track_link_click(
+    click_data: dict,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Track link clicks for engagement."""
+    try:
+        pm = get_personalization_manager()
+        
+        url = click_data.get("url")
+        context = click_data.get("context", "")
+        
+        logger.info(f"🌐 API: ✅ User {user_id} clicked link: {url}")
+        
+        # Track as engagement event
+        success = pm.track_user_engagement(user_id, "engagement_event", {
+            "type": "link_click",
+            "url": url,
+            "context": context,
+            "timestamp": click_data.get("timestamp")
+        })
+        
+        if not success:
+            logger.error(f"🌐 API: ❌ Failed to track link click for user {user_id}")
+            raise HTTPException(status_code=500, detail="Failed to track link click")
+        
+        return {"success": True, "message": "Link click tracked successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"🌐 API: ❌ Error tracking link click for user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to track link click: {str(e)}")
+
+
 @router.put("/user/personalization/override")
 async def override_learned_behavior(
     override_request: PreferenceOverride,

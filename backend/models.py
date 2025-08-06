@@ -46,12 +46,11 @@ class PreferencesConfig(BaseModel):
     interaction_preferences: InteractionPreferences = InteractionPreferences()
 
 
-class ReadingPatterns(BaseModel):
-    """User reading pattern analytics."""
-    avg_reading_time_seconds: Dict[str, float] = {
-        "short_responses": 0.0,
-        "medium_responses": 0.0,
-        "long_responses": 0.0
+class FeedbackSignals(BaseModel):
+    """User feedback signals."""
+    thumbs_feedback: Dict[str, int] = {
+        "up": 0,
+        "down": 0
     }
     content_completion_rates: Dict[str, float] = {
         "research_findings": 0.0,
@@ -65,6 +64,10 @@ class InteractionSignals(BaseModel):
     most_engaged_source_types: List[str] = []
     preferred_research_timing: Optional[str] = None
     follow_up_question_frequency: float = 0.0
+    link_clicks: int = 0
+    session_continuation_rate: float = 0.0
+    source_exploration_clicks: int = 0
+    research_activations: int = 0
 
 
 class FormatOptimizations(BaseModel):
@@ -81,7 +84,7 @@ class LearnedAdaptations(BaseModel):
 
 class EngagementAnalytics(BaseModel):
     """User engagement analytics."""
-    reading_patterns: ReadingPatterns = ReadingPatterns()
+    feedback_signals: FeedbackSignals = FeedbackSignals()
     interaction_signals: InteractionSignals = InteractionSignals()
     learned_adaptations: LearnedAdaptations = LearnedAdaptations()
     user_overrides: Dict[str, Any] = {}

@@ -71,12 +71,25 @@ class PersonalizationManager:
 
     def _learn_from_research_interaction(self, user_id: str, metadata: Dict[str, Any]) -> None:
         """Learn preferences from research finding interactions."""
+        # Get new engagement metrics
+        feedback = metadata.get("feedback")
+        link_clicks = metadata.get("link_clicks", 0)
+        source_exploration = metadata.get("source_exploration_clicks", 0)
+        session_continuation = metadata.get("session_continuation_rate", 0.0)
         completion_rate = metadata.get("completion_rate", 0.0)
         source_types = metadata.get("source_types", [])
-        reading_time = metadata.get("reading_time_seconds", 0)
         content_length = metadata.get("content_length", 0)
         
-        if completion_rate > 0.7 and reading_time > 30:  # High engagement threshold
+        # Calculate engagement score using new metrics
+        engagement_score = self._calculate_engagement_score(
+            feedback=feedback,
+            link_clicks=link_clicks, 
+            source_exploration=source_exploration,
+            session_continuation=session_continuation,
+            completion_rate=completion_rate
+        )
+        
+        if engagement_score > 0.7:  # High engagement threshold
             # Learn source type preferences
             self._adjust_source_preferences(user_id, source_types, 0.05)
             
@@ -84,20 +97,32 @@ class PersonalizationManager:
             if content_length > 0:
                 self._adjust_format_preferences(user_id, content_length, completion_rate)
         
-        elif completion_rate < 0.3:  # Low engagement
+        elif engagement_score < 0.3:  # Low engagement
             # Decrease preference for these source types
             self._adjust_source_preferences(user_id, source_types, -0.03)
 
     def _learn_from_chat_interaction(self, user_id: str, metadata: Dict[str, Any]) -> None:
         """Learn preferences from chat interactions."""
-        completion_rate = metadata.get("completion_rate", 0.0)
-        has_follow_up = metadata.get("has_follow_up", False)
+        # Get new engagement metrics for chat
+        feedback = metadata.get("feedback")
+        link_clicks = metadata.get("link_clicks", 0)
+        source_exploration = metadata.get("source_exploration_clicks", 0)
+        session_continuation = metadata.get("session_continuation_rate", 0.0)
         response_length = metadata.get("response_length", "medium")
         
+        # Calculate engagement score using new metrics
+        engagement_score = self._calculate_engagement_score(
+            feedback=feedback,
+            link_clicks=link_clicks,
+            source_exploration=source_exploration,
+            session_continuation=session_continuation,
+            completion_rate=1.0  # Assume completion for chat responses
+        )
+        
         # Learn about preferred response detail level
-        if completion_rate > 0.8 and has_follow_up:
+        if engagement_score > 0.7:
             self._adjust_detail_preference(user_id, response_length, True)
-        elif completion_rate < 0.4:
+        elif engagement_score < 0.4:
             self._adjust_detail_preference(user_id, response_length, False)
 
     def _adjust_source_preferences(self, user_id: str, source_types: List[str], adjustment: float) -> None:
@@ -372,3 +397,36 @@ class PersonalizationManager:
         except Exception as e:
             logger.error(f"Error getting transparency data for user {user_id}: {str(e)}")
             return {}
+
+    def _calculate_engagement_score(self, feedback=None, link_clicks=0, source_exploration=0, 
+                                   session_continuation=0.0, completion_rate=0.0) -> float:
+        """
+        Calculate engagement score using new metrics (replacing reading time).
+        
+        Returns:
+            Float between 0.0 and 1.0 representing engagement level
+        """
+        score = 0.0
+        
+        # Thumbs feedback (30% weight)
+        if feedback == "up":
+            score += 0.3
+        elif feedback == "down":
+            score -= 0.1  # Slight negative weight
+        
+        # Session continuation (25% weight) 
+        score += session_continuation * 0.25
+        
+        # Link clicks (20% weight) - normalized
+        normalized_clicks = min(1.0, link_clicks / 3.0)  # 3+ clicks = max score
+        score += normalized_clicks * 0.2
+        
+        # Source exploration (15% weight)
+        if source_exploration > 0:
+            score += 0.15
+        
+        # Completion rate (10% weight)
+        score += completion_rate * 0.1
+        
+        # Ensure score is between 0 and 1
+        return max(0.0, min(1.0, score))

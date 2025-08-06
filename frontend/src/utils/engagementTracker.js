@@ -151,35 +151,38 @@ class EngagementTracker {
   }
 
   /**
-   * Track chat response engagement
+   * Track specific engagement events (feedback, links, etc.)
    */
-  async trackChatEngagement(responseData, userId, readingTime, hasFollowUp = false) {
+  async trackEngagementEvent(eventData) {
     if (!this.isEnabled) return;
 
-    const trackingData = {
-      reading_time_seconds: readingTime,
-      completion_rate: 1.0, // Assume full completion for chat responses
-      response_length: responseData.response?.length || 0,
-      has_follow_up: hasFollowUp,
-      model_used: responseData.model,
-      topic_initiated: this.isTopicInitiatedByUser(responseData)
-    };
-
     try {
-      console.log('👤 EngagementTracker: Sending chat engagement data');
-      console.log('👤 EngagementTracker: Chat tracking payload:', trackingData);
+      console.log('👤 EngagementTracker: Sending engagement event:', eventData.type);
+      console.log('👤 EngagementTracker: Event data:', eventData);
       
-      await trackUserEngagement('chat_response', trackingData);
+      await trackUserEngagement('engagement_event', eventData);
       
-      console.log(`👤 EngagementTracker: ✅ Successfully tracked chat engagement:`, 
-        `${readingTime}s reading time,`, 
-        `follow_up: ${hasFollowUp},`,
-        `response_length: ${trackingData.response_length}`);
+      console.log(`👤 EngagementTracker: ✅ Successfully tracked ${eventData.type} event`);
     } catch (error) {
-      console.error('👤 EngagementTracker: ❌ Failed to track chat engagement:', error);
-      console.error('👤 EngagementTracker: ❌ Failed chat tracking data:', trackingData);
-      console.error('👤 EngagementTracker: ❌ Response data context:', responseData);
+      console.error('👤 EngagementTracker: ❌ Failed to track engagement event:', error);
+      console.error('👤 EngagementTracker: ❌ Failed event data:', eventData);
     }
+  }
+
+  /**
+   * Track session continuation
+   */
+  trackSessionContinuation(sessionId, continuationType = 'new_message') {
+    if (!this.isEnabled) return;
+
+    console.log('👤 EngagementTracker: ✅ Session continuation tracked:', sessionId, continuationType);
+    
+    this.trackEngagementEvent({
+      type: 'session_continuation',
+      sessionId,
+      continuationType,
+      timestamp: Date.now()
+    });
   }
 
   /**
@@ -309,8 +312,8 @@ export const useEngagementTracking = () => {
     endReading: (contentId, userId) => engagementTracker.endReadingSession(contentId, userId),
     trackScroll: (contentId, percentage) => engagementTracker.trackScrollEvent(contentId, percentage),
     trackInteraction: (contentId, type, data) => engagementTracker.trackInteraction(contentId, type, data),
-    trackChat: (responseData, userId, readingTime, hasFollowUp) => 
-      engagementTracker.trackChatEngagement(responseData, userId, readingTime, hasFollowUp),
+    trackEvent: (eventData) => engagementTracker.trackEngagementEvent(eventData),
+    trackSessionContinuation: (sessionId, type) => engagementTracker.trackSessionContinuation(sessionId, type),
     createScrollObserver: (element, contentId) => engagementTracker.createScrollObserver(element, contentId),
     startPageTimer: (pageId) => engagementTracker.startPageTimer(pageId),
     updateActivity: (pageId) => engagementTracker.updateActivity(pageId),
@@ -318,5 +321,9 @@ export const useEngagementTracking = () => {
     setEnabled: (enabled) => engagementTracker.setEnabled(enabled)
   };
 };
+
+// Export individual functions for direct use
+export const trackEngagement = (eventData) => engagementTracker.trackEngagementEvent(eventData);
+export const trackSessionContinuation = (sessionId, type) => engagementTracker.trackSessionContinuation(sessionId, type);
 
 export default engagementTracker;

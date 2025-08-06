@@ -21,7 +21,7 @@ const ChatPage = () => {
     updateConversationTopics,
   } = useSession();
 
-  const { trackChat, startPageTimer, updateActivity, endPageTimer } = useEngagementTracking();
+  const { trackSessionContinuation, startPageTimer, updateActivity, endPageTimer } = useEngagementTracking();
 
   // Local state for UI components
   const [isTyping, setIsTyping] = useState(false);
@@ -160,14 +160,9 @@ const ChatPage = () => {
       
       updateMessages(prev => [...prev, assistantMessage]);
       
-      // Track chat engagement
-      if (messageStartTime && userId) {
-        const readingTime = (Date.now() - messageStartTime) / 1000;
-        const hasFollowUp = response.follow_up_questions && response.follow_up_questions.length > 0;
-        
-        trackChat(response, userId, readingTime, hasFollowUp).catch(err => {
-          console.warn('Failed to track chat engagement:', err);
-        });
+      // Track session continuation (user continuing conversation)
+      if (sessionId && messages.length > 0) {
+        trackSessionContinuation(sessionId, 'new_message');
       }
       
       // Clear status message immediately when response is displayed
@@ -307,6 +302,7 @@ const ChatPage = () => {
               routingInfo={msg.routingInfo}
               followUpQuestions={msg.follow_up_questions}
               onFollowUpClick={handleFollowUpClick}
+              messageId={`${sessionId}_${index}`}
             />
           ))}
           {isTyping && <TypingIndicator />}

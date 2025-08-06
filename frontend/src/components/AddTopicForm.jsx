@@ -1,5 +1,6 @@
 import React, { useState } from 'react';
 import { createCustomTopic } from '../services/api';
+import { trackEngagement } from '../utils/engagementTracker';
 import '../styles/AddTopicForm.css';
 
 const AddTopicForm = ({ isOpen, onClose, onTopicAdded }) => {
@@ -78,6 +79,18 @@ const AddTopicForm = ({ isOpen, onClose, onTopicAdded }) => {
       });
 
       if (result.success) {
+        // Track research activation
+        if (formData.enable_research) {
+          console.log('👤 AddTopicForm: ✅ Research activation tracked for topic:', result.topic.name);
+          trackEngagement({
+            type: 'research_activation',
+            topicId: result.topic.id,
+            topicName: result.topic.name,
+            activationType: 'manual_topic_creation',
+            timestamp: Date.now()
+          });
+        }
+        
         // Reset form
         setFormData({
           name: '',
