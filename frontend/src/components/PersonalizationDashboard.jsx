@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState } from 'react';
 import { overrideLearnedBehavior, getUserPersonalizationData } from '../services/api';
 import '../styles/PersonalizationDashboard.css';
 
@@ -17,10 +17,11 @@ const PersonalizationDashboard = ({ personalizationData, onDataUpdate }) => {
   };
 
   const handleOverride = async (preferenceType, currentValue, disableLearning = false) => {
+    let newValue = null;
     try {
       setIsLoading(true);
       
-      const newValue = prompt(
+      newValue = prompt(
         `Override ${preferenceType.replace(/_/g, ' ')}\nCurrent value: ${currentValue}\nEnter new value:`,
         currentValue
       );

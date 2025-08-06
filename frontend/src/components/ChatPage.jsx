@@ -28,7 +28,6 @@ const ChatPage = () => {
   const [isLoading, setIsLoading] = useState(false);
   const [chatInputValue, setChatInputValue] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
-  const [messageStartTime, setMessageStartTime] = useState(null);
   
   // Topics sidebar state
   const [isTopicsSidebarCollapsed, setIsTopicsSidebarCollapsed] = useState(false);
@@ -103,7 +102,6 @@ const ChatPage = () => {
     // Show typing indicator and start timing
     setIsTyping(true);
     setIsLoading(true);
-    setMessageStartTime(Date.now());
     
     try {
       // Trigger user activity for motivation system (fire and forget)
