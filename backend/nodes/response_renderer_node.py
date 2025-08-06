@@ -14,6 +14,7 @@ from nodes.base import (
     config,
     get_current_datetime_str,
     queue_status,
+    personalization_manager,
 )
 from llm_models import FormattedResponse
 from utils import get_last_user_message
@@ -51,6 +52,19 @@ async def response_renderer_node(state: ChatState) -> ChatState:
     personality = state.get("personality") or {}
     style = personality.get("style", "helpful")
     tone = personality.get("tone", "friendly")
+    
+    # Get personalization context for user preferences
+    user_id = state.get("user_id")
+    personalization_context = {}
+    if user_id:
+        try:
+            logger.info(f"✨ Renderer: Retrieving personalization context for user {user_id}")
+            personalization_context = personalization_manager.get_personalization_context(user_id)
+            logger.debug(f"✨ Renderer: ✅ Personalization context retrieved for user {user_id}")
+        except Exception as e:
+            logger.warning(f"✨ Renderer: ⚠️ Could not retrieve personalization context for user {user_id}: {str(e)}")
+    else:
+        logger.info("✨ Renderer: No user_id found, using default formatting preferences")
 
     # Get the active module that was used to handle the query
     module_used = state.get("current_module", "chat")
@@ -63,10 +77,34 @@ async def response_renderer_node(state: ChatState) -> ChatState:
         api_key=config.OPENAI_API_KEY,
     )
 
-    # Create a system prompt for the renderer
+    # Extract format preferences from personalization context
+    format_prefs = personalization_context.get("format_preferences", {})
+    response_length = format_prefs.get("response_length", "medium")
+    detail_level = format_prefs.get("detail_level", "balanced")
+    citation_style = format_prefs.get("citation_style", "inline")
+    use_bullet_points = format_prefs.get("use_bullet_points", True)
+    include_key_insights = format_prefs.get("include_key_insights", True)
+    
+    # Extract learned adaptations
+    learned_adaptations = personalization_context.get("learned_adaptations", {})
+    format_optimizations = learned_adaptations.get("format_optimizations", {})
+    prefers_structured = format_optimizations.get("prefers_structured_responses", True)
+    optimal_length = format_optimizations.get("optimal_response_length")
+    
+    # Create a system prompt for the renderer with personalization
     system_message = SystemMessage(
         content=RESPONSE_RENDERER_SYSTEM_PROMPT.format(
-            current_time=current_time_str, style=style, tone=tone, module_used=module_used
+            current_time=current_time_str, 
+            style=style, 
+            tone=tone, 
+            module_used=module_used,
+            response_length=response_length,
+            detail_level=detail_level,
+            citation_style=citation_style,
+            use_bullet_points=use_bullet_points,
+            include_key_insights=include_key_insights,
+            prefers_structured=prefers_structured,
+            optimal_length=optimal_length or "not specified"
         )
     )
 
