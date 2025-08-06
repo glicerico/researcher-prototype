@@ -34,27 +34,40 @@ class PersonalizationManager:
             True if successful, False otherwise
         """
         try:
+            logger.info(f"PersonalizationManager: Processing engagement for user {user_id}, type: {interaction_type}")
+            logger.debug(f"PersonalizationManager: Engagement data for user {user_id}: {metadata}")
+            
             # Track basic engagement
             success = self.profile_manager.track_engagement(user_id, interaction_type, metadata)
             
             if success:
+                logger.debug(f"PersonalizationManager: Basic engagement tracking successful for user {user_id}")
                 # Perform advanced learning
                 self._update_learned_preferences(user_id, interaction_type, metadata)
+                logger.info(f"PersonalizationManager: Completed learning update for user {user_id}")
+            else:
+                logger.warning(f"PersonalizationManager: Basic engagement tracking failed for user {user_id}")
                 
             return success
         except Exception as e:
-            logger.error(f"Error tracking engagement for user {user_id}: {str(e)}")
+            logger.error(f"PersonalizationManager: Error tracking engagement for user {user_id}: {str(e)}", exc_info=True)
             return False
 
     def _update_learned_preferences(self, user_id: str, interaction_type: str, metadata: Dict[str, Any]) -> None:
         """Update learned preferences based on engagement patterns."""
         try:
+            logger.debug(f"PersonalizationManager: Starting preference learning for user {user_id}, type: {interaction_type}")
+            
             if interaction_type == "research_finding":
                 self._learn_from_research_interaction(user_id, metadata)
+                logger.debug(f"PersonalizationManager: Completed research interaction learning for user {user_id}")
             elif interaction_type == "chat_response":
                 self._learn_from_chat_interaction(user_id, metadata)
+                logger.debug(f"PersonalizationManager: Completed chat interaction learning for user {user_id}")
+            else:
+                logger.warning(f"PersonalizationManager: Unknown interaction type for learning: {interaction_type} (user: {user_id})")
         except Exception as e:
-            logger.error(f"Error updating learned preferences for user {user_id}: {str(e)}")
+            logger.error(f"PersonalizationManager: Error updating learned preferences for user {user_id}: {str(e)}", exc_info=True)
 
     def _learn_from_research_interaction(self, user_id: str, metadata: Dict[str, Any]) -> None:
         """Learn preferences from research finding interactions."""
@@ -102,11 +115,15 @@ class PersonalizationManager:
                     changes_made[source_type] = {"old": old_value, "new": new_value}
             
             if changes_made:
+                logger.info(f"PersonalizationManager: Adjusting source preferences for user {user_id}: {changes_made}")
                 self.profile_manager.update_preferences(user_id, {"content_preferences": {"source_types": source_prefs}})
                 self._log_learning_adaptation(user_id, "source_preference_adjustment", changes_made, adjustment > 0)
+                logger.debug(f"PersonalizationManager: Source preference adjustment complete for user {user_id}")
+            else:
+                logger.debug(f"PersonalizationManager: No source preference changes needed for user {user_id}")
                 
         except Exception as e:
-            logger.error(f"Error adjusting source preferences for user {user_id}: {str(e)}")
+            logger.error(f"PersonalizationManager: Error adjusting source preferences for user {user_id}: {str(e)}", exc_info=True)
 
     def _adjust_format_preferences(self, user_id: str, content_length: int, completion_rate: float) -> None:
         """Adjust format preferences based on content engagement."""
@@ -264,20 +281,26 @@ class PersonalizationManager:
             True if successful, False otherwise
         """
         try:
+            logger.info(f"PersonalizationManager: User {user_id} overriding behavior: {override_type} = {override_value}, disable_learning={disable_learning}")
+            
             if override_type.startswith("source_preference_"):
                 source_type = override_type.replace("source_preference_", "")
                 preferences = self.profile_manager.get_preferences(user_id)
+                old_value = preferences["content_preferences"]["source_types"].get(source_type, 0.0)
                 preferences["content_preferences"]["source_types"][source_type] = override_value
                 success = self.profile_manager.update_preferences(user_id, {"content_preferences": {"source_types": preferences["content_preferences"]["source_types"]}})
+                logger.debug(f"PersonalizationManager: Source preference override for user {user_id}: {source_type} {old_value} -> {override_value}")
                 
             elif override_type == "detail_level":
                 success = self.profile_manager.update_preferences(user_id, {"format_preferences": {"detail_level": override_value}})
+                logger.debug(f"PersonalizationManager: Detail level override for user {user_id}: {override_value}")
                 
             elif override_type == "response_length":
                 success = self.profile_manager.update_preferences(user_id, {"format_preferences": {"response_length": override_value}})
+                logger.debug(f"PersonalizationManager: Response length override for user {user_id}: {override_value}")
                 
             else:
-                logger.warning(f"Unknown override type: {override_type}")
+                logger.warning(f"PersonalizationManager: Unknown override type for user {user_id}: {override_type}")
                 return False
             
             if success and disable_learning:
@@ -294,6 +317,7 @@ class PersonalizationManager:
                     self.profile_manager._get_engagement_analytics_path(user_id),
                     analytics
                 )
+                logger.info(f"PersonalizationManager: Disabled learning for user {user_id}, type: {override_type}")
             
             if success:
                 self._log_learning_adaptation(
@@ -302,11 +326,14 @@ class PersonalizationManager:
                     {"type": override_type, "value": override_value, "learning_disabled": disable_learning},
                     True
                 )
+                logger.info(f"PersonalizationManager: Successfully processed override for user {user_id}: {override_type}")
+            else:
+                logger.error(f"PersonalizationManager: Failed to apply override for user {user_id}: {override_type}")
             
             return success
             
         except Exception as e:
-            logger.error(f"Error overriding behavior for user {user_id}: {str(e)}")
+            logger.error(f"PersonalizationManager: Error overriding behavior for user {user_id}: {str(e)}", exc_info=True)
             return False
 
     def get_learning_transparency_data(self, user_id: str) -> Dict[str, Any]:

@@ -24,6 +24,9 @@ class EngagementTracker {
   startReadingSession(contentId, contentData = {}) {
     if (!this.isEnabled) return;
 
+    console.log('EngagementTracker: Starting reading session for content:', contentId);
+    console.log('EngagementTracker: Content data:', contentData);
+
     const session = {
       contentId,
       startTime: Date.now(),
@@ -34,6 +37,7 @@ class EngagementTracker {
     };
 
     this.readingSessions.set(contentId, session);
+    console.log('EngagementTracker: Active reading sessions:', this.readingSessions.size);
   }
 
   /**
@@ -43,7 +47,10 @@ class EngagementTracker {
     if (!this.isEnabled) return;
 
     const session = this.readingSessions.get(contentId);
-    if (!session) return;
+    if (!session) {
+      console.warn('EngagementTracker: No active session found for scroll tracking:', contentId);
+      return;
+    }
 
     session.scrollEvents.push({
       timestamp: Date.now(),
@@ -53,6 +60,12 @@ class EngagementTracker {
     // Mark as completed if user has scrolled through most of the content
     if (scrollPercentage > 80 && !session.completed) {
       session.completed = true;
+      console.log('EngagementTracker: Content marked as completed for:', contentId, 'at', scrollPercentage + '%');
+    }
+
+    // Log significant scroll milestones
+    if ([25, 50, 75, 100].includes(Math.floor(scrollPercentage))) {
+      console.log('EngagementTracker: Scroll milestone reached for', contentId + ':', Math.floor(scrollPercentage) + '%');
     }
   }
 
@@ -63,13 +76,20 @@ class EngagementTracker {
     if (!this.isEnabled) return;
 
     const session = this.readingSessions.get(contentId);
-    if (!session) return;
+    if (!session) {
+      console.warn('EngagementTracker: No active session found for interaction tracking:', contentId);
+      return;
+    }
+
+    console.log('EngagementTracker: User interaction tracked:', { contentId, interactionType, data });
 
     session.interactions.push({
       type: interactionType,
       timestamp: Date.now(),
       data
     });
+
+    console.log('EngagementTracker: Total interactions for', contentId + ':', session.interactions.length);
   }
 
   /**
@@ -111,9 +131,19 @@ class EngagementTracker {
     };
 
     try {
+      console.log('EngagementTracker: Sending research engagement data for content:', contentId);
+      console.log('EngagementTracker: Research tracking payload:', trackingData);
+      
       await trackUserEngagement('research_finding', trackingData);
+      
+      console.log(`EngagementTracker: Successfully tracked research engagement for ${contentId}:`, 
+        `${readingTime}s reading time,`, 
+        `${Math.round(completionRate * 100)}% completion,`,
+        `${session.interactions.length} interactions`);
     } catch (error) {
-      console.error('Failed to track engagement:', error);
+      console.error('EngagementTracker: Failed to track research engagement for content:', contentId, error);
+      console.error('EngagementTracker: Failed tracking data:', trackingData);
+      console.error('EngagementTracker: Session data:', session);
     }
 
     // Clean up
@@ -136,9 +166,19 @@ class EngagementTracker {
     };
 
     try {
+      console.log('EngagementTracker: Sending chat engagement data');
+      console.log('EngagementTracker: Chat tracking payload:', trackingData);
+      
       await trackUserEngagement('chat_response', trackingData);
+      
+      console.log(`EngagementTracker: Successfully tracked chat engagement:`, 
+        `${readingTime}s reading time,`, 
+        `follow_up: ${hasFollowUp},`,
+        `response_length: ${trackingData.response_length}`);
     } catch (error) {
-      console.error('Failed to track chat engagement:', error);
+      console.error('EngagementTracker: Failed to track chat engagement:', error);
+      console.error('EngagementTracker: Failed chat tracking data:', trackingData);
+      console.error('EngagementTracker: Response data context:', responseData);
     }
   }
 
@@ -181,7 +221,12 @@ class EngagementTracker {
    * Create intersection observer for automatic scroll tracking
    */
   createScrollObserver(contentElement, contentId, threshold = [0.25, 0.5, 0.75, 1.0]) {
-    if (!this.isEnabled || !contentElement) return null;
+    if (!this.isEnabled || !contentElement) {
+      console.warn('EngagementTracker: Cannot create scroll observer - disabled or no element:', { enabled: this.isEnabled, hasElement: !!contentElement });
+      return null;
+    }
+
+    console.log('EngagementTracker: Creating scroll observer for content:', contentId);
 
     const observer = new IntersectionObserver((entries) => {
       entries.forEach(entry => {
@@ -196,6 +241,7 @@ class EngagementTracker {
     });
 
     observer.observe(contentElement);
+    console.log('EngagementTracker: Scroll observer activated for:', contentId);
     return observer;
   }
 
@@ -205,10 +251,14 @@ class EngagementTracker {
   startPageTimer(pageId) {
     if (!this.isEnabled) return;
 
+    console.log('EngagementTracker: Starting page timer for:', pageId);
+    
     this.interactionTimers.set(pageId, {
       startTime: Date.now(),
       lastActivity: Date.now()
     });
+
+    console.log('EngagementTracker: Active page timers:', this.interactionTimers.size);
   }
 
   /**
@@ -230,10 +280,20 @@ class EngagementTracker {
     if (!this.isEnabled) return 0;
 
     const timer = this.interactionTimers.get(pageId);
-    if (!timer) return 0;
+    if (!timer) {
+      console.warn('EngagementTracker: No timer found for page:', pageId);
+      return 0;
+    }
 
     const sessionDuration = (Date.now() - timer.startTime) / 1000;
+    const activityDuration = (timer.lastActivity - timer.startTime) / 1000;
+    
+    console.log('EngagementTracker: Page session ended for:', pageId, 
+      `Total: ${sessionDuration}s,`, 
+      `Active: ${activityDuration}s`);
+    
     this.interactionTimers.delete(pageId);
+    console.log('EngagementTracker: Remaining active page timers:', this.interactionTimers.size);
     
     return sessionDuration;
   }

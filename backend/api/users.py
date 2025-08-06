@@ -124,18 +124,35 @@ async def create_user(display_name: Optional[str] = None):
 @router.get("/user/preferences", response_model=PreferencesConfig)
 async def get_user_preferences(user_id: str = Depends(get_or_create_user_id)):
     """Get user preferences."""
-    preferences_data = profile_manager.get_preferences(user_id)
-    return PreferencesConfig(**preferences_data)
+    try:
+        logger.info(f"API: Getting preferences for user {user_id}")
+        preferences_data = profile_manager.get_preferences(user_id)
+        logger.debug(f"API: Retrieved preferences for user {user_id}: {list(preferences_data.keys())}")
+        return PreferencesConfig(**preferences_data)
+    except Exception as e:
+        logger.error(f"API: Error getting preferences for user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to get preferences: {str(e)}")
 
 
 @router.put("/user/preferences")
 async def update_user_preferences(preferences: PreferencesConfig, user_id: str = Depends(get_or_create_user_id)):
     """Update user preferences."""
-    success = profile_manager.update_preferences(user_id, preferences.model_dump())
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to update preferences")
-    
-    return {"success": True, "message": "Preferences updated successfully"}
+    try:
+        logger.info(f"API: Updating preferences for user {user_id}")
+        logger.debug(f"API: New preferences for user {user_id}: {preferences.model_dump()}")
+        
+        success = profile_manager.update_preferences(user_id, preferences.model_dump())
+        if not success:
+            logger.error(f"API: Failed to update preferences for user {user_id}")
+            raise HTTPException(status_code=500, detail="Failed to update preferences")
+        
+        logger.info(f"API: Successfully updated preferences for user {user_id}")
+        return {"success": True, "message": "Preferences updated successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"API: Error updating preferences for user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to update preferences: {str(e)}")
 
 
 @router.get("/user/engagement-analytics", response_model=EngagementAnalytics)
@@ -166,19 +183,31 @@ async def track_user_engagement(
     user_id: str = Depends(get_or_create_user_id)
 ):
     """Track user engagement for learning."""
-    pm = get_personalization_manager()
-    
-    interaction_type = interaction_data.get("interaction_type")
-    metadata = interaction_data.get("metadata", {})
-    
-    if not interaction_type:
-        raise HTTPException(status_code=400, detail="Missing interaction_type")
-    
-    success = pm.track_user_engagement(user_id, interaction_type, metadata)
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to track engagement")
-    
-    return {"success": True, "message": "Engagement tracked successfully"}
+    try:
+        pm = get_personalization_manager()
+        
+        interaction_type = interaction_data.get("interaction_type")
+        metadata = interaction_data.get("metadata", {})
+        
+        if not interaction_type:
+            logger.warning(f"API: Missing interaction_type in engagement tracking for user {user_id}")
+            raise HTTPException(status_code=400, detail="Missing interaction_type")
+        
+        logger.info(f"API: Tracking engagement for user {user_id}: {interaction_type}")
+        logger.debug(f"API: Engagement metadata for user {user_id}: {metadata}")
+        
+        success = pm.track_user_engagement(user_id, interaction_type, metadata)
+        if not success:
+            logger.error(f"API: Failed to track engagement for user {user_id}: {interaction_type}")
+            raise HTTPException(status_code=500, detail="Failed to track engagement")
+        
+        logger.info(f"API: Successfully tracked engagement for user {user_id}: {interaction_type}")
+        return {"success": True, "message": "Engagement tracked successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"API: Error tracking engagement for user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to track engagement: {str(e)}")
 
 
 @router.put("/user/personalization/override")
@@ -187,19 +216,30 @@ async def override_learned_behavior(
     user_id: str = Depends(get_or_create_user_id)
 ):
     """Allow user to override learned behaviors."""
-    pm = get_personalization_manager()
-    
-    success = pm.override_learned_behavior(
-        user_id,
-        override_request.preference_type,
-        override_request.override_value,
-        override_request.disable_learning
-    )
-    
-    if not success:
-        raise HTTPException(status_code=500, detail="Failed to override behavior")
-    
-    return {"success": True, "message": "Behavior override applied successfully"}
+    try:
+        pm = get_personalization_manager()
+        
+        logger.info(f"API: User {user_id} overriding learned behavior: {override_request.preference_type} = {override_request.override_value}")
+        logger.debug(f"API: Override request for user {user_id}: disable_learning={override_request.disable_learning}")
+        
+        success = pm.override_learned_behavior(
+            user_id,
+            override_request.preference_type,
+            override_request.override_value,
+            override_request.disable_learning
+        )
+        
+        if not success:
+            logger.error(f"API: Failed to override behavior for user {user_id}: {override_request.preference_type}")
+            raise HTTPException(status_code=500, detail="Failed to override behavior")
+        
+        logger.info(f"API: Successfully applied behavior override for user {user_id}: {override_request.preference_type}")
+        return {"success": True, "message": "Behavior override applied successfully"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"API: Error overriding behavior for user {user_id}: {str(e)}", exc_info=True)
+        raise HTTPException(status_code=500, detail=f"Failed to override behavior: {str(e)}")
 
 
 @router.get("/user/personalization-context")

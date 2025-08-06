@@ -38,7 +38,8 @@ const PersonalizationDashboard = ({ personalizationData, onDataUpdate }) => {
       }
     } catch (error) {
       console.error('Error overriding behavior:', error);
-      alert('Failed to override behavior. Please try again.');
+      console.error('Override request details:', { preferenceType, currentValue, newValue });
+      alert(`Failed to override behavior: ${error.message || 'Please try again.'}`);
     } finally {
       setIsLoading(false);
     }
@@ -65,7 +66,8 @@ const PersonalizationDashboard = ({ personalizationData, onDataUpdate }) => {
       }
     } catch (error) {
       console.error('Error disabling learning:', error);
-      alert('Failed to disable learning. Please try again.');
+      console.error('Disable learning request:', { preferenceType, currentValue });
+      alert(`Failed to disable learning: ${error.message || 'Please try again.'}`);
     } finally {
       setIsLoading(false);
     }

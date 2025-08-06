@@ -365,11 +365,18 @@ class ProfileManager:
         Returns:
             The user's preferences, or default preferences if not found
         """
-        preferences = self.storage.read(self._get_preferences_path(user_id))
-        if not preferences:
-            preferences = self._get_default_preferences()
-            self.storage.write(self._get_preferences_path(user_id), preferences)
-        return preferences
+        try:
+            preferences = self.storage.read(self._get_preferences_path(user_id))
+            if not preferences:
+                logger.info(f"Creating default preferences for user {user_id}")
+                preferences = self._get_default_preferences()
+                self.storage.write(self._get_preferences_path(user_id), preferences)
+            else:
+                logger.debug(f"Retrieved preferences for user {user_id}")
+            return preferences
+        except Exception as e:
+            logger.error(f"Error getting preferences for user {user_id}: {str(e)}")
+            return self._get_default_preferences()
 
     def update_preferences(self, user_id: str, preferences: Dict[str, Any]) -> bool:
         """
@@ -382,23 +389,37 @@ class ProfileManager:
         Returns:
             True if successful, False otherwise
         """
-        current_preferences = self.get_preferences(user_id)
-        
-        for category, values in preferences.items():
-            if category in current_preferences:
-                if isinstance(values, dict) and isinstance(current_preferences[category], dict):
-                    current_preferences[category].update(values)
+        try:
+            current_preferences = self.get_preferences(user_id)
+            changes_made = {}
+            
+            for category, values in preferences.items():
+                old_values = current_preferences.get(category, {})
+                if category in current_preferences:
+                    if isinstance(values, dict) and isinstance(current_preferences[category], dict):
+                        current_preferences[category].update(values)
+                        changes_made[category] = {"old": old_values, "new": current_preferences[category]}
+                    else:
+                        old_value = current_preferences[category]
+                        current_preferences[category] = values
+                        changes_made[category] = {"old": old_value, "new": values}
                 else:
                     current_preferences[category] = values
+                    changes_made[category] = {"old": None, "new": values}
+            
+            success = self.storage.write(self._get_preferences_path(user_id), current_preferences)
+            
+            if success:
+                logger.info(f"Updated preferences for user {user_id}. Categories: {list(changes_made.keys())}")
+                logger.debug(f"Preference changes for user {user_id}: {changes_made}")
+                self._log_preference_change(user_id, preferences)
             else:
-                current_preferences[category] = values
-        
-        success = self.storage.write(self._get_preferences_path(user_id), current_preferences)
-        
-        if success:
-            self._log_preference_change(user_id, preferences)
-        
-        return success
+                logger.error(f"Failed to write preferences to storage for user {user_id}")
+            
+            return success
+        except Exception as e:
+            logger.error(f"Error updating preferences for user {user_id}: {str(e)}")
+            return False
 
     def get_engagement_analytics(self, user_id: str) -> Dict[str, Any]:
         """
@@ -428,17 +449,31 @@ class ProfileManager:
         Returns:
             True if successful, False otherwise
         """
-        analytics = self.get_engagement_analytics(user_id)
-        
         try:
+            analytics = self.get_engagement_analytics(user_id)
+            
+            logger.info(f"Tracking engagement for user {user_id}: {interaction_type}")
+            logger.debug(f"Engagement metadata for user {user_id}: {metadata}")
+            
             if interaction_type == "research_finding":
                 self._process_research_engagement(analytics, metadata)
+                logger.debug(f"Processed research engagement for user {user_id}: reading_time={metadata.get('reading_time_seconds', 0)}s, completion={metadata.get('completion_rate', 0):.2f}")
             elif interaction_type == "chat_response":
                 self._process_chat_engagement(analytics, metadata)
+                logger.debug(f"Processed chat engagement for user {user_id}: completion={metadata.get('completion_rate', 0):.2f}, follow_up={metadata.get('has_follow_up', False)}")
+            else:
+                logger.warning(f"Unknown interaction type for user {user_id}: {interaction_type}")
             
-            return self.storage.write(self._get_engagement_analytics_path(user_id), analytics)
+            success = self.storage.write(self._get_engagement_analytics_path(user_id), analytics)
+            
+            if success:
+                logger.debug(f"Successfully saved engagement analytics for user {user_id}")
+            else:
+                logger.error(f"Failed to save engagement analytics for user {user_id}")
+                
+            return success
         except Exception as e:
-            logger.error(f"Error tracking engagement for user {user_id}: {str(e)}")
+            logger.error(f"Error tracking engagement for user {user_id}: {str(e)}", exc_info=True)
             return False
 
     def _process_research_engagement(self, analytics: Dict[str, Any], metadata: Dict[str, Any]) -> None:
@@ -553,11 +588,17 @@ class ProfileManager:
             True if successful, False otherwise
         """
         try:
-            self.get_preferences(user_id)
-            self.get_engagement_analytics(user_id)
-            self.get_personalization_history(user_id)
-            logger.info(f"Migrated personalization files for user {user_id}")
+            logger.info(f"Starting personalization file migration for user {user_id}")
+            
+            # Initialize all personalization files
+            preferences = self.get_preferences(user_id)
+            analytics = self.get_engagement_analytics(user_id)
+            history = self.get_personalization_history(user_id)
+            
+            logger.info(f"Successfully migrated personalization files for user {user_id}")
+            logger.debug(f"Migration summary for user {user_id}: preferences_categories={list(preferences.keys())}, analytics_ready={bool(analytics)}, history_ready={bool(history)}")
+            
             return True
         except Exception as e:
-            logger.error(f"Error migrating personalization files for user {user_id}: {str(e)}")
+            logger.error(f"Error migrating personalization files for user {user_id}: {str(e)}", exc_info=True)
             return False
