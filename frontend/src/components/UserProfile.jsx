@@ -45,8 +45,8 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
         setEditedTone(userData.personality.tone);
         setEditedPreferences(preferencesData);
       } catch (error) {
-        console.error('UserProfile: Error loading user profile:', error);
-        console.error('UserProfile: Failed to load data for user:', userId);
+        console.error('👤 UserProfile: ❌ Error loading user profile:', error);
+        console.error('👤 UserProfile: ❌ Failed to load data for user:', userId);
       } finally {
         setIsLoading(false);
       }
@@ -60,18 +60,18 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
   const handleApplyPreset = (presetKey) => {
     const preset = presets[presetKey];
     if (preset) {
-      console.log('UserProfile: Applying personality preset:', presetKey);
-      console.log('UserProfile: Preset details:', preset);
+      console.log('👤 UserProfile: Applying personality preset:', presetKey);
+      console.log('👤 UserProfile: Preset details:', preset);
       setEditedStyle(preset.style);
       setEditedTone(preset.tone);
     } else {
-      console.warn('UserProfile: Preset not found:', presetKey);
+      console.warn('👤 UserProfile: ⚠️ Preset not found:', presetKey);
     }
   };
 
   const handleSavePersonality = async () => {
     try {
-      console.log('UserProfile: Saving personality changes for user:', userId);
+      console.log('👤 UserProfile: Saving personality changes for user:', userId);
       
       const updatedPersonality = {
         style: editedStyle,
@@ -79,11 +79,11 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
         additional_traits: profile.personality.additional_traits || {}
       };
       
-      console.log('UserProfile: Updated personality data:', updatedPersonality);
+      console.log('👤 UserProfile: Updated personality data:', updatedPersonality);
       
       await updateUserPersonality(updatedPersonality);
       
-      console.log('UserProfile: Successfully saved personality changes for user:', userId);
+      console.log('👤 UserProfile: ✅ Successfully saved personality changes for user:', userId);
       
       // Update local state
       setProfile({
@@ -98,20 +98,20 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
         onProfileUpdated(updatedPersonality);
       }
     } catch (error) {
-      console.error('UserProfile: Error updating personality for user:', userId, error);
-      console.error('UserProfile: Failed personality update data:', { editedStyle, editedTone });
+      console.error('👤 UserProfile: ❌ Error updating personality for user:', userId, error);
+      console.error('👤 UserProfile: ❌ Failed personality update data:', { editedStyle, editedTone });
       alert('Failed to update personality settings');
     }
   };
 
   const handleSavePreferences = async () => {
     try {
-      console.log('UserProfile: Saving preferences for user:', userId);
-      console.log('UserProfile: New preferences data:', editedPreferences);
+      console.log('👤 UserProfile: Saving preferences for user:', userId);
+      console.log('👤 UserProfile: New preferences data:', editedPreferences);
       
       await updateUserPreferences(editedPreferences);
       
-      console.log('UserProfile: Successfully saved preferences for user:', userId);
+      console.log('👤 UserProfile: ✅ Successfully saved preferences for user:', userId);
       
       // Update local state
       setPreferences(editedPreferences);
@@ -122,18 +122,18 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
       setPersonalizationData(newPersonalizationData);
       
       if (newPersonalizationData) {
-        console.log('UserProfile: Refreshed personalization data after preference update');
+        console.log('👤 UserProfile: 🔄 Refreshed personalization data after preference update');
       }
       
     } catch (error) {
-      console.error('UserProfile: Error updating preferences for user:', userId, error);
-      console.error('UserProfile: Failed preferences update data:', editedPreferences);
+      console.error('👤 UserProfile: ❌ Error updating preferences for user:', userId, error);
+      console.error('👤 UserProfile: ❌ Failed preferences update data:', editedPreferences);
       alert('Failed to update preferences');
     }
   };
 
   const handlePreferenceChange = (category, key, value) => {
-    console.log('UserProfile: Preference change:', { category, key, value, userId });
+    console.log('👤 UserProfile: Preference change:', { category, key, value, userId });
     setEditedPreferences(prev => ({
       ...prev,
       [category]: {
@@ -144,7 +144,7 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
   };
 
   const handleSourceTypeChange = (sourceType, value) => {
-    console.log('UserProfile: Source type preference change:', { sourceType, value, userId });
+    console.log('👤 UserProfile: Source type preference change:', { sourceType, value, userId });
     setEditedPreferences(prev => ({
       ...prev,
       content_preferences: {

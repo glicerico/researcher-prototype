@@ -17,7 +17,7 @@ from dependencies import get_or_create_user_id, GUEST_USER_ID
 
 async def initializer_node(state: ChatState) -> ChatState:
     """Handles user and initial state setup, including session management and memory context retrieval."""
-    logger.info("🔄 Initializer: Setting up user state and thread")
+    logger.info("🧠 Initializer: Setting up user state and thread")
     queue_status(state.get("thread_id"), "Initializing thread...")
 
     # Initialize state objects if they don't exist
@@ -32,9 +32,9 @@ async def initializer_node(state: ChatState) -> ChatState:
         user_id = get_or_create_user_id(user_id)
         state["user_id"] = user_id
         if user_id == GUEST_USER_ID:
-            logger.info(f"🔄 Initializer: Using guest user: {user_id}")
+            logger.info(f"🧠 Initializer: Using guest user: {user_id}")
         else:
-            logger.info(f"🔄 Initializer: Using existing user: {user_id}")
+            logger.info(f"🧠 Initializer: Using existing user: {user_id}")
     else:
         # Update personality from stored preferences if not explicitly provided
         if not state.get("personality"):
@@ -47,7 +47,7 @@ async def initializer_node(state: ChatState) -> ChatState:
         timestamp = datetime.now(UTC).strftime("%Y%m%d_%H%M%S_%f")
         thread_id = f"{user_id}-{timestamp}"
         state["thread_id"] = thread_id
-        logger.info(f"🔄 Initializer: Generated new thread ID: {thread_id}")
+        logger.info(f"🧠 Initializer: ✅ Generated new thread ID: {thread_id}")
 
         # Create thread in ZEP when we generate a new thread ID
         if zep_manager.is_enabled():
@@ -56,13 +56,13 @@ async def initializer_node(state: ChatState) -> ChatState:
 
                 # Add an empty message to prime the thread and trigger context population
                 await zep_manager.add_message(thread_id, "Thread initialized", "system")
-                logger.debug(f"🔄 Initializer: Primed ZEP thread {thread_id} with initialization message")
+                logger.debug(f"🧠 Initializer: ✅ Primed ZEP thread {thread_id} with initialization message")
 
             except Exception as e:
                 logger.warning(f"Failed to create thread in ZEP: {str(e)}")
                 # Don't fail the request if ZEP thread creation fails
     else:
-        logger.info(f"🔄 Initializer: Using provided thread ID: {thread_id}")
+        logger.info(f"🧠 Initializer: Using provided thread ID: {thread_id}")
 
     # Retrieve memory context from Zep if available
     memory_context = None
@@ -72,18 +72,18 @@ async def initializer_node(state: ChatState) -> ChatState:
             memory_context = await zep_manager.get_memory_context(thread_id)
 
             if memory_context:
-                logger.info(f"🧠 Initializer: Retrieved memory context from ZEP.")
+                logger.info(f"🧠 Initializer: ✅ Retrieved memory context from ZEP.")
                 # Store in workflow context for debugging/inspection
                 state["workflow_context"]["memory_context_retrieved"] = True
             else:
-                logger.info("🧠 Initializer: No memory context found for this thread")
+                logger.info("🧠 Initializer: ⚠️ No memory context found for this thread")
                 state["workflow_context"]["memory_context_retrieved"] = False
 
         except Exception as e:
-            logger.error(f"🧠 Initializer: Error retrieving memory context: {str(e)}")
+            logger.error(f"🧠 Initializer: ❌ Error retrieving memory context: {str(e)}")
             state["workflow_context"]["memory_context_error"] = str(e)
     else:
-        logger.info("🧠 Initializer: Zep is not enabled, skipping memory context retrieval")
+        logger.info("🧠 Initializer: ⚠️ Zep is not enabled, skipping memory context retrieval")
 
     # Store memory context in state (will be None if not available)
     state["memory_context"] = memory_context
@@ -91,7 +91,7 @@ async def initializer_node(state: ChatState) -> ChatState:
     # Trim messages to keep only the most recent ones within the configured limit
     messages = state.get("messages", [])
     if messages and len(messages) > config.MAX_MESSAGES_IN_STATE:
-        logger.info(f"🔄 Initializer: Trimming messages from {len(messages)} to {config.MAX_MESSAGES_IN_STATE}")
+        logger.info(f"🧠 Initializer: ⚠️ Trimming messages from {len(messages)} to {config.MAX_MESSAGES_IN_STATE}")
 
         # Use trim_messages to properly trim while maintaining valid chat history
         trimmed_messages = trim_messages(
@@ -105,8 +105,8 @@ async def initializer_node(state: ChatState) -> ChatState:
         )
 
         state["messages"] = trimmed_messages
-        logger.info(f"🔄 Initializer: Kept {len(state['messages'])} most recent messages")
+        logger.info(f"🧠 Initializer: ✅ Kept {len(state['messages'])} most recent messages")
     else:
-        logger.info(f"🔄 Initializer: Processing {len(messages)} messages (within limit)")
+        logger.info(f"🧠 Initializer: Processing {len(messages)} messages (within limit)")
 
     return state

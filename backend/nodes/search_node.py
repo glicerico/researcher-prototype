@@ -42,7 +42,7 @@ async def search_node(state: ChatState) -> ChatState:
     # Check if Perplexity API key is available
     if not config.PERPLEXITY_API_KEY:
         error_message = "Perplexity API key not configured. Please set the PERPLEXITY_API_KEY environment variable."
-        logger.error(error_message)
+        logger.error(f"🔍 Search: ❌ {error_message}")
         state["module_results"]["search"] = {"success": False, "error": error_message}
         return state
 
@@ -76,13 +76,13 @@ async def search_node(state: ChatState) -> ChatState:
 
             # Log the search result
             display_result = search_result[:75] + "..." if len(search_result) > 75 else search_result
-            logger.info(f'🔍 Search: Result received: "{display_result}"')
+            logger.info(f'🔍 Search: ✅ Result received: "{display_result}"')
 
             # Log additional context information
             if citations:
-                logger.info(f"🔍 Search: Found {len(citations)} citations")
+                logger.info(f"🔍 Search: ✅ Found {len(citations)} citations")
             if search_results:
-                logger.info(f"🔍 Search: Found {len(search_results)} search result sources")
+                logger.info(f"🔍 Search: ✅ Found {len(search_results)} search result sources")
 
             state["module_results"]["search"] = {
                 "success": True,
@@ -94,7 +94,7 @@ async def search_node(state: ChatState) -> ChatState:
         else:
             # Handle API error
             error_message = f"Perplexity API request failed with status code {response.status_code}: {response.text}"
-            logger.error(error_message)
+            logger.error(f"🔍 Search: ❌ {error_message}")
             state["module_results"]["search"] = {
                 "success": False,
                 "error": error_message,
@@ -104,7 +104,7 @@ async def search_node(state: ChatState) -> ChatState:
     except Exception as e:
         # Handle any exceptions
         error_message = f"Error in search_node: {str(e)}"
-        logger.error(error_message, exc_info=True)
+        logger.error(f"🔍 Search: ❌ {error_message}", exc_info=True)
         state["module_results"]["search"] = {"success": False, "error": error_message}
 
     return state

@@ -44,9 +44,9 @@ async def integrator_node(state: ChatState) -> ChatState:
     memory_context_section = ""
     if memory_context:
         memory_context_section = f"CONVERSATION MEMORY:\n{memory_context}\n\nUse this context to maintain conversation continuity and reference previous topics when relevant."
-        logger.info("🧠 Integrator: Including memory context from previous conversations")
+        logger.info("🧠 Integrator: ✅ Including memory context from previous conversations")
     else:
-        logger.debug("🧠 Integrator: No memory context available")
+        logger.debug("🧠 Integrator: ⚠️ No memory context available")
 
     # Add search results to context if available
     search_results_data = state.get("module_results", {}).get("search", {})
@@ -60,14 +60,14 @@ async def integrator_node(state: ChatState) -> ChatState:
             # Pass the raw citation data directly to the renderer.
             state["workflow_context"]["citations"] = citations
             state["workflow_context"]["search_sources"] = search_sources
-            logger.info("🧠 Integrator: Passing raw citation data and sources to the renderer.")
+            logger.info("🧠 Integrator: ✅ Passing raw citation data and sources to the renderer.")
 
             # --- Context for Integrator LLM ---
             # Build a simple, clean context for the integrator's LLM prompt.
             # The search_result_text already has [n] markers. We pass it as-is.
             search_context = f"CURRENT INFORMATION FROM WEB SEARCH:\nThe following text was retrieved from a web search. It contains citation markers like [1], [2], etc.\n\n---\n\n{search_result_text}\n\n---\n\nUse this information to answer the user's query, making sure to preserve the citation markers as they are."
             context_sections.append(search_context)
-            logger.info("🧠 Integrator: Added search results with original citation markers to system context")
+            logger.info("🧠 Integrator: ✅ Added search results with original citation markers to system context")
 
     # Add analysis results to context if available
     analysis_results = state.get("module_results", {}).get("analyzer", {})
@@ -77,7 +77,7 @@ async def integrator_node(state: ChatState) -> ChatState:
             # Directly construct the analysis context string
             analysis_context = f"ANALYTICAL INSIGHTS:\nThe following analysis was performed related to the user's query:\n\n{analysis_result_text}\n\nIncorporate these insights naturally into your response where relevant."
             context_sections.append(analysis_context)
-            logger.info("🧠 Integrator: Added analysis results to system context")
+            logger.info("🧠 Integrator: ✅ Added analysis results to system context")
 
     # Combine all context sections
     context_section = "\n\n".join(context_sections) if context_sections else ""
@@ -108,7 +108,7 @@ async def integrator_node(state: ChatState) -> ChatState:
 
         # Log the response for traceability
         display_response = response.content[:75] + "..." if len(response.content) > 75 else response.content
-        logger.info(f'🧠 Integrator: Generated response: "{display_response}"')
+        logger.info(f'🧠 Integrator: ✅ Generated response: "{display_response}"')
 
         # Store the Integrator's response in the workflow context for the renderer
         state["workflow_context"]["integrator_response"] = response.content

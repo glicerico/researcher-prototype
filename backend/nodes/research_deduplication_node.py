@@ -23,7 +23,7 @@ def research_deduplication_node(state: ChatState) -> ChatState:
     quality_results = state.get("module_results", {}).get("research_quality_assessor", {})
     
     if not quality_results.get("success", False):
-        logger.error("🔄 Research Deduplication: No quality assessment results available")
+        logger.error("🔄 Research Deduplication: ❌ No quality assessment results available")
         state["module_results"]["research_deduplication"] = {
             "success": False,
             "error": "No quality assessment results available",
@@ -38,7 +38,7 @@ def research_deduplication_node(state: ChatState) -> ChatState:
     user_id = research_metadata.get("user_id", "unknown")
     
     if not search_results.get("success", False):
-        logger.error("🔄 Research Deduplication: No search results available")
+        logger.error("🔄 Research Deduplication: ❌ No search results available")
         state["module_results"]["research_deduplication"] = {
             "success": False,
             "error": "No search results available",
@@ -53,7 +53,7 @@ def research_deduplication_node(state: ChatState) -> ChatState:
         existing_findings = research_manager.get_research_findings(user_id, topic_name)
         
         if not existing_findings or topic_name not in existing_findings:
-            logger.info(f"🔄 Research Deduplication: No existing findings for topic '{topic_name}' - not a duplicate")
+            logger.info(f"🔄 Research Deduplication: ✅ No existing findings for topic '{topic_name}' - not a duplicate")
             state["module_results"]["research_deduplication"] = {
                 "success": True,
                 "is_duplicate": False,
@@ -65,7 +65,7 @@ def research_deduplication_node(state: ChatState) -> ChatState:
         topic_findings = existing_findings[topic_name]
         
         if not topic_findings:
-            logger.info(f"🔄 Research Deduplication: Empty existing findings for topic '{topic_name}' - not a duplicate")
+            logger.info(f"🔄 Research Deduplication: ✅ Empty existing findings for topic '{topic_name}' - not a duplicate")
             state["module_results"]["research_deduplication"] = {
                 "success": True,
                 "is_duplicate": False,
@@ -114,7 +114,7 @@ def research_deduplication_node(state: ChatState) -> ChatState:
         is_duplicate = dedup_result.is_duplicate
         similarity_score = dedup_result.similarity_score
         
-        logger.info(f"🔄 Research Deduplication: Analysis complete - Duplicate: {is_duplicate}, Similarity: {similarity_score:.2f}")
+        logger.info(f"🔄 Research Deduplication: ✅ Analysis complete - Duplicate: {is_duplicate}, Similarity: {similarity_score:.2f}")
         
         # Store the deduplication results
         state["module_results"]["research_deduplication"] = {
@@ -129,7 +129,7 @@ def research_deduplication_node(state: ChatState) -> ChatState:
         
     except Exception as e:
         error_message = f"Error in deduplication check: {str(e)}"
-        logger.error(f"🔄 Research Deduplication: {error_message}")
+        logger.error(f"🔄 Research Deduplication: ❌ {error_message}")
         
         # Default to not duplicate on error with a fallback result
         fallback_result = ResearchDeduplicationResult(
