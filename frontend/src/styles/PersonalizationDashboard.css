@@ -1,0 +1,407 @@
+/* PersonalizationDashboard.css - Styling for the personalization transparency dashboard */
+
+.personalization-dashboard {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  position: relative;
+}
+
+.dashboard-header {
+  margin-bottom: 30px;
+  text-align: center;
+}
+
+.dashboard-header h3 {
+  color: #2c3e50;
+  margin-bottom: 10px;
+  font-size: 1.6em;
+}
+
+.dashboard-subtitle {
+  color: #7f8c8d;
+  font-size: 0.95em;
+  margin: 0;
+}
+
+/* Loading overlay */
+.loading-overlay {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(255, 255, 255, 0.8);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 4px solid #f3f3f3;
+  border-top: 4px solid #3498db;
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+  margin-bottom: 10px;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+/* Dashboard stats */
+.dashboard-stats {
+  display: flex;
+  gap: 30px;
+  margin-bottom: 30px;
+  padding: 20px;
+  background: #f8f9fa;
+  border-radius: 8px;
+  justify-content: center;
+}
+
+.stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+}
+
+.stat-label {
+  font-size: 0.9em;
+  color: #6c757d;
+  margin-bottom: 5px;
+}
+
+.stat-value {
+  font-size: 1.4em;
+  font-weight: bold;
+  color: #2c3e50;
+}
+
+/* Dashboard sections */
+.dashboard-section {
+  margin-bottom: 25px;
+  border: 1px solid #dee2e6;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.section-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 15px 20px;
+  background: #f8f9fa;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color 0.2s;
+}
+
+.section-header:hover {
+  background: #e9ecef;
+}
+
+.section-header h4 {
+  margin: 0;
+  color: #2c3e50;
+  font-size: 1.1em;
+}
+
+.expand-icon {
+  transition: transform 0.2s;
+  color: #6c757d;
+  font-size: 0.8em;
+}
+
+.expand-icon.expanded {
+  transform: rotate(180deg);
+}
+
+.section-content {
+  padding: 20px;
+  background: white;
+}
+
+/* Preference items */
+.preference-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid #f0f0f0;
+}
+
+.preference-item:last-child {
+  border-bottom: none;
+}
+
+.preference-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  flex: 1;
+}
+
+.preference-name {
+  font-weight: 500;
+  color: #2c3e50;
+  min-width: 180px;
+}
+
+.preference-value {
+  color: #495057;
+  font-family: 'Courier New', monospace;
+  background: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.override-badge, .learning-disabled-badge {
+  background: #17a2b8;
+  color: white;
+  padding: 2px 8px;
+  border-radius: 12px;
+  font-size: 0.75em;
+  font-weight: 500;
+}
+
+.learning-disabled-badge {
+  background: #dc3545;
+}
+
+.preference-actions {
+  display: flex;
+  gap: 8px;
+}
+
+.action-btn {
+  padding: 6px 12px;
+  border: none;
+  border-radius: 4px;
+  font-size: 0.8em;
+  cursor: pointer;
+  transition: all 0.2s;
+  font-weight: 500;
+}
+
+.action-btn:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.override-btn {
+  background: #007bff;
+  color: white;
+}
+
+.override-btn:hover:not(:disabled) {
+  background: #0056b3;
+}
+
+.disable-btn {
+  background: #6c757d;
+  color: white;
+}
+
+.disable-btn:hover:not(:disabled) {
+  background: #545b62;
+}
+
+/* No data state */
+.no-data {
+  text-align: center;
+  padding: 30px;
+  color: #6c757d;
+}
+
+.no-data p {
+  margin: 0;
+  font-style: italic;
+}
+
+/* Engagement patterns */
+.engagement-stats {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.engagement-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 0;
+}
+
+.engagement-label {
+  color: #2c3e50;
+  font-weight: 500;
+}
+
+.engagement-value {
+  color: #495057;
+  font-family: 'Courier New', monospace;
+  background: #f8f9fa;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+/* Adaptations list */
+.adaptations-list {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+}
+
+.adaptation-item {
+  padding: 15px;
+  background: #f8f9fa;
+  border-radius: 6px;
+  border-left: 4px solid #007bff;
+}
+
+.adaptation-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.adaptation-type {
+  font-weight: 600;
+  color: #2c3e50;
+}
+
+.adaptation-time {
+  font-size: 0.85em;
+  color: #6c757d;
+}
+
+.adaptation-description {
+  color: #495057;
+  font-size: 0.95em;
+  margin-bottom: 8px;
+}
+
+.adaptation-effectiveness {
+  font-size: 0.85em;
+  color: #28a745;
+  font-weight: 500;
+}
+
+/* User overrides */
+.overrides-list {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.override-item {
+  padding: 12px;
+  background: #fff3cd;
+  border: 1px solid #ffeaa7;
+  border-radius: 6px;
+}
+
+.override-info {
+  display: flex;
+  align-items: center;
+  gap: 15px;
+  margin-bottom: 5px;
+}
+
+.override-name {
+  font-weight: 500;
+  color: #2c3e50;
+  min-width: 180px;
+}
+
+.override-value {
+  color: #495057;
+  font-family: 'Courier New', monospace;
+  background: white;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.9em;
+}
+
+.override-time {
+  font-size: 0.8em;
+  color: #6c757d;
+}
+
+/* Dashboard footer */
+.dashboard-footer {
+  margin-top: 40px;
+  padding-top: 20px;
+  border-top: 1px solid #dee2e6;
+}
+
+.privacy-note {
+  background: #e7f3ff;
+  padding: 20px;
+  border-radius: 8px;
+  border-left: 4px solid #007bff;
+}
+
+.privacy-note h5 {
+  margin: 0 0 10px 0;
+  color: #2c3e50;
+  font-size: 1.1em;
+}
+
+.privacy-note p {
+  margin: 0;
+  color: #495057;
+  font-size: 0.95em;
+  line-height: 1.5;
+}
+
+/* Responsive design */
+@media (max-width: 768px) {
+  .personalization-dashboard {
+    padding: 15px;
+  }
+  
+  .dashboard-stats {
+    flex-direction: column;
+    gap: 15px;
+  }
+  
+  .preference-item {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 10px;
+  }
+  
+  .preference-actions {
+    width: 100%;
+    justify-content: flex-end;
+  }
+  
+  .adaptation-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 5px;
+  }
+  
+  .override-info {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 8px;
+  }
+}
+
+.dashboard-loading {
+  text-align: center;
+  padding: 40px;
+  color: #6c757d;
+}

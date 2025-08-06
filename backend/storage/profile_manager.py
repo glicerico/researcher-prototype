@@ -123,6 +123,18 @@ class ProfileManager:
         """Get the path to a user's profile file."""
         return f"{self._get_user_path(user_id)}/profile.json"
 
+    def _get_preferences_path(self, user_id: str) -> str:
+        """Get the path to a user's preferences file."""
+        return f"{self._get_user_path(user_id)}/preferences.json"
+
+    def _get_engagement_analytics_path(self, user_id: str) -> str:
+        """Get the path to a user's engagement analytics file."""
+        return f"{self._get_user_path(user_id)}/engagement_analytics.json"
+
+    def _get_personalization_history_path(self, user_id: str) -> str:
+        """Get the path to a user's personalization history file."""
+        return f"{self._get_user_path(user_id)}/personalization_history.json"
+
     def create_user(self, metadata: Optional[Dict[str, Any]] = None) -> str:
         """
         Create a new user with a unique ID.
@@ -274,3 +286,278 @@ class ProfileManager:
         profile_path = self._get_profile_path(user_id)
         file_path = self.storage._get_file_path(profile_path)
         return file_path.exists()
+
+    def _get_default_preferences(self) -> Dict[str, Any]:
+        """Get default user preferences."""
+        return {
+            "content_preferences": {
+                "research_depth": "balanced",
+                "source_types": {
+                    "academic_papers": 0.7,
+                    "news_articles": 0.8,
+                    "expert_blogs": 0.7,
+                    "government_reports": 0.6,
+                    "industry_reports": 0.6
+                },
+                "topic_categories": {}
+            },
+            "format_preferences": {
+                "response_length": "medium",
+                "detail_level": "balanced",
+                "citation_style": "inline",
+                "use_bullet_points": True,
+                "include_key_insights": True
+            },
+            "interaction_preferences": {
+                "follow_up_questions": True,
+                "proactive_research": True,
+                "notification_frequency": "moderate"
+            }
+        }
+
+    def _get_default_engagement_analytics(self) -> Dict[str, Any]:
+        """Get default engagement analytics structure."""
+        return {
+            "reading_patterns": {
+                "avg_reading_time_seconds": {
+                    "short_responses": 0,
+                    "medium_responses": 0,
+                    "long_responses": 0
+                },
+                "content_completion_rates": {
+                    "research_findings": 0.0,
+                    "chat_responses": 0.0
+                }
+            },
+            "interaction_signals": {
+                "topics_initiated_by_user": [],
+                "most_engaged_source_types": [],
+                "preferred_research_timing": None,
+                "follow_up_question_frequency": 0.0
+            },
+            "learned_adaptations": {
+                "tone_adjustments": {},
+                "format_optimizations": {
+                    "prefers_structured_responses": None,
+                    "optimal_response_length": None
+                }
+            }
+        }
+
+    def _get_default_personalization_history(self) -> Dict[str, Any]:
+        """Get default personalization history structure."""
+        return {
+            "adaptation_log": [],
+            "preference_evolution": {
+                "source_type_preferences": [],
+                "format_preferences": [],
+                "content_preferences": []
+            }
+        }
+
+    def get_preferences(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get a user's preferences.
+
+        Args:
+            user_id: The ID of the user
+
+        Returns:
+            The user's preferences, or default preferences if not found
+        """
+        preferences = self.storage.read(self._get_preferences_path(user_id))
+        if not preferences:
+            preferences = self._get_default_preferences()
+            self.storage.write(self._get_preferences_path(user_id), preferences)
+        return preferences
+
+    def update_preferences(self, user_id: str, preferences: Dict[str, Any]) -> bool:
+        """
+        Update a user's preferences.
+
+        Args:
+            user_id: The ID of the user
+            preferences: The preferences to update
+
+        Returns:
+            True if successful, False otherwise
+        """
+        current_preferences = self.get_preferences(user_id)
+        
+        for category, values in preferences.items():
+            if category in current_preferences:
+                if isinstance(values, dict) and isinstance(current_preferences[category], dict):
+                    current_preferences[category].update(values)
+                else:
+                    current_preferences[category] = values
+            else:
+                current_preferences[category] = values
+        
+        success = self.storage.write(self._get_preferences_path(user_id), current_preferences)
+        
+        if success:
+            self._log_preference_change(user_id, preferences)
+        
+        return success
+
+    def get_engagement_analytics(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get a user's engagement analytics.
+
+        Args:
+            user_id: The ID of the user
+
+        Returns:
+            The user's engagement analytics, or default analytics if not found
+        """
+        analytics = self.storage.read(self._get_engagement_analytics_path(user_id))
+        if not analytics:
+            analytics = self._get_default_engagement_analytics()
+            self.storage.write(self._get_engagement_analytics_path(user_id), analytics)
+        return analytics
+
+    def track_engagement(self, user_id: str, interaction_type: str, metadata: Dict[str, Any]) -> bool:
+        """
+        Track user engagement for learning preferences.
+
+        Args:
+            user_id: The ID of the user
+            interaction_type: Type of interaction (research_finding, chat_response, etc.)
+            metadata: Interaction metadata
+
+        Returns:
+            True if successful, False otherwise
+        """
+        analytics = self.get_engagement_analytics(user_id)
+        
+        try:
+            if interaction_type == "research_finding":
+                self._process_research_engagement(analytics, metadata)
+            elif interaction_type == "chat_response":
+                self._process_chat_engagement(analytics, metadata)
+            
+            return self.storage.write(self._get_engagement_analytics_path(user_id), analytics)
+        except Exception as e:
+            logger.error(f"Error tracking engagement for user {user_id}: {str(e)}")
+            return False
+
+    def _process_research_engagement(self, analytics: Dict[str, Any], metadata: Dict[str, Any]) -> None:
+        """Process research finding engagement data."""
+        reading_time = metadata.get("reading_time_seconds", 0)
+        completion_rate = metadata.get("completion_rate", 0.0)
+        source_types = metadata.get("source_types", [])
+        
+        if reading_time > 0:
+            response_length = self._categorize_response_length(metadata.get("content_length", 0))
+            current_avg = analytics["reading_patterns"]["avg_reading_time_seconds"].get(response_length, 0)
+            
+            if current_avg == 0:
+                analytics["reading_patterns"]["avg_reading_time_seconds"][response_length] = reading_time
+            else:
+                analytics["reading_patterns"]["avg_reading_time_seconds"][response_length] = (current_avg + reading_time) / 2
+        
+        if completion_rate > 0:
+            current_rate = analytics["reading_patterns"]["content_completion_rates"]["research_findings"]
+            if current_rate == 0:
+                analytics["reading_patterns"]["content_completion_rates"]["research_findings"] = completion_rate
+            else:
+                analytics["reading_patterns"]["content_completion_rates"]["research_findings"] = (current_rate + completion_rate) / 2
+        
+        if source_types:
+            for source_type in source_types:
+                if source_type not in analytics["interaction_signals"]["most_engaged_source_types"]:
+                    if completion_rate > 0.7:
+                        analytics["interaction_signals"]["most_engaged_source_types"].append(source_type)
+
+    def _process_chat_engagement(self, analytics: Dict[str, Any], metadata: Dict[str, Any]) -> None:
+        """Process chat response engagement data."""
+        reading_time = metadata.get("reading_time_seconds", 0)
+        completion_rate = metadata.get("completion_rate", 0.0)
+        follow_up = metadata.get("has_follow_up", False)
+        
+        if completion_rate > 0:
+            current_rate = analytics["reading_patterns"]["content_completion_rates"]["chat_responses"]
+            if current_rate == 0:
+                analytics["reading_patterns"]["content_completion_rates"]["chat_responses"] = completion_rate
+            else:
+                analytics["reading_patterns"]["content_completion_rates"]["chat_responses"] = (current_rate + completion_rate) / 2
+        
+        if follow_up:
+            current_freq = analytics["interaction_signals"]["follow_up_question_frequency"]
+            analytics["interaction_signals"]["follow_up_question_frequency"] = min(1.0, current_freq + 0.1)
+
+    def _categorize_response_length(self, content_length: int) -> str:
+        """Categorize response length based on character count."""
+        if content_length < 500:
+            return "short_responses"
+        elif content_length < 1500:
+            return "medium_responses"
+        else:
+            return "long_responses"
+
+    def get_personalization_history(self, user_id: str) -> Dict[str, Any]:
+        """
+        Get a user's personalization history.
+
+        Args:
+            user_id: The ID of the user
+
+        Returns:
+            The user's personalization history
+        """
+        history = self.storage.read(self._get_personalization_history_path(user_id))
+        if not history:
+            history = self._get_default_personalization_history()
+            self.storage.write(self._get_personalization_history_path(user_id), history)
+        return history
+
+    def _log_preference_change(self, user_id: str, preferences_changed: Dict[str, Any]) -> None:
+        """Log preference changes to personalization history."""
+        try:
+            history = self.get_personalization_history(user_id)
+            
+            log_entry = {
+                "timestamp": time.time(),
+                "adaptation_type": "manual_preference_update",
+                "change_made": f"User manually updated preferences: {list(preferences_changed.keys())}",
+                "user_feedback": "explicit",
+                "effectiveness_score": None
+            }
+            
+            history["adaptation_log"].append(log_entry)
+            
+            for category in preferences_changed.keys():
+                evolution_entry = {
+                    "timestamp": time.time(),
+                    "category": category,
+                    "change_type": "manual_update"
+                }
+                
+                if category == "content_preferences":
+                    history["preference_evolution"]["content_preferences"].append(evolution_entry)
+                elif category == "format_preferences":
+                    history["preference_evolution"]["format_preferences"].append(evolution_entry)
+            
+            self.storage.write(self._get_personalization_history_path(user_id), history)
+        except Exception as e:
+            logger.error(f"Error logging preference change for user {user_id}: {str(e)}")
+
+    def migrate_user_personalization_files(self, user_id: str) -> bool:
+        """
+        Migrate existing user to have personalization files.
+        
+        Args:
+            user_id: The ID of the user
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            self.get_preferences(user_id)
+            self.get_engagement_analytics(user_id)
+            self.get_personalization_history(user_id)
+            logger.info(f"Migrated personalization files for user {user_id}")
+            return True
+        except Exception as e:
+            logger.error(f"Error migrating personalization files for user {user_id}: {str(e)}")
+            return False

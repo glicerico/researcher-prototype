@@ -154,6 +154,94 @@ export const getPersonalityPresets = async () => {
   }
 };
 
+// Personalization API functions
+export const getUserPreferences = async () => {
+  try {
+    const response = await api.get('/user/preferences');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching user preferences:', error);
+    throw error;
+  }
+};
+
+export const updateUserPreferences = async (preferences) => {
+  try {
+    const response = await api.put('/user/preferences', preferences);
+    return response.data;
+  } catch (error) {
+    console.error('Error updating user preferences:', error);
+    throw error;
+  }
+};
+
+export const getUserEngagementAnalytics = async () => {
+  try {
+    const response = await api.get('/user/engagement-analytics');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching engagement analytics:', error);
+    throw error;
+  }
+};
+
+export const getUserPersonalizationHistory = async () => {
+  try {
+    const response = await api.get('/user/personalization-history');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching personalization history:', error);
+    throw error;
+  }
+};
+
+export const getUserPersonalizationData = async () => {
+  try {
+    const response = await api.get('/user/personalization');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching personalization data:', error);
+    throw error;
+  }
+};
+
+export const trackUserEngagement = async (interactionType, metadata) => {
+  try {
+    const response = await api.post('/user/engagement/track', {
+      interaction_type: interactionType,
+      metadata: metadata
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error tracking user engagement:', error);
+    throw error;
+  }
+};
+
+export const overrideLearnedBehavior = async (preferenceType, overrideValue, disableLearning = false) => {
+  try {
+    const response = await api.put('/user/personalization/override', {
+      preference_type: preferenceType,
+      override_value: overrideValue,
+      disable_learning: disableLearning
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error overriding learned behavior:', error);
+    throw error;
+  }
+};
+
+export const getPersonalizationContext = async () => {
+  try {
+    const response = await api.get('/user/personalization-context');
+    return response.data;
+  } catch (error) {
+    console.error('Error fetching personalization context:', error);
+    throw error;
+  }
+};
+
 // Topic management functions
 export const getAllTopicSuggestions = async () => {
   try {

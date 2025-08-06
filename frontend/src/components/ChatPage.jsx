@@ -6,6 +6,7 @@ import TypingIndicator from './TypingIndicator';
 import SessionHistory from './SessionHistory';
 import ConversationTopics from './ConversationTopics';
 import { sendChatMessage, triggerUserActivity, API_URL } from '../services/api';
+import { useEngagementTracking } from '../utils/engagementTracker';
 import '../App.css';
 
 const ChatPage = () => {
@@ -14,21 +15,46 @@ const ChatPage = () => {
     sessionId,
     messages,
     personality,
+    userId,
     updateSessionId,
     updateMessages,
     updateConversationTopics,
   } = useSession();
+
+  const { trackChat, startPageTimer, updateActivity, endPageTimer } = useEngagementTracking();
 
   // Local state for UI components
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [chatInputValue, setChatInputValue] = useState('');
   const [statusMessage, setStatusMessage] = useState('');
+  const [messageStartTime, setMessageStartTime] = useState(null);
   
   // Topics sidebar state
   const [isTopicsSidebarCollapsed, setIsTopicsSidebarCollapsed] = useState(false);
   
   const messagesEndRef = useRef(null);
+
+  // Track page engagement
+  useEffect(() => {
+    if (!userId) return;
+
+    startPageTimer('chat_page');
+    
+    const handleActivity = () => updateActivity('chat_page');
+    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
+    
+    events.forEach(event => {
+      document.addEventListener(event, handleActivity, true);
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleActivity, true);
+      });
+      endPageTimer('chat_page');
+    };
+  }, [userId, startPageTimer, updateActivity, endPageTimer]);
 
   // Subscribe to backend status updates via SSE
   useEffect(() => {
@@ -74,9 +100,10 @@ const ChatPage = () => {
     updateMessages(updatedMessages);
     setChatInputValue(''); // Clear the input after sending
     
-    // Show typing indicator
+    // Show typing indicator and start timing
     setIsTyping(true);
     setIsLoading(true);
+    setMessageStartTime(Date.now());
     
     try {
       // Trigger user activity for motivation system (fire and forget)
@@ -132,6 +159,16 @@ const ChatPage = () => {
       };
       
       updateMessages(prev => [...prev, assistantMessage]);
+      
+      // Track chat engagement
+      if (messageStartTime && userId) {
+        const readingTime = (Date.now() - messageStartTime) / 1000;
+        const hasFollowUp = response.follow_up_questions && response.follow_up_questions.length > 0;
+        
+        trackChat(response, userId, readingTime, hasFollowUp).catch(err => {
+          console.warn('Failed to track chat engagement:', err);
+        });
+      }
       
       // Clear status message immediately when response is displayed
       setStatusMessage('');
