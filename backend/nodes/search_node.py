@@ -60,13 +60,8 @@ def _build_search_parameters(source_preferences: dict) -> tuple[str, dict, list,
         search_recency_filter = "week"
         logger.info(f"🔍 Search: Using week recency filter for news preference")
     
-    # Build domain filters
+    # Add non-academic domain filters
     domain_mappings = {
-        "academic_papers": [
-            "arxiv.org", "scholar.google.com", "pubmed.ncbi.nlm.nih.gov", 
-            "ieee.org", "acm.org", "nature.com", "science.org",
-            "springer.com", "wiley.com", "sciencedirect.com"
-        ],
         "news_articles": [
             "reuters.com", "bloomberg.com", "wsj.com", "ft.com",
             "bbc.com", "cnn.com", "npr.org", "apnews.com"
@@ -146,12 +141,6 @@ async def search_node(state: ChatState) -> ChatState:
         if search_recency_filter:
             payload["search_recency_filter"] = search_recency_filter
             
-        # Add reasoning effort for deep research model
-        if config.PERPLEXITY_MODEL == "sonar-deep-research":
-            academic_weight = source_preferences.get("academic_papers", 0.5)
-            reasoning_effort = "high" if academic_weight > 0.7 else "medium"
-            payload["reasoning_effort"] = reasoning_effort
-            logger.info(f"🔍 Search: Using {reasoning_effort} reasoning effort for deep research")
 
         # Make API request
         response = requests.post("https://api.perplexity.ai/chat/completions", headers=headers, json=payload)
