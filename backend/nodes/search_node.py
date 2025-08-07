@@ -33,12 +33,11 @@ def _get_source_preferences(user_id: str) -> dict:
         return {}
 
 
-def _build_search_parameters(source_preferences: dict) -> tuple[str, dict, list, str]:
+def _build_search_parameters(source_preferences: dict) -> tuple[str, dict, str]:
     """Build personalized search parameters based on user preferences."""
     # Default values
     search_mode = "web"
     web_search_options = {"search_context_size": "medium"}
-    search_domain_filter = []
     search_recency_filter = None
     
     # Get preference weights
@@ -60,24 +59,7 @@ def _build_search_parameters(source_preferences: dict) -> tuple[str, dict, list,
         search_recency_filter = "week"
         logger.info(f"🔍 Search: Using week recency filter for news preference")
     
-    # Add non-academic domain filters
-    domain_mappings = {
-        "news_articles": [
-            "reuters.com", "bloomberg.com", "wsj.com", "ft.com",
-            "bbc.com", "cnn.com", "npr.org", "apnews.com"
-        ],
-        "expert_blogs": [
-            "medium.com", "substack.com", "techcrunch.com",
-            "hbr.org", "mckinsey.com", "pwc.com", "deloitte.com"
-        ]
-    }
-    
-    for source_type, domains in domain_mappings.items():
-        if source_preferences.get(source_type, 0.5) > 0.7:
-            search_domain_filter.extend(domains)
-            logger.info(f"🔍 Search: Added {source_type} domains")
-    
-    return search_mode, web_search_options, search_domain_filter, search_recency_filter
+    return search_mode, web_search_options, search_recency_filter
 
 
 async def search_node(state: ChatState) -> ChatState:
@@ -115,7 +97,7 @@ async def search_node(state: ChatState) -> ChatState:
         source_preferences = _get_source_preferences(user_id)
         
         # Build search parameters
-        search_mode, web_search_options, search_domain_filter, search_recency_filter = _build_search_parameters(source_preferences)
+        search_mode, web_search_options, search_recency_filter = _build_search_parameters(source_preferences)
         
         # Prepare API request
         headers = {"Authorization": f"Bearer {config.PERPLEXITY_API_KEY}", "Content-Type": "application/json"}
@@ -134,10 +116,6 @@ async def search_node(state: ChatState) -> ChatState:
         }
         
         # Add optional parameters
-        if search_domain_filter:
-            payload["search_domain_filter"] = search_domain_filter[:10]  # Limit to 10 domains max
-            logger.info(f"🔍 Search: Using domain filter with {len(payload['search_domain_filter'])} domains")
-            
         if search_recency_filter:
             payload["search_recency_filter"] = search_recency_filter
             
