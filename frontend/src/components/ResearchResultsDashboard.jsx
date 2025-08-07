@@ -37,7 +37,13 @@ const ResearchResultsDashboard = () => {
     
     if (isExternal) {
       return (
-        <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+        <a 
+          href={href} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          onClick={(e) => e.stopPropagation()} // Prevent parent click handlers from interfering
+          {...props}
+        >
           {children}
         </a>
       );
@@ -112,7 +118,7 @@ const ResearchResultsDashboard = () => {
   // Mark research notifications as read when user visits this page (only once)
   useEffect(() => {
     markResearchNotificationsRead();
-  }, [markResearchNotificationsRead]); // Include markResearchNotificationsRead in dependencies
+  }, []); // Run only once when component mounts
 
   // Auto-refresh research data every 10 seconds when user is selected
   useEffect(() => {

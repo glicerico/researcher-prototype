@@ -13,7 +13,13 @@ const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUp
     
     if (isExternal) {
       return (
-        <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+        <a 
+          href={href} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          onClick={(e) => e.stopPropagation()} // Prevent parent click handlers from interfering
+          {...props}
+        >
           {children}
         </a>
       );

@@ -221,22 +221,23 @@ export const NotificationProvider = ({ children }) => {
     setNewResearchCount(0);
   };
 
-  const markResearchNotificationsRead = () => {
-    setNotifications(prev => 
-      prev.map(notif => 
+  const markResearchNotificationsRead = useCallback(() => {
+    setNotifications(prev => {
+      const updatedNotifications = prev.map(notif => 
         (notif.type === 'new_research' || notif.type === 'research_complete')
           ? { ...notif, read: true }
           : notif
-      )
-    );
-    // Recalculate unread count
-    setNewResearchCount(prev => {
-      const researchNotifs = notifications.filter(n => 
-        (n.type === 'new_research' || n.type === 'research_complete') && !n.read
       );
-      return Math.max(0, prev - researchNotifs.length);
+      
+      // Recalculate unread count based on the updated notifications
+      const unreadResearchCount = updatedNotifications.filter(n => 
+        (n.type === 'new_research' || n.type === 'research_complete') && !n.read
+      ).length;
+      setNewResearchCount(0); // Since we're marking all as read
+      
+      return updatedNotifications;
     });
-  };
+  }, []);
 
   const clearNotifications = () => {
     setNotifications([]);
