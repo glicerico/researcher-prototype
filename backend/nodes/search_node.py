@@ -143,6 +143,7 @@ async def search_node(state: ChatState) -> ChatState:
             
 
         # Make API request
+        logger.debug(f"🔍 Search: Payload to Perplexity: {payload}")
         response = requests.post("https://api.perplexity.ai/chat/completions", headers=headers, json=payload)
 
         # Process response

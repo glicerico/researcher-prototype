@@ -1,17 +1,30 @@
 import logging
+import os
 import sys
 from typing import Optional
 
-def configure_logging(level: int = logging.INFO) -> logging.Logger:
+def configure_logging(level: Optional[int] = None) -> logging.Logger:
     """
     Configure global logging settings for the application.
     
     Args:
-        level: The logging level to set (default: INFO)
+        level: The logging level to set (default: reads from LOG_LEVEL env var or INFO)
         
     Returns:
         A logger instance for the application
     """
+    # Determine logging level from environment variable if not explicitly provided
+    if level is None:
+        log_level_str = os.getenv('LOG_LEVEL', 'INFO').upper()
+        level_mapping = {
+            'DEBUG': logging.DEBUG,
+            'INFO': logging.INFO,
+            'WARNING': logging.WARNING,
+            'ERROR': logging.ERROR,
+            'CRITICAL': logging.CRITICAL
+        }
+        level = level_mapping.get(log_level_str, logging.INFO)
+    
     # Create a root logger
     root_logger = logging.getLogger()
     root_logger.setLevel(level)
