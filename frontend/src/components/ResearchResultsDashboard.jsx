@@ -30,6 +30,28 @@ const ResearchResultsDashboard = () => {
   const scrollContainerRef = useRef(null);
   const scrollPositionRef = useRef(null);
 
+  // Custom link renderer to open external links in new tab
+  const LinkRenderer = ({ href, children, ...props }) => {
+    // Check if it's an external link
+    const isExternal = href && (href.startsWith('http://') || href.startsWith('https://'));
+    
+    if (isExternal) {
+      return (
+        <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+          {children}
+        </a>
+      );
+    }
+    
+    // Internal links or non-http links use default behavior
+    return <a href={href} {...props}>{children}</a>;
+  };
+
+  // ReactMarkdown components configuration
+  const markdownComponents = {
+    a: LinkRenderer
+  };
+
   // Load research data
   const loadResearchData = useCallback(async (isBackground = false) => {
     if (!userId) {
@@ -577,7 +599,7 @@ const ResearchResultsDashboard = () => {
                             {/* Display formatted content with citations if available, otherwise fallback to summary */}
                             {finding.formatted_content ? (
                               <div className="finding-formatted-content">
-                                <ReactMarkdown>{finding.formatted_content}</ReactMarkdown>
+                                <ReactMarkdown components={markdownComponents}>{finding.formatted_content}</ReactMarkdown>
                               </div>
                             ) : finding.findings_summary && (
                               <div className="finding-summary">
