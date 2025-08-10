@@ -7,9 +7,11 @@ from typing import List, Optional
 
 class RoutingAnalysis(BaseModel):
     """Analysis of user input to route to appropriate module."""
-    decision: str = Field(description="The routing decision: 'chat', 'search', or 'analyzer'")
+    decision: str = Field(description="The routing decision: 'chat', 'search', 'analyzer', 'academic_search', 'social_search', or 'medical_search'")
     reason: str = Field(description="Brief explanation of why this routing decision was made")
     complexity: int = Field(description="Estimated complexity level as integer from 1 (simple) to 10 (complex)", ge=1, le=10)
+    source_preference: str = Field(description="Preferred search source: 'perplexity', 'semantic_scholar', 'reddit', 'pubmed', or 'auto'", default="auto")
+    scope_filters: List[str] = Field(description="Search scope filters like 'recent', 'academic', 'medical', 'social'", default_factory=list)
 
 
 class AnalysisTask(BaseModel):

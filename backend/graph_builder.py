@@ -23,6 +23,11 @@ from nodes.analyzer_node import analyzer_node
 from nodes.integrator_node import integrator_node
 from nodes.response_renderer_node import response_renderer_node
 
+# Import new specialized search nodes
+from nodes.semantic_scholar_node import semantic_scholar_search_node
+from nodes.reddit_search_node import reddit_search_node
+from nodes.pubmed_search_node import pubmed_search_node
+
 
 def setup_tracing():
     """Configure LangSmith tracing based on environment variables."""
@@ -59,6 +64,11 @@ def create_chat_graph():
     builder.add_node("integrator", integrator_node)
     builder.add_node("response_renderer", response_renderer_node)
     
+    # Add specialized search nodes
+    builder.add_node("academic_search", semantic_scholar_search_node)
+    builder.add_node("social_search", reddit_search_node)
+    builder.add_node("medical_search", pubmed_search_node)
+    
     # Define the workflow
     builder.set_entry_point("initializer")
     builder.add_edge("initializer", "router")
@@ -70,6 +80,9 @@ def create_chat_graph():
         {
             "search": "search_prompt_optimizer",
             "analyzer": "analysis_task_refiner",
+            "academic_search": "academic_search",
+            "social_search": "social_search", 
+            "medical_search": "medical_search",
             "chat": "integrator" 
         }
     )
@@ -77,6 +90,11 @@ def create_chat_graph():
     # Connect the search optimization to search
     builder.add_edge("search_prompt_optimizer", "search")
     builder.add_edge("search", "integrator")
+    
+    # Connect specialized search nodes directly to integrator
+    builder.add_edge("academic_search", "integrator")
+    builder.add_edge("social_search", "integrator")
+    builder.add_edge("medical_search", "integrator")
     
     # Connect the analysis refiner to analyzer
     builder.add_edge("analysis_task_refiner", "analyzer")

@@ -48,26 +48,33 @@ async def integrator_node(state: ChatState) -> ChatState:
     else:
         logger.debug("🧠 Integrator: No memory context available")
 
-    # Add search results to context if available
-    search_results_data = state.get("module_results", {}).get("search", {})
-    if search_results_data.get("success", False):
-        search_result_text = search_results_data.get("result", "")
-        if search_result_text:
-            citations = search_results_data.get("citations", [])  # List of URL strings
-            search_sources = search_results_data.get("search_results", [])  # List of objects
-
-            # --- Data for Renderer ---
-            # Pass the raw citation data directly to the renderer.
-            state["workflow_context"]["citations"] = citations
-            state["workflow_context"]["search_sources"] = search_sources
-            logger.info("🧠 Integrator: Passing raw citation data and sources to the renderer.")
-
-            # --- Context for Integrator LLM ---
-            # Build a simple, clean context for the integrator's LLM prompt.
-            # The search_result_text already has [n] markers. We pass it as-is.
-            search_context = f"CURRENT INFORMATION FROM WEB SEARCH:\nThe following text was retrieved from a web search. It contains citation markers like [1], [2], etc.\n\n---\n\n{search_result_text}\n\n---\n\nUse this information to answer the user's query, making sure to preserve the citation markers as they are."
-            context_sections.append(search_context)
-            logger.info("🧠 Integrator: Added search results with original citation markers to system context")
+    # Add search results to context from all search sources
+    search_sources = ["search", "academic_search", "social_search", "medical_search"]
+    all_citations = []
+    all_search_sources = []
+    
+    for source in search_sources:
+        search_results_data = state.get("module_results", {}).get(source, {})
+        if search_results_data.get("success", False):
+            search_result_text = search_results_data.get("result", "")
+            if search_result_text:
+                # Build source-specific context
+                source_name = search_results_data.get("source", source.replace("_", " ").title())
+                search_context = f"INFORMATION FROM {source_name.upper()}:\n{search_result_text}\n"
+                context_sections.append(search_context)
+                logger.info(f"🧠 Integrator: Added {source_name} results to system context")
+                
+                # Collect citations and sources for renderer
+                citations = search_results_data.get("citations", [])
+                search_sources_data = search_results_data.get("search_sources", [])
+                all_citations.extend(citations)
+                all_search_sources.extend(search_sources_data)
+    
+    # Pass combined citation data to renderer
+    if all_citations or all_search_sources:
+        state["workflow_context"]["citations"] = all_citations
+        state["workflow_context"]["search_sources"] = all_search_sources
+        logger.info("🧠 Integrator: Passing combined citation data from all sources to the renderer.")
 
     # Add analysis results to context if available
     analysis_results = state.get("module_results", {}).get("analyzer", {})

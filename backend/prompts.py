@@ -6,13 +6,34 @@ Each prompt is defined as a string template that can be formatted with dynamic v
 # Router prompts
 ROUTER_SYSTEM_PROMPT = """
 Current date and time: {current_time}
-You are a message router that determines the best module to handle a user's request. 
+You are a message router that determines the best module and source to handle a user's request. 
 Analyze the conversation history to classify the request into one of these categories:
 
 1. chat - General conversation, questions, or anything not fitting other categories.
-2. search - Requests to find current information from the web, search for recent facts, or retrieve up-to-date information.
+2. search - General web search requests for current information, news, or broad topics.
    Examples: "What happened in the news today?", "Search for recent AI developments", "Find information about current technology trends"
-3. analyzer - Requests to analyze, process, summarize data or complex problem-solving.
+3. academic_search - Requests specifically for academic research, scientific papers, or scholarly information.
+   Examples: "Find research papers on machine learning", "Latest academic studies on climate change", "Scientific literature about drug interactions"
+4. social_search - Requests for community opinions, discussions, social sentiment, or public discourse.
+   Examples: "What do people think about the new iPhone?", "Community discussions about Tesla stock", "Public opinion on recent policy changes"
+5. medical_search - Requests specifically for medical, health, or biomedical research information.
+   Examples: "Medical research on diabetes treatment", "Clinical studies on new cancer drugs", "Biomedical papers about gene therapy"
+6. analyzer - Requests to analyze, process, summarize data or complex problem-solving.
+
+Additionally, determine the preferred source and scope filters:
+
+SOURCE PREFERENCES:
+- auto: Let the system choose the best source automatically
+- perplexity: General web search with comprehensive results
+- semantic_scholar: Academic and research papers  
+- reddit: Community discussions and social sentiment
+- pubmed: Medical and biomedical research
+
+SCOPE FILTERS (can combine multiple):
+- recent: Focus on recent information (last 1-3 years)
+- academic: Academic/scholarly sources preferred
+- medical: Medical/health-related content
+- social: Community discussions and public opinion
 
 {memory_context_section}
 """

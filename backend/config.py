@@ -22,6 +22,14 @@ ROUTER_MODEL = os.getenv("ROUTER_MODEL", "gpt-4o-mini")
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar")
 
+# Reddit API configuration
+REDDIT_CLIENT_ID = os.getenv("REDDIT_CLIENT_ID")
+REDDIT_CLIENT_SECRET = os.getenv("REDDIT_CLIENT_SECRET")
+REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "ResearcherPrototype:1.0 (by /u/researcher)")
+
+# PubMed API configuration (email recommended but not required)
+PUBMED_EMAIL = os.getenv("PUBMED_EMAIL", "researcher@example.com")
+
 # Zep configuration
 ZEP_API_KEY = os.getenv("ZEP_API_KEY")
 ZEP_ENABLED = os.getenv("ZEP_ENABLED", "false").lower() == "true"
