@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { getAllPrompts, getAdminStatus } from '../../services/adminApi';
+import { getAllPrompts, getAdminStatus, deleteAllUsers } from '../../services/adminApi';
 import { useAdmin } from '../../context/AdminContext';
 import PromptEditor from './PromptEditor';
 import FlowVisualization from './FlowVisualization';
@@ -52,6 +52,17 @@ const AdminDashboard = () => {
   const handleLogout = () => {
     logout();
     navigate('/');
+  };
+
+  const handleDeleteAllUsers = async () => {
+    if (!window.confirm('Delete all users?')) return;
+    try {
+      await deleteAllUsers();
+      alert('All users deleted');
+    } catch (err) {
+      console.error('Error deleting users:', err);
+      setError('Failed to delete users');
+    }
   };
 
   if (loading) {
@@ -175,6 +186,13 @@ const AdminDashboard = () => {
                   </div>
                 ))}
               </div>
+            </div>
+
+            <div className="danger-section">
+              <h2>🧹 User Management</h2>
+              <button onClick={handleDeleteAllUsers} className="btn-danger">
+                Delete All Users
+              </button>
             </div>
           </div>
         )}

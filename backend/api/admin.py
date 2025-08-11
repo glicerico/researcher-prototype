@@ -6,6 +6,7 @@ from datetime import datetime
 from services.auth_manager import auth_manager, verify_admin_token
 from services.prompt_manager import prompt_manager
 from services.flow_analyzer import flow_analyzer
+from dependencies import profile_manager
 from logging_config import get_logger
 
 logger = get_logger(__name__)
@@ -83,6 +84,29 @@ async def verify_token(authorization: Optional[str] = Header(None)):
             detail="Internal server error during token verification"
         )
 
+
+
+# User management endpoints
+@router.delete("/users")
+async def delete_all_users(authorization: Optional[str] = Header(None)):
+    verify_admin_token(authorization)
+
+    try:
+        success = profile_manager.delete_all_users()
+        if not success:
+            raise HTTPException(
+                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+                detail="Failed to delete users",
+            )
+        return {"success": True, "message": "All users deleted"}
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error deleting all users: {str(e)}")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Error deleting users: {str(e)}",
+        )
 
 # Prompt management endpoints
 @router.get("/prompts")

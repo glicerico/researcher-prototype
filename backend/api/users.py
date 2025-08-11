@@ -96,3 +96,15 @@ async def create_user(display_name: Optional[str] = None):
         "user_id": user_id,
         "display_name": display_name or generate_display_name_from_user_id(user_id),
     }
+
+
+@router.delete("/user")
+async def delete_current_user(user_id: Optional[str] = Depends(get_existing_user_id)):
+    if not user_id:
+        raise HTTPException(status_code=404, detail="No user ID provided or user not found")
+
+    success = profile_manager.delete_user(user_id)
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to delete user")
+
+    return {"success": True, "message": "User deleted successfully"}

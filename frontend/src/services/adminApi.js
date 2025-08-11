@@ -107,6 +107,15 @@ export const getAllPrompts = async () => {
   }
 };
 
+export const deleteAllUsers = async () => {
+  try {
+    const response = await adminApi.delete('/users');
+    return response.data;
+  } catch (error) {
+    throw error;
+  }
+};
+
 export const getPrompt = async (promptName) => {
   try {
     const response = await adminApi.get(`/prompts/${promptName}`);

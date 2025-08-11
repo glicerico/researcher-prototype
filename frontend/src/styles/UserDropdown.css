@@ -38,6 +38,21 @@
   font-size: 0.7rem;
 }
 
+.delete-user-button {
+  margin-top: 8px;
+  width: 100%;
+  background-color: #e74c3c;
+  color: #fff;
+  border: none;
+  padding: 6px;
+  border-radius: var(--border-radius);
+  cursor: pointer;
+}
+
+.delete-user-button:hover {
+  background-color: #c0392b;
+}
+
 .dropdown-menu {
   position: absolute;
   top: 100%;

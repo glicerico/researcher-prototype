@@ -122,6 +122,16 @@ export const getCurrentUser = async () => {
   }
 };
 
+export const deleteUser = async () => {
+  try {
+    const response = await api.delete('/user');
+    return response.data;
+  } catch (error) {
+    console.error('Error deleting user:', error);
+    throw error;
+  }
+};
+
 export const updateUserDisplayName = async (displayName) => {
   try {
     const response = await api.put('/user/display-name', null, {
