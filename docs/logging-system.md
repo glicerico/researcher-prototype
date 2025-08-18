@@ -69,7 +69,7 @@ Used for critical errors, failures, and exceptions:
 Used for warnings, non-critical issues, and informational alerts:
 
 ```
-👤 EngagementTracker: ⚠️ No active session found for scroll tracking
+👤 EngagementTracker: ✅ Research activation tracked for topic: AI Ethics
 💾 Research Storage: ⚠️ Quality score 0.42 below threshold 0.6 - not storing
 🧠 Initializer: ⚠️ No memory context found for this thread
 ```
@@ -118,12 +118,10 @@ Used for warnings, non-critical issues, and informational alerts:
 
 #### EngagementTracker (`👤 EngagementTracker`)
 ```
-👤 EngagementTracker: Starting reading session for content: research_456
-👤 EngagementTracker: Scroll milestone reached for research_456: 50%
-👤 EngagementTracker: ✅ Content marked as completed for: research_456
-👤 EngagementTracker: ✅ Successfully tracked research engagement for research_456
-👤 EngagementTracker: ⚠️ No active session found for scroll tracking: research_789
-👤 EngagementTracker: ❌ Failed to track research engagement for content: research_456
+👤 EngagementTracker: ✅ User feedback recorded: up for message: msg_123
+👤 EngagementTracker: ✅ Source exploration tracked for message: msg_123
+👤 EngagementTracker: ✅ Research activation tracked for topic: AI Ethics
+👤 EngagementTracker: ✅ Successfully tracked feedback event
 ```
 
 ### API Layer Logging (`🌐 API`)
@@ -348,18 +346,9 @@ END {
 
 #### Response Time Analysis (for timed operations)
 ```bash
-grep "👤.*reading_time" application.log | awk '{
-    match($0, /reading_time=([0-9.]+)/, arr)
-    if (arr[1]) {
-        times[++count] = arr[1]
-        total += arr[1]
-    }
-}
-END {
-    avg = total/count
-    printf "Average reading time: %.2f seconds\n", avg
-    printf "Total interactions: %d\n", count
-}'
+grep "👤.*feedback.*up" application.log | wc -l
+grep "👤.*feedback.*down" application.log | wc -l
+grep "👤.*research_activation" application.log | wc -l
 ```
 
 ## Production Monitoring

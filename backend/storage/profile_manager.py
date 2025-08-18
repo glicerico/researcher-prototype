@@ -319,15 +319,6 @@ class ProfileManager:
         """Get default engagement analytics structure."""
         return {
             "reading_patterns": {
-                "avg_reading_time_seconds": {
-                    "short_responses": 0,
-                    "medium_responses": 0,
-                    "long_responses": 0
-                },
-                "content_completion_rates": {
-                    "research_findings": 0.0,
-                    "chat_responses": 0.0
-                }
             },
             "interaction_signals": {
                 "topics_initiated_by_user": [],
@@ -457,10 +448,10 @@ class ProfileManager:
             
             if interaction_type == "research_finding":
                 self._process_research_engagement(analytics, metadata)
-                logger.debug(f"👤 ProfileManager: Processed research engagement for user {user_id}: reading_time={metadata.get('reading_time_seconds', 0)}s, completion={metadata.get('completion_rate', 0):.2f}")
+                logger.debug(f"👤 ProfileManager: Processed research engagement for user {user_id}: source_types={metadata.get('source_types', [])}")
             elif interaction_type == "chat_response":
                 self._process_chat_engagement(analytics, metadata)
-                logger.debug(f"👤 ProfileManager: Processed chat engagement for user {user_id}: completion={metadata.get('completion_rate', 0):.2f}, follow_up={metadata.get('has_follow_up', False)}")
+                logger.debug(f"👤 ProfileManager: Processed chat engagement for user {user_id}: follow_up={metadata.get('has_follow_up', False)}")
             else:
                 logger.warning(f"Unknown interaction type for user {user_id}: {interaction_type}")
             
@@ -478,44 +469,20 @@ class ProfileManager:
 
     def _process_research_engagement(self, analytics: Dict[str, Any], metadata: Dict[str, Any]) -> None:
         """Process research finding engagement data."""
-        reading_time = metadata.get("reading_time_seconds", 0)
-        completion_rate = metadata.get("completion_rate", 0.0)
         source_types = metadata.get("source_types", [])
-        
-        if reading_time > 0:
-            response_length = self._categorize_response_length(metadata.get("content_length", 0))
-            current_avg = analytics["reading_patterns"]["avg_reading_time_seconds"].get(response_length, 0)
-            
-            if current_avg == 0:
-                analytics["reading_patterns"]["avg_reading_time_seconds"][response_length] = reading_time
-            else:
-                analytics["reading_patterns"]["avg_reading_time_seconds"][response_length] = (current_avg + reading_time) / 2
-        
-        if completion_rate > 0:
-            current_rate = analytics["reading_patterns"]["content_completion_rates"]["research_findings"]
-            if current_rate == 0:
-                analytics["reading_patterns"]["content_completion_rates"]["research_findings"] = completion_rate
-            else:
-                analytics["reading_patterns"]["content_completion_rates"]["research_findings"] = (current_rate + completion_rate) / 2
         
         if source_types:
             for source_type in source_types:
                 if source_type not in analytics["interaction_signals"]["most_engaged_source_types"]:
-                    if completion_rate > 0.7:
+                    # Use explicit feedback
+                    feedback = metadata.get("feedback")
+                    if feedback == "up":
                         analytics["interaction_signals"]["most_engaged_source_types"].append(source_type)
 
     def _process_chat_engagement(self, analytics: Dict[str, Any], metadata: Dict[str, Any]) -> None:
         """Process chat response engagement data."""
-        reading_time = metadata.get("reading_time_seconds", 0)
-        completion_rate = metadata.get("completion_rate", 0.0)
         follow_up = metadata.get("has_follow_up", False)
         
-        if completion_rate > 0:
-            current_rate = analytics["reading_patterns"]["content_completion_rates"]["chat_responses"]
-            if current_rate == 0:
-                analytics["reading_patterns"]["content_completion_rates"]["chat_responses"] = completion_rate
-            else:
-                analytics["reading_patterns"]["content_completion_rates"]["chat_responses"] = (current_rate + completion_rate) / 2
         
         if follow_up:
             current_freq = analytics["interaction_signals"]["follow_up_question_frequency"]

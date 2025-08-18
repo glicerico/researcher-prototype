@@ -76,7 +76,6 @@ class PersonalizationManager:
         link_clicks = metadata.get("link_clicks", 0)
         source_exploration = metadata.get("source_exploration_clicks", 0)
         session_continuation = metadata.get("session_continuation_rate", 0.0)
-        completion_rate = metadata.get("completion_rate", 0.0)
         source_types = metadata.get("source_types", [])
         content_length = metadata.get("content_length", 0)
         
@@ -86,7 +85,7 @@ class PersonalizationManager:
             link_clicks=link_clicks, 
             source_exploration=source_exploration,
             session_continuation=session_continuation,
-            completion_rate=completion_rate
+            completion_rate=0.0  # No longer tracking completion rate
         )
         
         if engagement_score > 0.7:  # High engagement threshold
@@ -95,7 +94,8 @@ class PersonalizationManager:
             
             # Learn format preferences
             if content_length > 0:
-                self._adjust_format_preferences(user_id, content_length, completion_rate)
+                # Format preferences based on explicit feedback only
+                self._adjust_format_preferences(user_id, content_length, engagement_score)
         
         elif engagement_score < 0.3:  # Low engagement
             # Decrease preference for these source types
@@ -116,7 +116,7 @@ class PersonalizationManager:
             link_clicks=link_clicks,
             source_exploration=source_exploration,
             session_continuation=session_continuation,
-            completion_rate=1.0  # Assume completion for chat responses
+            completion_rate=0.0  # No longer tracking completion rate
         )
         
         # Learn about preferred response detail level
@@ -150,7 +150,7 @@ class PersonalizationManager:
         except Exception as e:
             logger.error(f"👤 PersonalizationManager: ❌ Error adjusting source preferences for user {user_id}: {str(e)}", exc_info=True)
 
-    def _adjust_format_preferences(self, user_id: str, content_length: int, completion_rate: float) -> None:
+    def _adjust_format_preferences(self, user_id: str, content_length: int, engagement_score: float) -> None:
         """Adjust format preferences based on content engagement."""
         try:
             analytics = self.profile_manager.get_engagement_analytics(user_id)
@@ -158,7 +158,7 @@ class PersonalizationManager:
             # Update optimal response length based on high engagement
             current_optimal = analytics["learned_adaptations"]["format_optimizations"].get("optimal_response_length")
             
-            if completion_rate > 0.8:
+            if engagement_score > 0.8:  # High engagement from explicit feedback
                 if current_optimal is None:
                     analytics["learned_adaptations"]["format_optimizations"]["optimal_response_length"] = content_length
                 else:
@@ -280,7 +280,6 @@ class PersonalizationManager:
                 "interaction_preferences": preferences.get("interaction_preferences", {}),
                 "learned_adaptations": analytics.get("learned_adaptations", {}),
                 "engagement_patterns": {
-                    "avg_completion_rate": analytics["reading_patterns"]["content_completion_rates"].get("research_findings", 0.0),
                     "preferred_sources": analytics["interaction_signals"].get("most_engaged_source_types", []),
                     "follow_up_frequency": analytics["interaction_signals"].get("follow_up_question_frequency", 0.0)
                 }
@@ -399,7 +398,7 @@ class PersonalizationManager:
             return {}
 
     def _calculate_engagement_score(self, feedback=None, link_clicks=0, source_exploration=0, 
-                                   session_continuation=0.0, completion_rate=0.0) -> float:
+                                   session_continuation=0.0) -> float:
         """
         Calculate engagement score using new metrics (replacing reading time).
         
@@ -425,8 +424,6 @@ class PersonalizationManager:
         if source_exploration > 0:
             score += 0.15
         
-        # Completion rate (10% weight)
-        score += completion_rate * 0.1
         
         # Ensure score is between 0 and 1
         return max(0.0, min(1.0, score))

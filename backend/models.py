@@ -52,10 +52,6 @@ class FeedbackSignals(BaseModel):
         "up": 0,
         "down": 0
     }
-    content_completion_rates: Dict[str, float] = {
-        "research_findings": 0.0,
-        "chat_responses": 0.0
-    }
 
 
 class InteractionSignals(BaseModel):

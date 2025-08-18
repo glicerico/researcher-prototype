@@ -264,7 +264,7 @@ const PersonalizationDashboard = ({ personalizationData, onDataUpdate }) => {
               <div className="engagement-item">
                 <span className="engagement-label">Average Completion Rate (Research):</span>
                 <span className="engagement-value">
-                  {Math.round((learned_behaviors?.engagement_patterns?.avg_completion_rate || 0) * 100)}%
+                  N/A (completion tracking removed)
                 </span>
               </div>
               

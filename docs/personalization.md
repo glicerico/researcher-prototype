@@ -99,12 +99,12 @@ news_articles: 0.3     // Low preference (learned)
 - Detail level preferences based on follow-up questions
 
 **Engagement Patterns:**
-- Average completion rates by content type
 - Follow-up question frequency  
 - Most engaged source types
-- Feedback response patterns
+- Feedback response patterns (👍👎)
 - Link clicking behavior
 - Source exploration tendencies
+- Research activation patterns
 
 ### Transparency and Control
 
@@ -115,7 +115,7 @@ Users can see all learned behaviors in the **"What I've Learned"** tab:
 **Sections:**
 - **Source Type Preferences**: Shows learned weights with override buttons
 - **Format Optimizations**: Displays optimal response length and structure preferences
-- **Engagement Patterns**: Analytics on reading and interaction habits
+- **Engagement Patterns**: Analytics on explicit feedback and interaction habits
 - **Recent Adaptations**: History of system learning with effectiveness scores
 - **User Overrides**: List of user-modified behaviors
 
@@ -165,7 +165,6 @@ Each user has three JSON files in `backend/data/users/`:
       "timestamp": 1704067200,
       "topic_name": "AI Ethics", 
       "feedback": "up",
-      "completion_rate": 0.85,
       "link_clicks": 2,
       "source_exploration_clicks": 1,
       "source_types": ["academic_papers", "expert_blogs"]
@@ -183,7 +182,6 @@ Each user has three JSON files in `backend/data/users/`:
   ],
   "summary_stats": {
     "total_interactions": 25,
-    "avg_completion_rate": 0.78,
     "thumbs_up_rate": 0.82,
     "avg_link_clicks": 1.4,
     "most_engaged_sources": ["academic_papers", "expert_blogs"]
@@ -204,7 +202,6 @@ Each user has three JSON files in `backend/data/users/`:
       "prefers_structured_responses": true
     },
     "engagement_patterns": {
-      "avg_completion_rate": 0.82,
       "follow_up_frequency": 0.35,
       "preferred_sources": ["academic_papers", "expert_blogs"]
     }
@@ -214,7 +211,7 @@ Each user has three JSON files in `backend/data/users/`:
       "timestamp": 1704067200,
       "adaptation_type": "source_preference_academic_papers",
       "change_made": "Increased preference from 0.7 to 0.8",
-      "reason": "High completion rate and engagement",
+      "reason": "Positive feedback and high engagement",
       "effectiveness_score": 0.85
     }
   ],
@@ -354,7 +351,6 @@ Content-Type: application/json
   "interaction_type": "research_finding",
   "metadata": {
     "feedback": "up",
-    "completion_rate": 0.85,
     "link_clicks": 2,
     "source_exploration_clicks": 1,
     "content_length": 1200,
@@ -422,7 +418,6 @@ GET /api/users/personalization
       "prefers_structured_responses": true
     },
     "engagement_patterns": {
-      "avg_completion_rate": 0.82,
       "follow_up_frequency": 0.35,
       "preferred_sources": ["academic_papers", "expert_blogs"]
     }
@@ -432,7 +427,7 @@ GET /api/users/personalization
       "timestamp": 1704067200,
       "adaptation_type": "source_preference_academic_papers",
       "change_made": "Increased preference from 0.8 to 0.9",
-      "reason": "High completion rate and engagement",
+      "reason": "Positive feedback and high engagement",
       "effectiveness_score": 0.88
     }
   ],
@@ -563,12 +558,11 @@ async function overridePreference(preferenceType, value, disableLearning = false
 import httpx
 
 # Track research finding engagement  
-async def track_research_engagement(user_id: str, topic: str, feedback: str, completion_rate: float, link_clicks: int):
+async def track_research_engagement(user_id: str, topic: str, feedback: str, link_clicks: int):
     engagement_data = {
         "interaction_type": "research_finding",
         "metadata": {
             "feedback": feedback,
-            "completion_rate": completion_rate,
             "link_clicks": link_clicks,
             "source_exploration_clicks": 1,
             "topic_name": topic,
@@ -602,13 +596,13 @@ def _adjust_source_preferences(self, user_id: str, source_types: List[str],
 #### Format Optimization
 ```python
 def _optimize_response_format(self, user_id: str, response_length: int, 
-                            completion_rate: float):
-    """Learn optimal response length based on reading patterns."""
-    if completion_rate > 0.8:
-        # User completed long response - increase optimal length
+                            feedback: str):
+    """Learn optimal response length based on explicit feedback only."""
+    if feedback == "up":
+        # User gave positive feedback - increase optimal length
         optimal_length = max(current_optimal, response_length)
-    elif completion_rate < 0.5:
-        # User didn't complete - decrease optimal length
+    elif feedback == "down":
+        # User gave negative feedback - decrease optimal length
         optimal_length = min(current_optimal, response_length * 0.8)
 ```
 

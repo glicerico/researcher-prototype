@@ -21,7 +21,7 @@ const ChatPage = () => {
     updateConversationTopics,
   } = useSession();
 
-  const { trackSessionContinuation, startPageTimer, updateActivity, endPageTimer } = useEngagementTracking();
+  const { trackSessionContinuation } = useEngagementTracking();
 
   // Local state for UI components
   const [isTyping, setIsTyping] = useState(false);
@@ -34,26 +34,7 @@ const ChatPage = () => {
   
   const messagesEndRef = useRef(null);
 
-  // Track page engagement
-  useEffect(() => {
-    if (!userId) return;
 
-    startPageTimer('chat_page');
-    
-    const handleActivity = () => updateActivity('chat_page');
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
-    events.forEach(event => {
-      document.addEventListener(event, handleActivity, true);
-    });
-
-    return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, handleActivity, true);
-      });
-      endPageTimer('chat_page');
-    };
-  }, [userId, startPageTimer, updateActivity, endPageTimer]);
 
   // Subscribe to backend status updates via SSE
   useEffect(() => {

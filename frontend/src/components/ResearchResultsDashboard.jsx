@@ -15,15 +15,6 @@ import '../styles/ResearchResultsDashboard.css';
 const ResearchResultsDashboard = () => {
   const { userId } = useSession();
   const { markResearchNotificationsRead } = useNotifications();
-  const { 
-    startReading, 
-    endReading, 
-    trackInteraction, 
-    createScrollObserver,
-    startPageTimer,
-    endPageTimer,
-    updateActivity
-  } = useEngagementTracking();
   
   const [researchData, setResearchData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -105,26 +96,7 @@ const ResearchResultsDashboard = () => {
     markResearchNotificationsRead();
   }, [markResearchNotificationsRead]); // Include markResearchNotificationsRead in dependencies
 
-  // Track page engagement
-  useEffect(() => {
-    if (!userId) return;
 
-    startPageTimer('research_dashboard');
-    
-    const handleActivity = () => updateActivity('research_dashboard');
-    const events = ['mousedown', 'mousemove', 'keypress', 'scroll', 'touchstart'];
-    
-    events.forEach(event => {
-      document.addEventListener(event, handleActivity, true);
-    });
-
-    return () => {
-      events.forEach(event => {
-        document.removeEventListener(event, handleActivity, true);
-      });
-      endPageTimer('research_dashboard');
-    };
-  }, [userId, startPageTimer, updateActivity, endPageTimer]);
 
   // Auto-refresh research data every 10 seconds when user is selected
   useEffect(() => {
@@ -209,33 +181,11 @@ const ResearchResultsDashboard = () => {
     const newExpanded = new Set(expandedTopics);
     if (newExpanded.has(topicName)) {
       newExpanded.delete(topicName);
-      // End reading sessions for collapsed findings
-      const findings = researchData[topicName] || [];
-      findings.forEach(finding => {
-        const findingId = `finding_${finding.finding_id}`;
-        endReading(findingId, userId);
-      });
     } else {
       newExpanded.add(topicName);
-      // Start reading sessions for expanded findings
-      const findings = researchData[topicName] || [];
-      findings.forEach(finding => {
-        const findingId = `finding_${finding.finding_id}`;
-        const contentData = {
-          topic_name: topicName,
-          content_length: finding.formatted_content?.length || finding.findings_content?.length || 0,
-          citations: finding.citations || [],
-          quality_score: finding.quality_score || 0
-        };
-        startReading(findingId, contentData);
-      });
     }
     setExpandedTopics(newExpanded);
     
-    // Track topic expansion interaction
-    trackInteraction(`topic_${topicName}`, newExpanded.has(topicName) ? 'expand' : 'collapse', {
-      findings_count: (researchData[topicName] || []).length
-    });
   };
 
   // Handle bookmark toggle
@@ -252,10 +202,6 @@ const ResearchResultsDashboard = () => {
     
     localStorage.setItem('bookmarkedFindings', JSON.stringify([...newBookmarked]));
     
-    // Track bookmark interaction
-    trackInteraction(`finding_${findingId}`, isBookmarking ? 'bookmark' : 'unbookmark', {
-      action: isBookmarking ? 'add' : 'remove'
-    });
   };
 
   // Handle mark as read
@@ -264,10 +210,6 @@ const ResearchResultsDashboard = () => {
       await markFindingAsRead(findingId);
       await loadResearchData();
       
-      // Track mark as read interaction
-      trackInteraction(`finding_${findingId}`, 'mark_read', {
-        action: 'mark_as_read'
-      });
     } catch (err) {
       console.error('Error marking finding as read:', err);
     }
