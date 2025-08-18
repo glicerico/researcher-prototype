@@ -6,7 +6,7 @@ The researcher assistant includes a comprehensive, privacy-preserving personaliz
 
 The personalization system consists of four main components that work together to understand and adapt to user preferences:
 
-- **Privacy-First Architecture**: All data stored locally, no external servers
+- **Secure Architecture**: Data managed with proper authentication
 - **Transparent Learning**: Users can see exactly what the system has learned
 - **User Control**: Override or disable any learned behavior
 - **Adaptive Responses**: Dynamic tone, format, and content prioritization
@@ -128,7 +128,7 @@ Users can see all learned behaviors in the **"What I've Learned"** tab:
 
 ### Data Storage
 
-Each user has three JSON files in `backend/data/users/`:
+Each user has personalization data stored in three categories:
 
 #### Preferences File (`{user_id}_preferences.json`)
 ```json
@@ -608,10 +608,10 @@ def _optimize_response_format(self, user_id: str, response_length: int,
 
 ## Privacy and Security
 
-### Privacy-First Design
+### Secure Design
 
-1. **Local Storage Only**: All personalization data stored locally in JSON files
-2. **No External Transmission**: Personal data never sent to external servers
+1. **Server-Side Storage**: All personalization data securely stored
+2. **Authenticated Access**: Personal data only accessible through authenticated user sessions
 3. **User Ownership**: Complete control over personal data and learned behaviors
 4. **Transparent Operations**: All learning visible to users with override capabilities
 
@@ -684,10 +684,10 @@ For comprehensive logging analysis and monitoring, see the [Logging System Docum
 1. **Regular Review**: Check "What I've Learned" tab periodically
 2. **Active Feedback**: Override behaviors that don't match preferences
 3. **Explicit Settings**: Set initial preferences for faster learning
-4. **Privacy Awareness**: Understand what data is being collected locally
+4. **Privacy Awareness**: Understand what data is being collected about your interactions
 
 ### For Developers
-1. **Privacy by Design**: Always store data locally, never transmit personal data
+1. **Privacy by Design**: Secure data storage with proper access controls
 2. **Transparent Operations**: Log all learning activities with clear descriptions
 3. **User Control**: Always provide override and disable options
 4. **Performance Monitoring**: Track learning effectiveness and system impact
@@ -695,5 +695,5 @@ For comprehensive logging analysis and monitoring, see the [Logging System Docum
 ### For Administrators
 1. **Monitor Logs**: Regular review of `👤` personalization logs
 2. **Performance Tracking**: Monitor learning effectiveness and user satisfaction
-3. **Privacy Compliance**: Ensure no personal data leaves local storage
+3. **Privacy Compliance**: Ensure personal data is properly secured and access-controlled
 4. **System Health**: Watch for learning errors or data corruption
