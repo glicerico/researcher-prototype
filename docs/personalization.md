@@ -69,10 +69,11 @@ Comprehensive tracking of user interactions and reading patterns.
 
 Users can directly configure:
 
-**Content Preferences:**
+**Content & Interaction Preferences:**
 - **Research Depth**: Quick, Balanced, or Detailed responses
 - **Source Types**: Slider controls for academic papers, news articles, expert blogs, etc.
 - **Response Format**: Use bullet points, include key insights sections (citations are always numbered inline)
+ - **Notification Frequency (External)**: Preference for external alerts (email/SMS): Low, Moderate, High. Does not affect in-app notifications.
 
 **Personality Settings:**
 - **Communication Style**: Helpful, Concise, Expert, Creative, Friendly
