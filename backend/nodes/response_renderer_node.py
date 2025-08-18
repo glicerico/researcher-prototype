@@ -81,7 +81,6 @@ async def response_renderer_node(state: ChatState) -> ChatState:
     format_prefs = personalization_context.get("format_preferences", {})
     response_length = format_prefs.get("response_length", "medium")
     detail_level = format_prefs.get("detail_level", "balanced")
-    citation_style = format_prefs.get("citation_style", "inline")
     use_bullet_points = format_prefs.get("use_bullet_points", True)
     include_key_insights = format_prefs.get("include_key_insights", True)
     
@@ -100,7 +99,6 @@ async def response_renderer_node(state: ChatState) -> ChatState:
             module_used=module_used,
             response_length=response_length,
             detail_level=detail_level,
-            citation_style=citation_style,
             use_bullet_points=use_bullet_points,
             include_key_insights=include_key_insights,
             prefers_structured=prefers_structured,

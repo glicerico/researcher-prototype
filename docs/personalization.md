@@ -42,7 +42,6 @@ Advanced learning engine that analyzes user behavior and adapts system responses
 - Research source weighting (academic papers vs. news vs. blogs)
 - Response length optimization
 - Detail level adjustment
-- Citation style preferences
 
 #### 👤 UserProfile Component (`frontend/src/components/UserProfile.jsx`)
 Three-tab interface for managing personalization settings.
@@ -73,8 +72,7 @@ Users can directly configure:
 **Content Preferences:**
 - **Research Depth**: Quick, Balanced, or Detailed responses
 - **Source Types**: Slider controls for academic papers, news articles, expert blogs, etc.
-- **Citation Style**: Inline, numbered, or bibliography format
-- **Response Format**: Use bullet points, include key insights sections
+- **Response Format**: Use bullet points, include key insights sections (citations are always numbered inline)
 
 **Personality Settings:**
 - **Communication Style**: Helpful, Concise, Expert, Creative, Friendly
@@ -99,12 +97,8 @@ news_articles: 0.3     // Low preference (learned)
 - Detail level preferences based on follow-up questions
 
 **Engagement Patterns:**
-- Follow-up question frequency  
+- Follow-up question frequency
 - Most engaged source types
-- Feedback response patterns (👍👎)
-- Link clicking behavior
-- Source exploration tendencies
-- Research activation patterns
 
 ### Transparency and Control
 
@@ -146,7 +140,6 @@ Each user has personalization data stored in three categories:
   "format_preferences": {
     "response_length": "medium",
     "detail_level": "balanced",
-    "citation_style": "inline",
     "use_bullet_points": true,
     "include_key_insights": true
   },
@@ -266,7 +259,6 @@ GET /api/users/preferences
   "format_preferences": {
     "response_length": "medium",
     "detail_level": "balanced", 
-    "citation_style": "inline",
     "use_bullet_points": true,
     "include_key_insights": true
   },
@@ -309,7 +301,6 @@ Content-Type: application/json
   "format_preferences": {
     "response_length": "long",
     "detail_level": "comprehensive",
-    "citation_style": "numbered", 
     "use_bullet_points": false,
     "include_key_insights": true
   },

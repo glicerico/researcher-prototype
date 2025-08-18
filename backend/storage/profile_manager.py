@@ -304,13 +304,10 @@ class ProfileManager:
             "format_preferences": {
                 "response_length": "medium",
                 "detail_level": "balanced",
-                "citation_style": "inline",
                 "use_bullet_points": True,
                 "include_key_insights": True
             },
             "interaction_preferences": {
-                "follow_up_questions": True,
-                "proactive_research": True,
                 "notification_frequency": "moderate"
             }
         }
@@ -321,9 +318,7 @@ class ProfileManager:
             "reading_patterns": {
             },
             "interaction_signals": {
-                "topics_initiated_by_user": [],
                 "most_engaged_source_types": [],
-                "preferred_research_timing": None,
                 "follow_up_question_frequency": 0.0
             },
             "learned_adaptations": {

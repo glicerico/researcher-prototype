@@ -27,15 +27,12 @@ class FormatPreferences(BaseModel):
     """User format preferences."""
     response_length: str = "medium"  # short, medium, long
     detail_level: str = "balanced"  # concise, balanced, comprehensive
-    citation_style: str = "inline"  # inline, numbered, bibliography
     use_bullet_points: bool = True
     include_key_insights: bool = True
 
 
 class InteractionPreferences(BaseModel):
     """User interaction preferences."""
-    follow_up_questions: bool = True
-    proactive_research: bool = True
     notification_frequency: str = "moderate"  # low, moderate, high
 
 
@@ -56,14 +53,8 @@ class FeedbackSignals(BaseModel):
 
 class InteractionSignals(BaseModel):
     """User interaction signals."""
-    topics_initiated_by_user: List[str] = []
     most_engaged_source_types: List[str] = []
-    preferred_research_timing: Optional[str] = None
     follow_up_question_frequency: float = 0.0
-    link_clicks: int = 0
-    session_continuation_rate: float = 0.0
-    source_exploration_clicks: int = 0
-    research_activations: int = 0
 
 
 class FormatOptimizations(BaseModel):

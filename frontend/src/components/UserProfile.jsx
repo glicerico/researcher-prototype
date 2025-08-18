@@ -305,17 +305,7 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
                 </select>
               </div>
 
-              <div className="form-group">
-                <label>Citation Style:</label>
-                <select
-                  value={editedPreferences?.format_preferences?.citation_style || 'inline'}
-                  onChange={(e) => handlePreferenceChange('format_preferences', 'citation_style', e.target.value)}
-                >
-                  <option value="inline">Inline</option>
-                  <option value="numbered">Numbered</option>
-                  <option value="bibliography">Bibliography</option>
-                </select>
-              </div>
+              
 
               <div className="checkbox-group">
                 <label>
@@ -377,10 +367,7 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
                 <span className="profile-info-label">Detail Level:</span>
                 <span className="profile-info-value">{preferences.format_preferences?.detail_level}</span>
               </div>
-              <div className="profile-info-item">
-                <span className="profile-info-label">Citation Style:</span>
-                <span className="profile-info-value">{preferences.format_preferences?.citation_style}</span>
-              </div>
+              
             </div>
           </div>
         )}
