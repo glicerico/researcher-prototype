@@ -49,20 +49,21 @@ async def initializer_node(state: ChatState) -> ChatState:
         state["thread_id"] = thread_id
         logger.info(f"🧠 Initializer: ✅ Generated new thread ID: {thread_id}")
 
-        # Create thread in ZEP when we generate a new thread ID
+        # Ensure thread exists in ZEP when we generate a new thread ID
         if zep_manager.is_enabled():
             try:
                 await zep_manager.create_thread(thread_id, user_id)
-
-                # Add an empty message to prime the thread and trigger context population
-                await zep_manager.add_message(thread_id, "Thread initialized", "system")
-                logger.debug(f"🧠 Initializer: ✅ Primed ZEP thread {thread_id} with initialization message")
-
             except Exception as e:
                 logger.warning(f"Failed to create thread in ZEP: {str(e)}")
                 # Don't fail the request if ZEP thread creation fails
     else:
         logger.info(f"🧠 Initializer: Using provided thread ID: {thread_id}")
+        # Ensure the thread exists in ZEP when a thread ID is provided externally (e.g., new session from UI)
+        if zep_manager.is_enabled():
+            try:
+                await zep_manager.create_thread(thread_id, user_id)
+            except Exception as e:
+                logger.warning(f"Failed to ensure provided thread exists in ZEP: {str(e)}")
 
     # Retrieve memory context from Zep if available
     memory_context = None
