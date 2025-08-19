@@ -33,54 +33,59 @@ def _get_source_preferences(user_id: str) -> dict:
         return {}
 
 
-def _build_search_parameters_without_recency(source_preferences: dict) -> tuple[str, dict]:
-    """Build personalized search parameters based on user preferences (excluding recency)."""
-    # Default values
+def _get_content_preferences(user_id: str) -> dict:
+    """Get full content preferences (including research_depth) from personalization context."""
+    if not user_id:
+        return {}
+    try:
+        personalization_context = personalization_manager.get_personalization_context(user_id)
+        return personalization_context.get("content_preferences", {})
+    except Exception as e:
+        logger.warning(f"🔍 Search: ⚠️ Could not retrieve content preferences for user {user_id}: {str(e)}")
+        return {}
+
+
+def _merge_search_parameters_with_optimizer(
+    source_preferences: dict,
+    optimizer_mode: str | None,
+    optimizer_context_size: str | None,
+    optimizer_confidence: dict | None,
+    research_depth: str | None,
+) -> tuple[str, dict]:
+    """Merge optimizer suggestions with user preferences for mode and context size."""
+    # Defaults
     search_mode = "web"
     web_search_options = {"search_context_size": "medium"}
-    
-    # Get preference weights
+
+    # User prefs
     academic_weight = source_preferences.get("academic_papers", 0.5)
-    
-    # Determine search mode and context size
-    if academic_weight > 0.7:
-        search_mode = "academic"
-        web_search_options["search_context_size"] = "high"
-        logger.info(f"🔍 Search: Using academic search mode (preference: {academic_weight})")
+    # research_depth provided separately (lives under content_preferences)
+
+    # Confidence
+    confidence = optimizer_confidence or {}
+
+    # Mode: use optimizer if confident, else prefs
+    if optimizer_mode and confidence.get("search_mode", 0.0) >= 0.7:
+        search_mode = optimizer_mode
     else:
-        logger.info(f"🔍 Search: Using web search mode (academic preference: {academic_weight})")
-    
+        search_mode = "academic" if academic_weight >= 0.7 else "web"
+
+    # Context size: use optimizer if confident, else map from research_depth
+    if optimizer_context_size and confidence.get("context_size", 0.0) >= 0.7:
+        size = optimizer_context_size
+    else:
+        depth_to_size = {"shallow": "low", "balanced": "medium", "deep": "high"}
+        size = depth_to_size.get((research_depth or "balanced").lower(), "medium")
+    web_search_options["search_context_size"] = size
+
+    # If academic mode, bias to high context
+    if search_mode == "academic" and web_search_options["search_context_size"] != "high":
+        web_search_options["search_context_size"] = "high"
+
     return search_mode, web_search_options
 
 
-# Keep the old function for backward compatibility if needed elsewhere
-def _build_search_parameters(source_preferences: dict) -> tuple[str, dict, str]:
-    """Build personalized search parameters based on user preferences."""
-    # Default values
-    search_mode = "web"
-    web_search_options = {"search_context_size": "medium"}
-    search_recency_filter = None
-    
-    # Get preference weights
-    academic_weight = source_preferences.get("academic_papers", 0.5)
-    news_weight = source_preferences.get("news_articles", 0.5)
-    expert_weight = source_preferences.get("expert_blogs", 0.5)
-    
-    # Determine search mode and context size
-    if academic_weight > 0.7:
-        search_mode = "academic"
-        web_search_options["search_context_size"] = "high"
-        search_recency_filter = "year"
-        logger.info(f"🔍 Search: Using academic search mode (preference: {academic_weight})")
-    else:
-        logger.info(f"🔍 Search: Using web search mode (academic preference: {academic_weight})")
-    
-    # Set recency filter for news preference
-    if news_weight > 0.7:
-        search_recency_filter = "week"
-        logger.info(f"🔍 Search: Using week recency filter for news preference")
-    
-    return search_mode, web_search_options, search_recency_filter
+
 
 
 async def search_node(state: ChatState) -> ChatState:
@@ -117,8 +122,16 @@ async def search_node(state: ChatState) -> ChatState:
         user_id = state.get("user_id")
         source_preferences = _get_source_preferences(user_id)
         
-        # Build search parameters (excluding recency filter)
-        search_mode, web_search_options = _build_search_parameters_without_recency(source_preferences)
+        # Merge optimizer suggestions with user preferences
+        wc = state.get("workflow_context", {})
+        optimizer_mode = wc.get("optimizer_search_mode")
+        optimizer_context_size = wc.get("optimizer_context_size")
+        optimizer_confidence = wc.get("optimizer_confidence", {})
+        content_prefs = _get_content_preferences(user_id)
+        research_depth = content_prefs.get("research_depth", "balanced")
+        search_mode, web_search_options = _merge_search_parameters_with_optimizer(
+            source_preferences, optimizer_mode, optimizer_context_size, optimizer_confidence, research_depth
+        )
         
         # Get recency filter from search optimizer instead of user preferences
         search_recency_filter = state.get("workflow_context", {}).get("search_recency_filter")

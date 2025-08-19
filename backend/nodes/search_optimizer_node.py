@@ -51,9 +51,31 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
     else:
         logger.debug("🔬 Search Optimizer: No memory context available")
 
+    # Build user profile section for the prompt
+    user_id = state.get("user_id")
+    user_profile_section = ""
+    try:
+        if user_id:
+            from nodes.base import personalization_manager  # local import to avoid cycles at module load
+            personalization_context = personalization_manager.get_personalization_context(user_id)
+            content_prefs = personalization_context.get("content_preferences", {})
+            source_types = content_prefs.get("source_types", {})
+            research_depth = content_prefs.get("research_depth", "balanced")
+            user_profile_section = (
+                "USER PROFILE:\n"
+                f"- Research depth: {research_depth}\n"
+                f"- Source type prefs: {source_types}\n"
+            )
+        else:
+            user_profile_section = "USER PROFILE:\n- Research depth: balanced\n- Source type prefs: {}\n"
+    except Exception:
+        user_profile_section = "USER PROFILE:\n- Research depth: balanced\n- Source type prefs: {}\n"
+
     system_message = SystemMessage(
         content=SEARCH_OPTIMIZER_SYSTEM_PROMPT.format(
-            current_time=current_time_str, memory_context_section=memory_context_section
+            current_time=current_time_str,
+            memory_context_section=memory_context_section,
+            user_profile_section=user_profile_section,
         )
     )
 
@@ -73,6 +95,9 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         
         refined_query = search_optimization.query
         recency_filter = search_optimization.recency_filter
+        search_mode = search_optimization.search_mode
+        context_size = search_optimization.context_size
+        confidence = search_optimization.confidence or {}
 
         if not refined_query:
             logger.warning("🔬 Search Optimizer: Empty query in structured response, using original query")
@@ -87,16 +112,26 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         else:
             logger.info('🔬 Search Optimizer: No recency filter needed (timeless content)')
 
-        # Store both the refined query and recency preference in workflow context
-        state["workflow_context"]["refined_search_query"] = refined_query
-        state["workflow_context"]["search_recency_filter"] = recency_filter
-        logger.info(f"Refined search query with context: {refined_query}, recency: {recency_filter}")
+        # Store optimizer decisions in workflow context
+        wc = state["workflow_context"]
+        wc["refined_search_query"] = refined_query
+        wc["search_recency_filter"] = recency_filter
+        wc["optimizer_search_mode"] = search_mode
+        wc["optimizer_context_size"] = context_size
+        wc["optimizer_confidence"] = confidence
+        logger.info(
+            f"Refined query: {refined_query}, recency: {recency_filter}, mode: {search_mode}, context: {context_size}, conf: {confidence}"
+        )
 
     except Exception as e:
         logger.error(
             f"Error in search_prompt_optimizer_node (with context): {str(e)}. Using original query as fallback."
         )
-        state["workflow_context"]["refined_search_query"] = last_user_message_content
-        state["workflow_context"]["search_recency_filter"] = None
+        wc = state["workflow_context"]
+        wc["refined_search_query"] = last_user_message_content
+        wc["search_recency_filter"] = None
+        wc["optimizer_search_mode"] = None
+        wc["optimizer_context_size"] = None
+        wc["optimizer_confidence"] = {}
 
     return state
