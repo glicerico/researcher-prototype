@@ -16,6 +16,7 @@ from nodes.base import (
     queue_status,
 )
 from utils import get_last_user_message
+from llm_models import SearchOptimization
 
 
 def search_prompt_optimizer_node(state: ChatState) -> ChatState:
@@ -61,44 +62,41 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
     # Build the complete message list for the optimizer
     context_messages_for_llm = [system_message] + history_messages
 
-    # Initialize the optimizer LLM
+    # Initialize the optimizer LLM with structured output
     optimizer_llm = ChatOpenAI(
-        model=config.ROUTER_MODEL, temperature=0.0, max_tokens=100, api_key=config.OPENAI_API_KEY
-    )
+        model=config.ROUTER_MODEL, temperature=0.0, max_tokens=150, api_key=config.OPENAI_API_KEY
+    ).with_structured_output(SearchOptimization)
 
     try:
-        # Invoke the optimizer to get a refined query directly
-        response = optimizer_llm.invoke(context_messages_for_llm)
-        response_content = response.content.strip()
+        # Invoke the optimizer to get structured search optimization
+        search_optimization = optimizer_llm.invoke(context_messages_for_llm)
+        
+        refined_query = search_optimization.query
+        recency_filter = search_optimization.recency_filter
 
-        # Parse JSON response to extract the query
-        try:
-            response_json = json.loads(response_content)
-            refined_query = response_json.get("query", "")
+        if not refined_query:
+            logger.warning("🔬 Search Optimizer: Empty query in structured response, using original query")
+            refined_query = last_user_message_content
+            recency_filter = None
 
-            if not refined_query:
-                logger.warning("🔬 Search Optimizer: Empty query in JSON response, using original query")
-                refined_query = last_user_message_content
-
-        except json.JSONDecodeError as json_error:
-            logger.warning(
-                f"🔬 Search Optimizer: Failed to parse JSON response: {json_error}. Response was: {response_content[:100]}..."
-            )
-            # Fallback: try to extract query from malformed response or use original
-            refined_query = response_content if response_content else last_user_message_content
-
-        # Log the refined query
+        # Log the refined query and recency decision
         display_refined = refined_query[:75] + "..." if len(refined_query) > 75 else refined_query
         logger.info(f'🔬 Search Optimizer: Produced refined query: "{display_refined}"')
+        if recency_filter:
+            logger.info(f'🔬 Search Optimizer: Determined recency filter: "{recency_filter}"')
+        else:
+            logger.info('🔬 Search Optimizer: No recency filter needed (timeless content)')
 
-        # Store the refined query in the workflow context
+        # Store both the refined query and recency preference in workflow context
         state["workflow_context"]["refined_search_query"] = refined_query
-        logger.info(f"Refined search query with context: {refined_query}")
+        state["workflow_context"]["search_recency_filter"] = recency_filter
+        logger.info(f"Refined search query with context: {refined_query}, recency: {recency_filter}")
 
     except Exception as e:
         logger.error(
             f"Error in search_prompt_optimizer_node (with context): {str(e)}. Using original query as fallback."
         )
         state["workflow_context"]["refined_search_query"] = last_user_message_content
+        state["workflow_context"]["search_recency_filter"] = None
 
     return state

@@ -33,6 +33,27 @@ def _get_source_preferences(user_id: str) -> dict:
         return {}
 
 
+def _build_search_parameters_without_recency(source_preferences: dict) -> tuple[str, dict]:
+    """Build personalized search parameters based on user preferences (excluding recency)."""
+    # Default values
+    search_mode = "web"
+    web_search_options = {"search_context_size": "medium"}
+    
+    # Get preference weights
+    academic_weight = source_preferences.get("academic_papers", 0.5)
+    
+    # Determine search mode and context size
+    if academic_weight > 0.7:
+        search_mode = "academic"
+        web_search_options["search_context_size"] = "high"
+        logger.info(f"🔍 Search: Using academic search mode (preference: {academic_weight})")
+    else:
+        logger.info(f"🔍 Search: Using web search mode (academic preference: {academic_weight})")
+    
+    return search_mode, web_search_options
+
+
+# Keep the old function for backward compatibility if needed elsewhere
 def _build_search_parameters(source_preferences: dict) -> tuple[str, dict, str]:
     """Build personalized search parameters based on user preferences."""
     # Default values
@@ -92,12 +113,19 @@ async def search_node(state: ChatState) -> ChatState:
         return state
 
     try:
-        # Get personalization context
+        # Get personalization context for search mode (but not recency)
         user_id = state.get("user_id")
         source_preferences = _get_source_preferences(user_id)
         
-        # Build search parameters
-        search_mode, web_search_options, search_recency_filter = _build_search_parameters(source_preferences)
+        # Build search parameters (excluding recency filter)
+        search_mode, web_search_options = _build_search_parameters_without_recency(source_preferences)
+        
+        # Get recency filter from search optimizer instead of user preferences
+        search_recency_filter = state.get("workflow_context", {}).get("search_recency_filter")
+        if search_recency_filter:
+            logger.info(f"🔍 Search: Using optimizer-determined recency filter: {search_recency_filter}")
+        else:
+            logger.info("🔍 Search: No recency filter (optimizer determined content is timeless)")
         
         # Prepare API request
         headers = {"Authorization": f"Bearer {config.PERPLEXITY_API_KEY}", "Content-Type": "application/json"}

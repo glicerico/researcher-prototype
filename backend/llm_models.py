@@ -86,6 +86,21 @@ class ResearchQualityAssessment(BaseModel):
         return v
 
 
+class SearchOptimization(BaseModel):
+    """Optimized search query with recency preference."""
+    query: str = Field(description="The optimized search query")
+    recency_filter: Optional[str] = Field(
+        description="Recency filter preference: 'week' for very recent info, 'month' for recent, 'year' for somewhat recent, or null for no preference",
+        default=None
+    )
+    
+    @field_validator('recency_filter')
+    def validate_recency_filter(cls, v):
+        if v is not None and v not in ['week', 'month', 'year']:
+            return None  # Default to no filter if invalid
+        return v
+
+
 class ResearchDeduplicationResult(BaseModel):
     """Result of research findings deduplication analysis."""
     is_duplicate: bool = Field(description="True if the new findings are substantially similar to existing ones")
