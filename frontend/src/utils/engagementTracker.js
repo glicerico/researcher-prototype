@@ -25,6 +25,24 @@ class EngagementTracker {
 
 
   /**
+   * Track interaction with content (clicks, selections, etc.)
+   */
+  trackInteraction(contentId, interactionType, data = {}) {
+    if (!this.isEnabled) return;
+
+    console.log('👤 EngagementTracker: User interaction tracked:', { contentId, interactionType, data });
+
+    // Track as engagement event
+    this.trackEngagementEvent({
+      type: 'content_interaction',
+      contentId,
+      interactionType,
+      data,
+      timestamp: Date.now()
+    });
+  }
+
+  /**
    * Track specific engagement events (feedback, links, etc.)
    */
   async trackEngagementEvent(eventData) {
@@ -105,9 +123,9 @@ const engagementTracker = new EngagementTracker();
 // React hook for easy component integration
 export const useEngagementTracking = () => {
   return {
+    trackInteraction: (contentId, type, data) => engagementTracker.trackInteraction(contentId, type, data),
     trackEvent: (eventData) => engagementTracker.trackEngagementEvent(eventData),
     trackSessionContinuation: (sessionId, type) => engagementTracker.trackSessionContinuation(sessionId, type),
-
     setEnabled: (enabled) => engagementTracker.setEnabled(enabled)
   };
 };

@@ -64,6 +64,9 @@ class PersonalizationManager:
             elif interaction_type == "chat_response":
                 self._learn_from_chat_interaction(user_id, metadata)
                 logger.debug(f"👤 PersonalizationManager: ✅ Completed chat interaction learning for user {user_id}")
+            elif interaction_type == "engagement_event":
+                self._learn_from_engagement_event(user_id, metadata)
+                logger.debug(f"👤 PersonalizationManager: ✅ Completed engagement event learning for user {user_id}")
             else:
                 logger.warning(f"PersonalizationManager: Unknown interaction type for learning: {interaction_type} (user: {user_id})")
         except Exception as e:
@@ -124,6 +127,41 @@ class PersonalizationManager:
             self._adjust_detail_preference(user_id, response_length, True)
         elif engagement_score < 0.4:
             self._adjust_detail_preference(user_id, response_length, False)
+
+    def _learn_from_engagement_event(self, user_id: str, metadata: Dict[str, Any]) -> None:
+        """Learn preferences from engagement events (implicit feedback)."""
+        event_type = metadata.get("type")
+        interaction_type = metadata.get("interactionType")
+        
+        if event_type == "content_interaction":
+            # Handle implicit feedback from content interactions
+            if interaction_type == "bookmark":
+                # Bookmarking shows strong interest - boost source preferences
+                content_data = metadata.get("data", {})
+                finding_id = content_data.get("findingId")
+                if finding_id:
+                    logger.debug(f"👤 PersonalizationManager: Learning from bookmark action for user {user_id}")
+                    # This indicates positive engagement - could be used to boost topic/source preferences
+                    
+            elif interaction_type == "expand":
+                # Topic expansion shows interest in that topic area
+                content_data = metadata.get("data", {})
+                topic_name = content_data.get("topicName")
+                if topic_name:
+                    logger.debug(f"👤 PersonalizationManager: Learning from topic expansion for user {user_id}: {topic_name}")
+                    # Could boost research priority for this topic
+                    
+            elif interaction_type == "mark_read":
+                # Mark as read shows content consumption
+                content_data = metadata.get("data", {})
+                finding_id = content_data.get("findingId")
+                if finding_id:
+                    logger.debug(f"👤 PersonalizationManager: Learning from mark-read action for user {user_id}")
+                    # Indicates content was consumed
+                    
+        elif event_type in ["research_activation", "feedback", "source_exploration"]:
+            # These are explicit feedback - handle with higher weight
+            logger.debug(f"👤 PersonalizationManager: Processing explicit engagement event for user {user_id}: {event_type}")
 
     def _adjust_source_preferences(self, user_id: str, source_types: List[str], adjustment: float) -> None:
         """Adjust source type preferences based on engagement."""

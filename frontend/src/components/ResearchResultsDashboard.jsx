@@ -15,6 +15,7 @@ import '../styles/ResearchResultsDashboard.css';
 const ResearchResultsDashboard = () => {
   const { userId } = useSession();
   const { markResearchNotificationsRead } = useNotifications();
+  const { trackInteraction } = useEngagementTracking();
   
   const [researchData, setResearchData] = useState({});
   const [loading, setLoading] = useState(true);
@@ -186,6 +187,11 @@ const ResearchResultsDashboard = () => {
     }
     setExpandedTopics(newExpanded);
     
+    // Track topic expansion interaction - useful for personalization
+    trackInteraction(`topic_${topicName}`, newExpanded.has(topicName) ? 'expand' : 'collapse', {
+      findings_count: (researchData[topicName] || []).length,
+      topicName
+    });
   };
 
   // Handle bookmark toggle
@@ -202,6 +208,11 @@ const ResearchResultsDashboard = () => {
     
     localStorage.setItem('bookmarkedFindings', JSON.stringify([...newBookmarked]));
     
+    // Track bookmark interaction - shows user interest
+    trackInteraction(`finding_${findingId}`, isBookmarking ? 'bookmark' : 'unbookmark', {
+      action: isBookmarking ? 'add' : 'remove',
+      findingId
+    });
   };
 
   // Handle mark as read
@@ -210,6 +221,11 @@ const ResearchResultsDashboard = () => {
       await markFindingAsRead(findingId);
       await loadResearchData();
       
+      // Track mark as read interaction - shows content consumption
+      trackInteraction(`finding_${findingId}`, 'mark_read', {
+        action: 'mark_as_read',
+        findingId
+      });
     } catch (err) {
       console.error('Error marking finding as read:', err);
     }
