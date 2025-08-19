@@ -144,6 +144,22 @@ Used for warnings, non-critical issues, and informational alerts:
 🔍 Search: ❌ Perplexity API request failed with status code 429
 ```
 
+#### Search Optimizer and Merge Logs
+```
+🔬 Search Optimizer: Produced refined query: "..."
+🔬 Search Optimizer: Determined recency filter: "week"
+🔬 Search Optimizer: No recency filter needed (timeless content)
+🔍 Search: Using optimizer-determined recency filter: week
+```
+
+The workflow context stores for observability:
+
+- `refined_search_query`
+- `search_recency_filter`
+- `optimizer_search_mode`
+- `optimizer_context_size`
+- `optimizer_confidence`
+
 #### Storage Operations (`💾`)
 ```
 💾 Research Storage: Processing research findings for storage

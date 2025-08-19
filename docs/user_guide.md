@@ -46,6 +46,14 @@ Changes apply instantly and are stored in your profile.
 
 ---
 
+### Web search behavior
+
+When your question needs web search, the assistant automatically optimizes the query and selects search settings:
+
+- Decides whether recency is important (e.g., “latest”, “today”, “updates”).
+- Chooses search mode: academic (for scholarly results) or web.
+- Sets context size (low/medium/high). If uncertain, it falls back to your research depth preference.
+
 ## 5. Research Topics & Findings
 
 ### Suggestion sidebar

@@ -121,6 +121,25 @@ Users can see all learned behaviors in the **"What I've Learned"** tab:
 
 ## Technical Implementation
 
+### Search Parameter Integration
+
+The search experience blends the user's learned preferences with query intent inferred by the Search Optimizer LLM.
+
+- Intent-first parameters (from optimizer):
+  - recency_filter: week | month | year | null
+  - search_mode: web | academic | null
+  - context_size: low | medium | high | null
+  - confidence: per-parameter confidence in [0.0, 1.0]
+
+- Preference fallbacks (from your profile):
+  - search_mode fallback: if `content_preferences.source_types.academic_papers ≥ 0.7` → academic, else web
+  - context_size fallback: map `content_preferences.research_depth` → shallow→low, balanced→medium, deep→high
+  - recency_filter: remains intent-driven (no preference fallback)
+
+Merge rule: use the optimizer’s choice when its confidence ≥ 0.7; otherwise, fall back to the learned preference.
+
+This design keeps recency tightly aligned with user intent (e.g., “latest”, “updates”), while respecting stable user tastes for academic vs. web mode and desired context size.
+
 ### Data Storage
 
 Each user has personalization data stored in three categories:
