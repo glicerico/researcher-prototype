@@ -370,7 +370,6 @@ const PersonalizationDashboard = ({ personalizationData, onDataUpdate }) => {
         <div className="privacy-note">
           <h5>Privacy Note</h5>
           <p>
-            All personalization data is stored locally on your device. Nothing is sent to external servers. 
             You have complete control over what the system learns and can override or disable any behavior.
           </p>
         </div>
