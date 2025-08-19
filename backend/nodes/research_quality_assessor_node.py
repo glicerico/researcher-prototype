@@ -21,7 +21,7 @@ def research_quality_assessor_node(state: ChatState) -> ChatState:
     search_results = state.get("module_results", {}).get("search", {})
     
     if not search_results.get("success", False):
-        logger.error("🎯 Research Quality Assessor: No successful search results to assess")
+        logger.error("🎯 Research Quality Assessor: ❌ No successful search results to assess")
         state["module_results"]["research_quality_assessor"] = {
             "success": False,
             "error": "No search results available for quality assessment"
@@ -35,7 +35,7 @@ def research_quality_assessor_node(state: ChatState) -> ChatState:
     research_results_content = search_results.get("result", "")
     
     if not research_results_content:
-        logger.error("🎯 Research Quality Assessor: Empty search results content")
+        logger.error("🎯 Research Quality Assessor: ❌ Empty search results content")
         state["module_results"]["research_quality_assessor"] = {
             "success": False,
             "error": "Empty search results content"
@@ -69,7 +69,7 @@ def research_quality_assessor_node(state: ChatState) -> ChatState:
         assessment_result = structured_llm.invoke(messages)
         
         overall_quality = assessment_result.overall_quality_score
-        logger.info(f"🎯 Research Quality Assessor: Quality assessment completed - Overall score: {overall_quality:.2f}")
+        logger.info(f"🎯 Research Quality Assessor: ✅ Quality assessment completed - Overall score: {overall_quality:.2f}")
         
         # Store the assessment results
         state["module_results"]["research_quality_assessor"] = {
@@ -81,7 +81,7 @@ def research_quality_assessor_node(state: ChatState) -> ChatState:
         
     except Exception as e:
         error_message = f"Error in quality assessment: {str(e)}"
-        logger.error(f"🎯 Research Quality Assessor: {error_message}")
+        logger.error(f"🎯 Research Quality Assessor: ❌ {error_message}")
         
         # Provide a fallback assessment using the Pydantic model
         fallback_assessment = ResearchQualityAssessment(

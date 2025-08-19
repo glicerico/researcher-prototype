@@ -29,7 +29,7 @@ def research_storage_node(state: ChatState) -> ChatState:
     
     # Check if we have all required results
     if not search_results.get("success", False):
-        logger.error("💾 Research Storage: No successful search results available")
+        logger.error("💾 Research Storage: ❌ No successful search results available")
         state["module_results"]["research_storage"] = {
             "success": False,
             "error": "No successful search results available",
@@ -38,7 +38,7 @@ def research_storage_node(state: ChatState) -> ChatState:
         return state
     
     if not quality_results.get("success", False):
-        logger.error("💾 Research Storage: No successful quality assessment available")
+        logger.error("💾 Research Storage: ❌ No successful quality assessment available")
         state["module_results"]["research_storage"] = {
             "success": False,
             "error": "No successful quality assessment available",
@@ -54,7 +54,7 @@ def research_storage_node(state: ChatState) -> ChatState:
     quality_threshold = config.RESEARCH_QUALITY_THRESHOLD
     
     if overall_quality_score < quality_threshold:
-        logger.info(f"💾 Research Storage: Quality score {overall_quality_score:.2f} below threshold {quality_threshold} - not storing")
+        logger.info(f"💾 Research Storage: ⚠️ Quality score {overall_quality_score:.2f} below threshold {quality_threshold} - not storing")
         
         # Still update last researched time to avoid immediate retry
         research_manager.update_topic_last_researched(user_id, topic_name)
@@ -73,7 +73,7 @@ def research_storage_node(state: ChatState) -> ChatState:
     is_duplicate = dedup_results.get("is_duplicate", False)
     
     if is_duplicate:
-        logger.info(f"💾 Research Storage: Findings are duplicate - not storing")
+        logger.info(f"💾 Research Storage: ⚠️ Findings are duplicate - not storing")
         
         # Still update last researched time
         research_manager.update_topic_last_researched(user_id, topic_name)
@@ -126,7 +126,7 @@ def research_storage_node(state: ChatState) -> ChatState:
             # Update last researched time
             research_manager.update_topic_last_researched(user_id, topic_name, current_time)
             
-            logger.info(f"💾 Research Storage: Successfully stored research finding for '{topic_name}'")
+            logger.info(f"💾 Research Storage: ✅ Successfully stored research finding for '{topic_name}'")
             
             # Send notification about new research
             try:
@@ -176,7 +176,7 @@ def research_storage_node(state: ChatState) -> ChatState:
             }
             
         else:
-            logger.error(f"💾 Research Storage: Failed to store research finding for '{topic_name}'")
+            logger.error(f"💾 Research Storage: ❌ Failed to store research finding for '{topic_name}'")
             
             state["module_results"]["research_storage"] = {
                 "success": False,
@@ -187,7 +187,7 @@ def research_storage_node(state: ChatState) -> ChatState:
             
     except Exception as e:
         error_message = f"Error storing research finding: {str(e)}"
-        logger.error(f"💾 Research Storage: {error_message}")
+        logger.error(f"💾 Research Storage: ❌ {error_message}")
         
         state["module_results"]["research_storage"] = {
             "success": False,

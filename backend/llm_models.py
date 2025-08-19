@@ -2,7 +2,7 @@
 Pydantic models for LLM structured output parsing.
 """
 from pydantic import BaseModel, Field, field_validator
-from typing import List, Optional
+from typing import List, Optional, Dict
 
 
 class RoutingAnalysis(BaseModel):
@@ -84,6 +84,57 @@ class ResearchQualityAssessment(BaseModel):
         if len(v) > 10:
             return v[:10]  # Limit to maximum 10 URLs
         return v
+
+
+class SearchOptimization(BaseModel):
+    """Optimized search query with parameters and confidences."""
+    query: str = Field(description="The optimized search query")
+    recency_filter: Optional[str] = Field(
+        description="Recency filter preference: 'week' | 'month' | 'year' | null",
+        default=None
+    )
+    search_mode: Optional[str] = Field(
+        description="Preferred search mode based on intent and profile: 'web' | 'academic' | null",
+        default=None
+    )
+    context_size: Optional[str] = Field(
+        description="Preferred web search context size: 'low' | 'medium' | 'high' | null",
+        default=None
+    )
+    confidence: Optional[Dict[str, float]] = Field(
+        description="Confidence per decision key: recency_filter, search_mode, context_size (0.0-1.0)",
+        default_factory=dict
+    )
+
+    @field_validator('recency_filter')
+    def validate_recency_filter(cls, v):
+        if v is not None and v not in ['week', 'month', 'year']:
+            return None  # Default to no filter if invalid
+        return v
+
+    @field_validator('search_mode')
+    def validate_search_mode(cls, v):
+        if v is not None and v not in ['web', 'academic']:
+            return None
+        return v
+
+    @field_validator('context_size')
+    def validate_context_size(cls, v):
+        if v is not None and v not in ['low', 'medium', 'high']:
+            return None
+        return v
+
+    @field_validator('confidence')
+    def validate_confidence(cls, v: Dict[str, float]):
+        if not v:
+            return {}
+        clamped: Dict[str, float] = {}
+        for key, value in v.items():
+            try:
+                clamped[key] = max(0.0, min(1.0, float(value)))
+            except Exception:
+                continue
+        return clamped
 
 
 class ResearchDeduplicationResult(BaseModel):

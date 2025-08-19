@@ -3,9 +3,12 @@ WebSocket-based notification manager for real-time updates.
 """
 import json
 import logging
+import asyncio
+import time
 from typing import Dict, Set, Optional
 from fastapi import WebSocket, WebSocketDisconnect
 from datetime import datetime, UTC
+from dependencies import profile_manager
 
 logger = logging.getLogger(__name__)
 
@@ -75,7 +78,12 @@ connection_manager = ConnectionManager()
 
 
 class NotificationService:
-    """Service for sending different types of notifications."""
+    """Service for sending different types of notifications.
+
+    Note: In-app WebSocket notifications are immediate by design. The
+    `interaction_preferences.notification_frequency` is reserved for future
+    external channels (email/SMS) and is not applied here.
+    """
     
     @staticmethod
     async def notify_new_research(user_id: str, topic_id: str, result_id: str, topic_name: str = None):

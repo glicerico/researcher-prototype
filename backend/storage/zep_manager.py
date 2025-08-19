@@ -200,6 +200,9 @@ class ZepManager:
             return False
         
         try:
+            # Ensure the thread exists before attempting to add messages
+            await self.create_thread(thread_id, user_id)
+
             # Add user message
             user_success = await self.add_message(thread_id, user_message, "user")
             if not user_success:

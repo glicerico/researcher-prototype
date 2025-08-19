@@ -1,10 +1,12 @@
 import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import '../styles/ChatMessage.css';
+import { trackEngagement } from '../utils/engagementTracker';
 
-const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUpClick }) => {
+const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUpClick, messageId }) => {
   const [showRoutingInfo, setShowRoutingInfo] = useState(false);
   const [showSources, setShowSources] = useState(false);
+  const [feedback, setFeedback] = useState(null);
 
   // Custom link renderer to open external links in new tab
   const LinkRenderer = ({ href, children, ...props }) => {
@@ -39,6 +41,36 @@ const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUp
   const mainContent = parts[0];
   const sourcesContent = parts.length > 1 ? parts[1] : null;
 
+  const handleFeedback = async (type) => {
+    if (feedback === type) return; // Already provided this feedback
+    
+    setFeedback(type);
+    console.log('👤 ChatMessage: ✅ User feedback recorded:', type, 'for message:', messageId);
+    
+    // Track engagement with feedback
+    await trackEngagement({
+      type: 'feedback',
+      messageId: messageId,
+      feedback: type,
+      timestamp: Date.now()
+    });
+  };
+
+  const handleSourcesToggle = async () => {
+    setShowSources(!showSources);
+    
+    if (!showSources) {
+      console.log('👤 ChatMessage: ✅ Source exploration tracked for message:', messageId);
+      
+      // Track source exploration
+      await trackEngagement({
+        type: 'source_exploration',
+        messageId: messageId,
+        timestamp: Date.now()
+      });
+    }
+  };
+
   return (
     <div className={`message ${role}`}>
       <div className="message-content">
@@ -47,7 +79,7 @@ const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUp
           <div className="sources-container">
             <button 
               className="sources-toggle"
-              onClick={() => setShowSources(!showSources)}
+              onClick={handleSourcesToggle}
             >
               {showSources ? 'Hide Sources' : 'Show Sources'}
             </button>
@@ -71,6 +103,26 @@ const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUp
                 ))}
                 </div>
             </div>
+        )}
+        
+        {/* Feedback buttons for assistant responses */}
+        {role === 'assistant' && (
+          <div className="feedback-container">
+            <button 
+              className={`feedback-btn ${feedback === 'up' ? 'active' : ''}`}
+              onClick={() => handleFeedback('up')}
+              disabled={feedback === 'up'}
+            >
+              👍 {feedback === 'up' ? 'Thanks!' : 'Helpful'}
+            </button>
+            <button 
+              className={`feedback-btn ${feedback === 'down' ? 'active' : ''}`}
+              onClick={() => handleFeedback('down')}
+              disabled={feedback === 'down'}
+            >
+              👎 {feedback === 'down' ? 'Noted' : 'Not helpful'}
+            </button>
+          </div>
         )}
       </div>
       
