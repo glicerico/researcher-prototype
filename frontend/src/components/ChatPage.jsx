@@ -15,7 +15,6 @@ const ChatPage = () => {
     sessionId,
     messages,
     personality,
-    userId,
     updateSessionId,
     updateMessages,
     updateConversationTopics,

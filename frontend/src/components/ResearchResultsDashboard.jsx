@@ -23,7 +23,7 @@ const ResearchResultsDashboard = () => {
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [expandedTopics, setExpandedTopics] = useState(new Set());
   const [bookmarkedFindings, setBookmarkedFindings] = useState(new Set());
-  const [readingTimers, setReadingTimers] = useState(new Map());
+  // Removed unused readingTimers state
   const [filters, setFilters] = useState({
     searchTerm: '',
     dateRange: 'all',
@@ -33,7 +33,6 @@ const ResearchResultsDashboard = () => {
   });
   const scrollContainerRef = useRef(null);
   const scrollPositionRef = useRef(null);
-  const observersRef = useRef(new Map());
 
   // Custom link renderer to open external links in new tab
   const LinkRenderer = ({ href, children, ...props }) => {
@@ -123,7 +122,7 @@ const ResearchResultsDashboard = () => {
   // Mark research notifications as read when user visits this page (only once)
   useEffect(() => {
     markResearchNotificationsRead();
-  }, []); // Run only once when component mounts
+  }, [markResearchNotificationsRead]);
 
 
 
