@@ -242,6 +242,21 @@ class ProfileManager:
         """
         return self.storage.list_directories(self.users_path)
 
+    def delete_all_users(self) -> bool:
+        """Delete all users and their data."""
+        users_dir = self.storage._get_file_path(self.users_path)
+
+        try:
+            import shutil
+
+            if users_dir.exists():
+                shutil.rmtree(users_dir)
+            users_dir.mkdir(parents=True, exist_ok=True)
+            return True
+        except Exception as e:
+            logger.error(f"Error deleting all users: {str(e)}")
+            return False
+
     def get_personality(self, user_id: str) -> Dict[str, Any]:
         """
         Get a user's personality configuration.

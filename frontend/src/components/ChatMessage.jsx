@@ -8,6 +8,34 @@ const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUp
   const [showSources, setShowSources] = useState(false);
   const [feedback, setFeedback] = useState(null);
 
+  // Custom link renderer to open external links in new tab
+  const LinkRenderer = ({ href, children, ...props }) => {
+    // Check if it's an external link
+    const isExternal = href && (href.startsWith('http://') || href.startsWith('https://'));
+    
+    if (isExternal) {
+      return (
+        <a 
+          href={href} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          onClick={(e) => e.stopPropagation()} // Prevent parent click handlers from interfering
+          {...props}
+        >
+          {children}
+        </a>
+      );
+    }
+    
+    // Internal links or non-http links use default behavior
+    return <a href={href} {...props}>{children}</a>;
+  };
+
+  // ReactMarkdown components configuration
+  const markdownComponents = {
+    a: LinkRenderer
+  };
+
   // Split content into main response and sources
   const parts = content.split('\n\n**Sources:**');
   const mainContent = parts[0];
@@ -46,7 +74,7 @@ const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUp
   return (
     <div className={`message ${role}`}>
       <div className="message-content">
-        <ReactMarkdown>{mainContent}</ReactMarkdown>
+        <ReactMarkdown components={markdownComponents}>{mainContent}</ReactMarkdown>
         {sourcesContent && (
           <div className="sources-container">
             <button 
@@ -56,7 +84,7 @@ const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUp
               {showSources ? 'Hide Sources' : 'Show Sources'}
             </button>
             {showSources && (
-              <ReactMarkdown>{`**Sources:**${sourcesContent}`}</ReactMarkdown>
+              <ReactMarkdown components={markdownComponents}>{`**Sources:**${sourcesContent}`}</ReactMarkdown>
             )}
           </div>
         )}

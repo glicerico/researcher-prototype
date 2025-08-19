@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useCallback, useRef } from 'react';
-import { getUsers, createUser, getCurrentUser } from '../services/api';
+import { getUsers, createUser, getCurrentUser, deleteUser } from '../services/api';
 import { generateDisplayName } from '../utils/userUtils';
 import '../styles/UserDropdown.css';
 
@@ -142,6 +142,20 @@ const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName, profi
       setIsLoading(false);
     }
   };
+
+  const handleDeleteCurrentUser = async () => {
+    if (!currentUserId) return;
+    if (!window.confirm('Are you sure you want to delete this user?')) return;
+    try {
+      await deleteUser();
+      onUserSelected('', '');
+      setIsDropdownOpen(false);
+      setUsers(users.filter((u) => u.user_id !== currentUserId));
+    } catch (error) {
+      console.error('Error deleting user:', error);
+      setError('Failed to delete user');
+    }
+  };
   
   return (
     <div className="user-dropdown" ref={dropdownRef}>
@@ -241,6 +255,15 @@ const UserDropdown = ({ onUserSelected, currentUserId, currentDisplayName, profi
                   }}>Cancel</button>
                 </div>
               </div>
+            )}
+
+            {currentUserId && !isCreatingUser && (
+              <button
+                className="delete-user-button"
+                onClick={handleDeleteCurrentUser}
+              >
+                Delete Current User
+              </button>
             )}
           </div>
         </div>

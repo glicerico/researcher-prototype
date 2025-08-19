@@ -251,6 +251,10 @@
   padding: 24px;
 }
 
+.danger-section {
+  margin-top: 24px;
+}
+
 .overview-tab, .flows-tab, .editor-tab {
   /* Ensures content inside tabs stretches if needed */
   height: 100%;
