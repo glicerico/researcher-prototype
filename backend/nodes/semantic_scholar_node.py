@@ -8,7 +8,7 @@ from typing import Dict, Any, List
 import requests
 from datetime import datetime
 from nodes.base_api_search_node import BaseAPISearchNode
-from nodes.base import ChatState, logger
+from nodes.base import ChatState, logger, config
 
 
 class SemanticScholarSearchNode(BaseAPISearchNode):
@@ -20,6 +20,9 @@ class SemanticScholarSearchNode(BaseAPISearchNode):
         self.headers = {
             "User-Agent": "ResearcherPrototype/1.0 (researcher@example.com)"
         }
+        # Include API key header if configured to improve rate limits
+        if getattr(config, 'SEMANTIC_SCHOLAR_API_KEY', None):
+            self.headers["x-api-key"] = config.SEMANTIC_SCHOLAR_API_KEY
     
     def validate_config(self) -> bool:
         """Semantic Scholar API is free and doesn't require API keys."""
@@ -69,6 +72,16 @@ class SemanticScholarSearchNode(BaseAPISearchNode):
                         "api_version": "v1",
                         "timestamp": datetime.now().isoformat()
                     }
+                }
+            elif response.status_code == 429:
+                return {
+                    "success": False,
+                    "error": (
+                        "Semantic Scholar rate limited (429). Set SEMANTIC_SCHOLAR_API_KEY "
+                        "to increase limits per https://www.semanticscholar.org/product/api#api-key-form"
+                    ),
+                    "results": [],
+                    "total_count": 0
                 }
             else:
                 return {

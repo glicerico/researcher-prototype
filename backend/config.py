@@ -30,6 +30,9 @@ REDDIT_USER_AGENT = os.getenv("REDDIT_USER_AGENT", "ResearcherPrototype:1.0 (by 
 # PubMed API configuration (email recommended but not required)
 PUBMED_EMAIL = os.getenv("PUBMED_EMAIL", "researcher@example.com")
 
+# Semantic Scholar API key (optional, increases rate limits)
+SEMANTIC_SCHOLAR_API_KEY = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
+
 # Zep configuration
 ZEP_API_KEY = os.getenv("ZEP_API_KEY")
 ZEP_ENABLED = os.getenv("ZEP_ENABLED", "false").lower() == "true"
