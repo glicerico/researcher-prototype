@@ -128,12 +128,5 @@ class BaseAPISearchNode(ABC):
         
         return state
     
-    def extract_scope_filters(self, state: ChatState) -> List[str]:
-        """Extract scope filters from routing analysis."""
-        routing_analysis = state.get("routing_analysis", {})
-        return routing_analysis.get("scope_filters", [])
+
     
-    def get_source_preference(self, state: ChatState) -> str:
-        """Get preferred source from routing analysis."""
-        routing_analysis = state.get("routing_analysis", {})
-        return routing_analysis.get("source_preference", "auto")

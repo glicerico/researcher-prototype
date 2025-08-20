@@ -44,11 +44,7 @@ class SemanticScholarSearchNode(BaseAPISearchNode):
                 "fields": "paperId,title,abstract,authors,year,citationCount,venue,url,openAccessPdf,fieldsOfStudy"
             }
             
-            # Add time filters if scope indicates recent research
-            scope_filters = kwargs.get("scope_filters", [])
-            if "recent" in scope_filters:
-                current_year = datetime.now().year
-                params["year"] = f"{current_year-2}-{current_year}"  # Last 3 years
+
             
             # Make API request
             response = requests.get(
@@ -154,27 +150,4 @@ semantic_scholar_search_node_instance = SemanticScholarSearchNode()
 
 async def semantic_scholar_search_node(state: ChatState) -> ChatState:
     """Semantic Scholar search node entry point."""
-    # Extract scope filters for specialized search
-    scope_filters = semantic_scholar_search_node_instance.extract_scope_filters(state)
-    
-    # Pass scope filters to the search
-    modified_state = await semantic_scholar_search_node_instance.execute_search_node(state)
-    
-    # Override the search method call to pass scope filters
-    if "semantic_scholar" in modified_state["module_results"] and modified_state["module_results"]["semantic_scholar"]["success"]:
-        # Re-run search with proper scope filters if needed
-        refined_query = state.get("workflow_context", {}).get("refined_search_query")
-        original_query = modified_state["module_results"]["semantic_scholar"]["query_used"]
-        query = refined_query if refined_query else original_query
-        
-        search_results = await semantic_scholar_search_node_instance.search(
-            query, 
-            scope_filters=scope_filters
-        )
-        
-        if search_results.get("success", False):
-            formatted_content = semantic_scholar_search_node_instance.format_results(search_results)
-            modified_state["module_results"]["semantic_scholar"]["result"] = formatted_content
-            modified_state["module_results"]["semantic_scholar"]["total_count"] = search_results.get("total_count", 0)
-    
-    return modified_state
+    return await semantic_scholar_search_node_instance.execute_search_node(state)

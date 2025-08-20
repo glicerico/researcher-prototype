@@ -84,8 +84,6 @@ async def router_node(state: ChatState) -> ChatState:
         module = routing_result.decision.lower()
         reason = routing_result.reason
         complexity = routing_result.complexity
-        source_preference = routing_result.source_preference
-        scope_filters = routing_result.scope_filters
 
         # Validate module name
         valid_modules = ["chat", "search", "analyzer", "academic_search", "social_search", "medical_search"]
@@ -98,13 +96,11 @@ async def router_node(state: ChatState) -> ChatState:
             "decision": module,
             "reason": reason,
             "complexity": complexity,
-            "source_preference": source_preference,
-            "scope_filters": scope_filters,
             "model_used": config.ROUTER_MODEL,
             "context_messages_used": len(router_messages) - 1,  # Excluding system message
         }
 
-        logger.info(f"🔀 Router: Selected module '{module}' (complexity: {complexity}) for message: \"{display_msg}\"")
+        logger.info(f"🔀 Router: Selected module '{module}' for message: \"{display_msg}\"")
         logger.debug(f"Routing reason: {reason}")
 
     except Exception as e:

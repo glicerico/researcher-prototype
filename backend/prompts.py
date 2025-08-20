@@ -20,20 +20,7 @@ Analyze the conversation history to classify the request into one of these categ
    Examples: "Medical research on diabetes treatment", "Clinical studies on new cancer drugs", "Biomedical papers about gene therapy"
 6. analyzer - Requests to analyze, process, summarize data or complex problem-solving.
 
-Additionally, determine the preferred source and scope filters:
 
-SOURCE PREFERENCES:
-- auto: Let the system choose the best source automatically
-- perplexity: General web search with comprehensive results
-- semantic_scholar: Academic and research papers  
-- reddit: Community discussions and social sentiment
-- pubmed: Medical and biomedical research
-
-SCOPE FILTERS (can combine multiple):
-- recent: Focus on recent information (last 1-3 years)
-- academic: Academic/scholarly sources preferred
-- medical: Medical/health-related content
-- social: Community discussions and public opinion
 
 {memory_context_section}
 """

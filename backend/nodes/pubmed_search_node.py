@@ -50,17 +50,7 @@ class PubMedSearchNode(BaseAPISearchNode):
                 'tool': 'ResearcherPrototype'
             }
             
-            # Add date filters if scope indicates recent research
-            scope_filters = kwargs.get("scope_filters", [])
-            if "recent" in scope_filters:
-                # Search last 2 years for medical research
-                end_date = datetime.now()
-                start_date = end_date - timedelta(days=730)
-                date_filter = f"{start_date.strftime('%Y/%m/%d')}:{end_date.strftime('%Y/%m/%d')}[pdat]"
-                search_params['term'] = f"({query}) AND {date_filter}"
-            elif "medical" in scope_filters:
-                # Add medical research focus
-                search_params['term'] = f"({query}) AND (clinical[sb] OR systematic[sb])"
+
             
             # Search for PMIDs
             search_response = requests.get(
@@ -306,60 +296,4 @@ pubmed_search_node_instance = PubMedSearchNode()
 
 async def pubmed_search_node(state: ChatState) -> ChatState:
     """PubMed search node entry point."""
-    # Extract scope filters for specialized medical search
-    scope_filters = pubmed_search_node_instance.extract_scope_filters(state)
-    
-    # Override the search method call to pass scope filters
-    refined_query = state.get("workflow_context", {}).get("refined_search_query")
-    from utils import get_last_user_message
-    original_user_query = get_last_user_message(state.get("messages", []))
-    query_to_search = refined_query if refined_query else original_user_query
-    
-    if not query_to_search:
-        state["module_results"]["pubmed"] = {
-            "success": False,
-            "error": "No query found for PubMed search (neither refined nor original).",
-        }
-        return state
-    
-    logger.info(f"🔍 PubMed: Searching for medical research: \"{query_to_search[:75]}...\"")
-    
-    # Perform search with scope filters
-    try:
-        search_results = await pubmed_search_node_instance.search(
-            query_to_search,
-            scope_filters=scope_filters
-        )
-        
-        if search_results.get("success", False):
-            formatted_content = pubmed_search_node_instance.format_results(search_results)
-            result_count = search_results.get("total_count", 0)
-            logger.info(f'🔍 PubMed: Found {result_count} medical research papers')
-            
-            state["module_results"]["pubmed"] = {
-                "success": True,
-                "result": formatted_content,
-                "query_used": query_to_search,
-                "total_count": result_count,
-                "source": "PubMed",
-                "metadata": search_results.get("metadata", {})
-            }
-        else:
-            error_message = search_results.get("error", "Unknown error in PubMed search")
-            logger.error(f"PubMed search failed: {error_message}")
-            state["module_results"]["pubmed"] = {
-                "success": False,
-                "error": error_message,
-                "source": "PubMed"
-            }
-            
-    except Exception as e:
-        error_message = f"Error in PubMed search: {str(e)}"
-        logger.error(error_message, exc_info=True)
-        state["module_results"]["pubmed"] = {
-            "success": False,
-            "error": error_message,
-            "source": "PubMed"
-        }
-    
-    return state
+    return await pubmed_search_node_instance.execute_search_node(state)

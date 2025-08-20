@@ -114,12 +114,7 @@ class RedditSearchNode(BaseAPISearchNode):
                 'restrict_sr': 'true' if subreddit else 'false'
             }
             
-            # Add time filters if scope indicates recent discussions
-            scope_filters = kwargs.get("scope_filters", [])
-            if "recent" in scope_filters:
-                params['t'] = 'week'  # Recent = past week
-            elif "social" in scope_filters:
-                params['sort'] = 'hot'  # Hot discussions for social context
+
             
             # Make API request
             response = requests.get(
