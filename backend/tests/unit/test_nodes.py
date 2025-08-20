@@ -62,8 +62,7 @@ class TestRouterNode:
         mock_structured = MagicMock()
         mock_routing_result = RoutingAnalysis(
             decision="chat",
-            reason="General conversation",
-            complexity=3  # int value between 1-10
+            reason="General conversation"
         )
         mock_structured.invoke.return_value = mock_routing_result
         mock_llm.with_structured_output.return_value = mock_structured
@@ -74,7 +73,7 @@ class TestRouterNode:
         assert result["current_module"] == "chat"
         assert result["routing_analysis"]["decision"] == "chat"
         assert result["routing_analysis"]["reason"] == "General conversation"
-        assert result["routing_analysis"]["complexity"] == 3
+
         assert "model_used" in result["routing_analysis"]
 
     @patch('nodes.router_node.ChatOpenAI')
@@ -86,8 +85,7 @@ class TestRouterNode:
         mock_structured = MagicMock()
         mock_routing_result = RoutingAnalysis(
             decision="search",
-            reason="User asking for current information",
-            complexity=5  # int value instead of string
+            reason="User asking for current information"
         )
         mock_structured.invoke.return_value = mock_routing_result
         mock_llm.with_structured_output.return_value = mock_structured
@@ -98,7 +96,7 @@ class TestRouterNode:
         assert result["current_module"] == "search"
         assert result["routing_analysis"]["decision"] == "search"
         assert result["routing_analysis"]["reason"] == "User asking for current information"
-        assert result["routing_analysis"]["complexity"] == 5
+
 
     @patch('nodes.router_node.ChatOpenAI')
     async def test_router_node_analyzer_routing(self, mock_openai, sample_chat_state):
@@ -109,8 +107,7 @@ class TestRouterNode:
         mock_structured = MagicMock()
         mock_routing_result = RoutingAnalysis(
             decision="analyzer",
-            reason="User requesting data analysis",
-            complexity=8  # int value instead of string
+            reason="User requesting data analysis"
         )
         mock_structured.invoke.return_value = mock_routing_result
         mock_llm.with_structured_output.return_value = mock_structured
@@ -128,8 +125,7 @@ class TestRouterNode:
         mock_structured = MagicMock()
         mock_routing_result = RoutingAnalysis(
             decision="chat",
-            reason="Continuing conversation",
-            complexity=2  # int value instead of string
+            reason="Continuing conversation"
         )
         mock_structured.invoke.return_value = mock_routing_result
         mock_llm.with_structured_output.return_value = mock_structured
@@ -147,8 +143,7 @@ class TestRouterNode:
         mock_structured = MagicMock()
         mock_routing_result = RoutingAnalysis(
             decision="invalid_module",
-            reason="Invalid routing decision",
-            complexity=1  # int value instead of string
+            reason="Invalid routing decision"
         )
         mock_structured.invoke.return_value = mock_routing_result
         mock_llm.with_structured_output.return_value = mock_structured

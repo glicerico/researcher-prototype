@@ -26,13 +26,11 @@ class TestRoutingAnalysis:
         """Test creating valid RoutingAnalysis."""
         analysis = RoutingAnalysis(
             decision="chat",
-            reason="General conversation",
-            complexity=1  # int, not string
+            reason="General conversation"
         )
         
         assert analysis.decision == "chat"
         assert analysis.reason == "General conversation"
-        assert analysis.complexity == 1
 
     def test_routing_analysis_all_decisions(self):
         """Test all valid routing decisions."""
@@ -41,22 +39,11 @@ class TestRoutingAnalysis:
         for decision in valid_decisions:
             analysis = RoutingAnalysis(
                 decision=decision,
-                reason=f"Test {decision}",
-                complexity=5  # int between 1-10
+                reason=f"Test {decision}"
             )
             assert analysis.decision == decision
 
-    def test_routing_analysis_all_complexities(self):
-        """Test all valid complexity levels."""
-        valid_complexities = [1, 5, 10]  # int values
-        
-        for complexity in valid_complexities:
-            analysis = RoutingAnalysis(
-                decision="chat",
-                reason="Test complexity",
-                complexity=complexity
-            )
-            assert analysis.complexity == complexity
+
 
     def test_routing_analysis_required_fields(self):
         """Test that all fields are required."""
@@ -66,8 +53,7 @@ class TestRoutingAnalysis:
         with pytest.raises(ValidationError):
             RoutingAnalysis(decision="chat")
         
-        with pytest.raises(ValidationError):
-            RoutingAnalysis(decision="chat", reason="Test")
+
 
 
 class TestAnalysisTask:

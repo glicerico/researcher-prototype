@@ -83,7 +83,6 @@ async def router_node(state: ChatState) -> ChatState:
         # routing_result is now a validated Pydantic RoutingAnalysis object
         module = routing_result.decision.lower()
         reason = routing_result.reason
-        complexity = routing_result.complexity
 
         # Validate module name
         valid_modules = ["chat", "search", "analyzer", "academic_search", "social_search", "medical_search"]
@@ -95,7 +94,6 @@ async def router_node(state: ChatState) -> ChatState:
         state["routing_analysis"] = {
             "decision": module,
             "reason": reason,
-            "complexity": complexity,
             "model_used": config.ROUTER_MODEL,
             "context_messages_used": len(router_messages) - 1,  # Excluding system message
         }

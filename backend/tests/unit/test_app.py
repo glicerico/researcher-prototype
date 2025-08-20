@@ -62,7 +62,7 @@ def test_chat_endpoint(mock_renderer_openai, mock_integrator_openai, mock_router
     mock_router_instance = MagicMock()
     mock_router_instance.with_structured_output.return_value.invoke.return_value.decision = "chat"
     mock_router_instance.with_structured_output.return_value.invoke.return_value.reason = "test"
-    mock_router_instance.with_structured_output.return_value.invoke.return_value.complexity = "low"
+
     mock_router_openai.return_value = mock_router_instance
 
     # Convert the test state to the format expected by the API
@@ -118,7 +118,7 @@ async def test_chat_graph(
     mock_router_instance = MagicMock()
     mock_router_instance.with_structured_output.return_value.invoke.return_value.decision = "chat"
     mock_router_instance.with_structured_output.return_value.invoke.return_value.reason = "test"
-    mock_router_instance.with_structured_output.return_value.invoke.return_value.complexity = "low"
+
     mock_router_openai.return_value = mock_router_instance
 
     # Run the graph using async invoke
