@@ -42,7 +42,9 @@ class RedditSearchNode(BaseAPISearchNode):
             )
             
             data = {
-                'grant_type': 'client_credentials'
+                'grant_type': 'client_credentials',
+                # Request minimal read scope
+                'scope': 'read'
             }
             
             headers = {

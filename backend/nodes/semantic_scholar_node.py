@@ -41,7 +41,8 @@ class SemanticScholarSearchNode(BaseAPISearchNode):
             params = {
                 "query": query,
                 "limit": min(limit, 100),  # API max is 100
-                "fields": "paperId,title,abstract,authors,year,citationCount,venue,url,openAccessPdf,fieldsOfStudy"
+                # Request nested fields explicitly to ensure stable response shape
+                "fields": "paperId,title,abstract,authors.name,year,citationCount,venue,url,openAccessPdf.url,fieldsOfStudy"
             }
             
 
