@@ -13,8 +13,28 @@ The **autonomous research engine** runs in the background, gathering high-qualit
 1. **Topic discovery** – after each chat message the `topic_extractor_node` suggests candidate topics.  
 2. **Subscription** – the UI lets you enable research per topic; selected topics are persisted in `storage_data/`.
 3. **Motivation model** – internal boredom / curiosity / tiredness / satisfaction drives decide when to launch a research cycle (default every ~2 h on average).  You can tweak rates & threshold via environment variables or debug APIs.
-4. **Graph workflow** – the research LangGraph (`research_graph_builder.py`) runs: query generation ➜ web search ➜ quality scoring ➜ deduplication ➜ storage.
+4. **Graph workflow** – the research LangGraph (`research_graph_builder.py`) runs: query generation ➜ multi-source search (web, academic, social, medical) ➜ quality scoring ➜ deduplication ➜ storage.
 5. **Review** – findings appear in the sidebar with summary, quality bars & source links.
+
+## Multi-Source Search Architecture
+
+The system uses an intelligent multi-source analyzer that replaces the previous single-choice router:
+
+### Intent Classification
+The `multi_source_analyzer_node` classifies user queries into three intents:
+- **chat**: General conversation, greetings, simple questions
+- **search**: Information gathering requiring external sources  
+- **analysis**: Deep analysis tasks using the analyzer node
+
+### Source Selection (Search Intent)
+For search queries, the system automatically selects up to 3 relevant sources:
+- **Web Search** (`search`): Current information, news, general topics
+- **Academic Search** (`academic_search`): Scholarly articles via Semantic Scholar
+- **Social Search** (`social_search`): Community discussions via Hacker News API
+- **Medical Search** (`medical_search`): Medical literature via PubMed
+
+### Parallel Execution
+The `source_coordinator_node` executes selected search sources concurrently using LangGraph's fan-out/fan-in pattern, then the `integrator_node` synthesizes results from all successful sources while gracefully handling any failures.
 
 ## Motivation System Mechanics
 
