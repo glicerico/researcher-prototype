@@ -73,3 +73,35 @@ graph TD
 ### Configuration
 
 Source selection logic is embedded in the multi-source analyzer's prompt system. No external configuration needed for basic operation. Advanced tuning available through prompt modifications in `prompts.py`.
+
+## Research Graph Multi-Source Integration
+
+The autonomous research engine (`research_graph_builder.py`) now uses the same multi-source architecture:
+
+### Research-Specific Enhancements
+- **Research Source Selector**: Topic-aware source selection for autonomous research
+- **Intelligent Prioritization**: Academic sources for scientific topics, medical sources for health topics
+- **Parallel Research**: Multiple sources queried simultaneously for comprehensive coverage
+- **Quality Assessment**: Results evaluated across source types before storage
+
+### Research Flow
+```mermaid
+graph TD
+    A[Research Topic] --> B[Query Generator]
+    B --> C[Research Source Selector]
+    C --> D[Source Coordinator]
+    
+    D --> E[Web Search]
+    D --> F[Academic Search]
+    D --> G[Social Search]
+    D --> H[Medical Search]
+    
+    E --> I[Integrator]
+    F --> I
+    G --> I
+    H --> I
+    
+    I --> J[Quality Assessor] --> K[Deduplication] --> L[Storage]
+```
+
+This ensures autonomous research benefits from the same comprehensive source coverage as interactive chat sessions.

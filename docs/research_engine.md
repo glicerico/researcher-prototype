@@ -13,7 +13,7 @@ The **autonomous research engine** runs in the background, gathering high-qualit
 1. **Topic discovery** – after each chat message the `topic_extractor_node` suggests candidate topics.  
 2. **Subscription** – the UI lets you enable research per topic; selected topics are persisted in `storage_data/`.
 3. **Motivation model** – internal boredom / curiosity / tiredness / satisfaction drives decide when to launch a research cycle (default every ~2 h on average).  You can tweak rates & threshold via environment variables or debug APIs.
-4. **Graph workflow** – the research LangGraph (`research_graph_builder.py`) runs: query generation ➜ multi-source search (web, academic, social, medical) ➜ quality scoring ➜ deduplication ➜ storage.
+4. **Graph workflow** – the research LangGraph (`research_graph_builder.py`) runs: initialization ➜ query generation ➜ source selection ➜ multi-source search coordination ➜ integration ➜ quality scoring ➜ deduplication ➜ storage.
 5. **Review** – findings appear in the sidebar with summary, quality bars & source links.
 
 ## Multi-Source Search Architecture
@@ -35,6 +35,30 @@ For search queries, the system automatically selects up to 3 relevant sources:
 
 ### Parallel Execution
 The `source_coordinator_node` executes selected search sources concurrently using LangGraph's fan-out/fan-in pattern, then the `integrator_node` synthesizes results from all successful sources while gracefully handling any failures.
+
+## Autonomous Research Multi-Source Flow
+
+The autonomous research engine now leverages the same multi-source capabilities as the chat system:
+
+### Research-Specific Source Selection
+1. **Research Source Selector** (`research_source_selector_node`): Analyzes research topics to select the most appropriate sources
+   - **Scientific/Technical Topics**: Academic + Web sources
+   - **Medical/Health Topics**: Medical + Academic sources  
+   - **Technology/Startup Topics**: Web + Social sources
+   - **Current Events**: Web + Social sources
+   - **Academic Fields**: Academic + Medical (if health-related)
+
+### Enhanced Research Workflow
+```
+Research Topic → Query Generation → Source Selection → Multi-Source Search → Integration → Quality Assessment → Deduplication → Storage
+```
+
+### Benefits for Autonomous Research
+- **Comprehensive Coverage**: Multiple perspectives on each research topic
+- **Source Diversity**: Academic rigor combined with current developments
+- **Parallel Efficiency**: All sources searched simultaneously
+- **Quality Filtering**: Results assessed across multiple source types
+- **Automatic Relevance**: Sources selected based on topic characteristics
 
 ## Motivation System Mechanics
 

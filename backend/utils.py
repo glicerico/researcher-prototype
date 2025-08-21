@@ -344,7 +344,8 @@ def get_graph_flow_data(graph_type: str = "main") -> Dict[str, Any]:
         nodes = [
             {"id": "research_initializer", "type": "start"},
             {"id": "research_query_generator", "type": "process"},
-            {"id": "search", "type": "process"},
+            {"id": "research_source_selector", "type": "process"},
+            {"id": "source_coordinator", "type": "process"},
             {"id": "integrator", "type": "process"},
             {"id": "response_renderer", "type": "process"},
             {"id": "research_quality_assessor", "type": "process"},
@@ -354,8 +355,9 @@ def get_graph_flow_data(graph_type: str = "main") -> Dict[str, Any]:
         
         edges = [
             {"from": "research_initializer", "to": "research_query_generator"},
-            {"from": "research_query_generator", "to": "search"},
-            {"from": "search", "to": "integrator"},
+            {"from": "research_query_generator", "to": "research_source_selector"},
+            {"from": "research_source_selector", "to": "source_coordinator"},
+            {"from": "source_coordinator", "to": "integrator"},
             {"from": "integrator", "to": "response_renderer"},
             {"from": "response_renderer", "to": "research_quality_assessor"},
             {"from": "research_quality_assessor", "to": "research_deduplication"},

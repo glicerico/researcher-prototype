@@ -216,6 +216,37 @@ INSTRUCTIONS:
 Generate a single, well-crafted research query that will effectively find new and relevant information about this topic.
 """
 
+RESEARCH_SOURCE_SELECTION_PROMPT = """
+You are an expert research coordinator selecting the best information sources for autonomous research.
+
+RESEARCH TOPIC:
+Name: {topic_name}
+Description: {topic_description}
+Query: {research_query}
+
+Your task is to select the most appropriate sources for comprehensive research on this topic.
+
+AVAILABLE SOURCES:
+- search: Web search for current information, news, recent developments
+- academic_search: Scholarly articles, research papers, academic publications  
+- social_search: Community discussions, trends, public opinion (Hacker News)
+- medical_search: Medical literature, health information, clinical studies
+
+RESEARCH SOURCE SELECTION GUIDELINES:
+- For scientific/technical topics: prioritize academic_search + search
+- For medical/health topics: prioritize medical_search + academic_search  
+- For technology/startup topics: prioritize search + social_search
+- For current events: prioritize search + social_search
+- For established academic fields: prioritize academic_search + medical_search (if health-related)
+- Always include 'search' for recent developments unless purely academic
+- Select 2-3 sources maximum for research efficiency
+
+Respond with:
+- intent: Always "search" for research
+- sources: Array of 2-3 most relevant source names from the available options
+
+Focus on sources that will provide the most comprehensive and up-to-date information for autonomous research."""
+
 RESEARCH_FINDINGS_QUALITY_ASSESSMENT_PROMPT = """Current date and time: {current_time}.
 You are an expert research quality assessor. Evaluate the quality of research findings based on multiple criteria.
 
