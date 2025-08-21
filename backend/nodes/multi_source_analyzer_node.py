@@ -120,6 +120,7 @@ async def multi_source_analyzer_node(state: ChatState) -> ChatState:
         }
 
         logger.info(f"🔍 Multi-Source Analyzer: Intent '{intent}' with sources: {sources}")
+        logger.info(f"🔍 Multi-Source Analyzer: State after setting - intent: {state.get('intent')}, sources: {state.get('selected_sources')}")
         logger.debug(f"Analysis reason: {reason}")
 
     except Exception as e:

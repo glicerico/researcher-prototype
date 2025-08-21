@@ -50,7 +50,9 @@ def create_chat_graph():
     def intent_router(state: ChatState) -> str:
         """Route based on intent: chat, search, or analysis."""
         intent = state.get("intent", "chat")
-        logger.info(f"⚡ Flow: Intent routing to '{intent}'")
+        sources = state.get("selected_sources", [])
+        logger.info(f"⚡ Flow: Intent routing to '{intent}' (sources: {sources})")
+        logger.debug(f"⚡ Flow: Full routing analysis: {state.get('routing_analysis', {})}")
         return intent
     
     # Build the graph
