@@ -48,33 +48,77 @@ async def integrator_node(state: ChatState) -> ChatState:
     else:
         logger.debug("🧠 Integrator: ⚠️ No memory context available")
 
-    # Add search results to context from all search sources
-    search_sources = ["search", "academic_search", "social_search", "medical_search"]
+    # Enhanced multi-source processing with weighting and cross-referencing
+    source_config = {
+        "search": {"weight": 0.8, "name": "Web Search", "type": "current_info"},
+        "academic_search": {"weight": 0.9, "name": "Academic Papers", "type": "scholarly"},
+        "social_search": {"weight": 0.6, "name": "Social Media", "type": "sentiment"},
+        "medical_search": {"weight": 0.9, "name": "Medical Research", "type": "clinical"},
+        "analyzer": {"weight": 0.7, "name": "Analysis", "type": "analytical"}
+    }
+    
     all_citations = []
     all_search_sources = []
+    successful_sources = []
+    failed_sources = []
     
-    for source in search_sources:
+    # Process each potential source
+    for source, config in source_config.items():
         search_results_data = state.get("module_results", {}).get(source, {})
+        
         if search_results_data.get("success", False):
             search_result_text = search_results_data.get("result", "")
             if search_result_text:
-                # Build source-specific context
-                source_name = search_results_data.get("source", source.replace("_", " ").title())
-                search_context = f"INFORMATION FROM {source_name.upper()}:\n{search_result_text}\n"
+                # Build weighted source-specific context
+                source_name = config["name"]
+                source_weight = config["weight"]
+                source_type = config["type"]
+                
+                # Create enhanced context with metadata
+                search_context = f"""INFORMATION FROM {source_name.upper()} (Reliability: {source_weight:.1f}/1.0, Type: {source_type}):
+{search_result_text}
+"""
                 context_sections.append(search_context)
-                logger.info(f"🧠 Integrator: Added {source_name} results to system context")
+                successful_sources.append({"name": source_name, "type": source_type, "weight": source_weight})
+                logger.info(f"🧠 Integrator: ✅ Added {source_name} results (weight: {source_weight}) to context")
                 
                 # Collect citations and sources for renderer
                 citations = search_results_data.get("citations", [])
                 search_sources_data = search_results_data.get("search_sources", [])
                 all_citations.extend(citations)
                 all_search_sources.extend(search_sources_data)
+        else:
+            # Track failed sources for graceful degradation reporting
+            if source in state.get("selected_sources", []):
+                failed_sources.append(source_config[source]["name"])
+                logger.warning(f"🧠 Integrator: ⚠️ {source_config[source]['name']} failed or returned no results")
     
-    # Pass combined citation data to renderer
+    # Add multi-source analysis summary to context
+    if len(successful_sources) > 1:
+        source_summary = f"""
+MULTI-SOURCE ANALYSIS SUMMARY:
+Successfully retrieved information from {len(successful_sources)} sources: {', '.join([s['name'] for s in successful_sources])}.
+When synthesizing, consider source reliability weights and cross-reference information between sources.
+Highlight areas where sources agree or provide complementary information.
+"""
+        context_sections.insert(0, source_summary)
+        logger.info(f"🧠 Integrator: 📊 Multi-source analysis with {len(successful_sources)} sources")
+    elif len(successful_sources) == 1:
+        logger.info(f"🧠 Integrator: Single source analysis: {successful_sources[0]['name']}")
+    
+    # Report any failures (graceful degradation)  
+    if failed_sources:
+        failure_note = f"\nNOTE: Some sources were unavailable: {', '.join(failed_sources)}. Response is based on available sources only."
+        state["workflow_context"]["source_failures"] = failed_sources
+        state["workflow_context"]["failure_note"] = failure_note
+        logger.info(f"🧠 Integrator: ⚠️ {len(failed_sources)} sources failed, graceful degradation in effect")
+    
+    # Pass enhanced citation data and source metadata to renderer
     if all_citations or all_search_sources:
         state["workflow_context"]["citations"] = all_citations
         state["workflow_context"]["search_sources"] = all_search_sources
-        logger.info("🧠 Integrator: Passing combined citation data from all sources to the renderer.")
+        state["workflow_context"]["successful_sources"] = successful_sources
+        logger.info(f"🧠 Integrator: 📚 Passing {len(all_citations)} citations from {len(successful_sources)} sources to renderer")
 
     # Add analysis results to context if available
     analysis_results = state.get("module_results", {}).get("analyzer", {})

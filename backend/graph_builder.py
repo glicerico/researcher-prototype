@@ -15,7 +15,7 @@ from utils import visualize_langgraph
 
 # Import all node functions
 from nodes.initializer_node import initializer_node
-from nodes.router_node import router_node
+from nodes.multi_source_analyzer_node import multi_source_analyzer_node
 from nodes.search_optimizer_node import search_prompt_optimizer_node
 from nodes.analysis_refiner_node import analysis_task_refiner_node
 from nodes.search_node import search_node
@@ -23,10 +23,11 @@ from nodes.analyzer_node import analyzer_node
 from nodes.integrator_node import integrator_node
 from nodes.response_renderer_node import response_renderer_node
 
-# Import new specialized search nodes
+# Import specialized search nodes
 from nodes.semantic_scholar_node import semantic_scholar_search_node
 from nodes.reddit_search_node import reddit_search_node
 from nodes.pubmed_search_node import pubmed_search_node
+from nodes.source_coordinator_node import source_coordinator_node
 
 
 def setup_tracing():
@@ -39,76 +40,70 @@ def setup_tracing():
 
 
 def create_chat_graph():
-    """Create a LangGraph graph for orchestrating the flow of the interaction."""
+    """Create a LangGraph graph for orchestrating multi-source information gathering."""
     
     # Configure LangSmith tracing if enabled
     if LANGCHAIN_TRACING_V2 and LANGCHAIN_API_KEY:
         setup_tracing()
     
-    # Define the router function for conditional branching
-    def router(state: ChatState) -> str:
-        """Route to the appropriate module based on the current_module state."""
-        logger.info(f"⚡ Flow: Routing to '{state['current_module']}' module")
-        return state["current_module"]
+    # Define the intent router function
+    def intent_router(state: ChatState) -> str:
+        """Route based on intent: chat or search."""
+        intent = state.get("intent", "chat")
+        logger.info(f"⚡ Flow: Intent routing to '{intent}'")
+        return intent
     
-    # Build and return the graph
+    # Build the graph
     builder = StateGraph(ChatState)
     
-    # Add all nodes
+    # Add core nodes
     builder.add_node("initializer", initializer_node)
-    builder.add_node("router", router_node)
-    builder.add_node("search_prompt_optimizer", search_prompt_optimizer_node)
-    builder.add_node("analysis_task_refiner", analysis_task_refiner_node)
-    builder.add_node("search", search_node)
-    builder.add_node("analyzer", analyzer_node)
+    builder.add_node("multi_source_analyzer", multi_source_analyzer_node)
     builder.add_node("integrator", integrator_node)
     builder.add_node("response_renderer", response_renderer_node)
     
-    # Add specialized search nodes
+    # Add search-related nodes
+    builder.add_node("search_prompt_optimizer", search_prompt_optimizer_node)
+    builder.add_node("search", search_node)
     builder.add_node("academic_search", semantic_scholar_search_node)
     builder.add_node("social_search", reddit_search_node)
     builder.add_node("medical_search", pubmed_search_node)
     
-    # Define the workflow
-    builder.set_entry_point("initializer")
-    builder.add_edge("initializer", "router")
+    # Add analysis nodes  
+    builder.add_node("analysis_task_refiner", analysis_task_refiner_node)
+    builder.add_node("analyzer", analyzer_node)
     
-    # From router, conditionally go to different modules
+    # Add source coordinator node for parallel execution
+    builder.add_node("source_coordinator", source_coordinator_node)
+    
+    # Define the main workflow
+    builder.set_entry_point("initializer")
+    builder.add_edge("initializer", "multi_source_analyzer")
+    
+    # Route based on intent: chat or search
     builder.add_conditional_edges(
-        "router",
-        router,
+        "multi_source_analyzer",
+        intent_router,
         {
-            "search": "search_prompt_optimizer",
-            "analyzer": "analysis_task_refiner",
-            "academic_search": "academic_search",
-            "social_search": "social_search", 
-            "medical_search": "medical_search",
-            "chat": "integrator" 
+            "chat": "integrator",
+            "search": "search_prompt_optimizer"
         }
     )
     
-    # Connect the search optimization to search
-    builder.add_edge("search_prompt_optimizer", "search")
-    builder.add_edge("search", "integrator")
+    # After query optimization, coordinate parallel searches
+    builder.add_edge("search_prompt_optimizer", "source_coordinator")
     
-    # Connect specialized search nodes directly to integrator
-    builder.add_edge("academic_search", "integrator")
-    builder.add_edge("social_search", "integrator")
-    builder.add_edge("medical_search", "integrator")
+    # Source coordinator goes directly to integrator after parallel execution
+    builder.add_edge("source_coordinator", "integrator")
     
-    # Connect the analysis refiner to analyzer
-    builder.add_edge("analysis_task_refiner", "analyzer")
-    builder.add_edge("analyzer", "integrator")
-    
-    # Connect the integrator to the response renderer
+    # Final processing
     builder.add_edge("integrator", "response_renderer")
-    
-    # End the graph after rendering the response (topic extraction moved to background)
     builder.add_edge("response_renderer", END)
     
     # Compile the graph
     graph = builder.compile()
-
+    
+    logger.info("🔗 Multi-source graph compiled successfully")
     return graph
 
 

@@ -40,9 +40,12 @@ async def response_renderer_node(state: ChatState) -> ChatState:
         )
         return state
 
-    # Retrieve citation data from the workflow context
+    # Retrieve enhanced citation and source data from the workflow context
     citations = state.get("workflow_context", {}).get("citations", [])
     search_sources = state.get("workflow_context", {}).get("search_sources", [])
+    successful_sources = state.get("workflow_context", {}).get("successful_sources", [])
+    source_failures = state.get("workflow_context", {}).get("source_failures", [])
+    failure_note = state.get("workflow_context", {}).get("failure_note", "")
 
     # Log the raw response
     display_raw = raw_response[:75] + "..." if len(raw_response) > 75 else raw_response
@@ -155,26 +158,42 @@ async def response_renderer_node(state: ChatState) -> ChatState:
         # Apply the replacement to the stylized response
         final_response = re.sub(r"\[(\d+)\]", replace_citation, stylized_response)
 
-        # Format and append the sources section
-        if search_sources:
-            sources_list = []
-            for i, s in enumerate(search_sources, 1):  # Start numbering from 1
-                title = s.get("title", "Unknown Title")
-                url = s.get("url")
-                if url:
-                    sources_list.append(f"[{i}]. [{title}]({url})")
+        # Enhanced sources section with multi-source attribution
+        if search_sources or successful_sources:
+            sources_section_parts = []
+            
+            # Add source attribution summary if multiple sources were used
+            if len(successful_sources) > 1:
+                source_names = [s.get("name", "Unknown") for s in successful_sources]
+                attribution = f"\n\n*Information synthesized from {len(successful_sources)} sources: {', '.join(source_names)}*"
+                sources_section_parts.append(attribution)
+            
+            # Add detailed sources list
+            if search_sources:
+                sources_list = []
+                for i, s in enumerate(search_sources, 1):  # Start numbering from 1
+                    title = s.get("title", "Unknown Title")
+                    url = s.get("url")
+                    if url:
+                        sources_list.append(f"[{i}]. [{title}]({url})")
 
-            if sources_list:
-                sources_section = "\n\n**Sources:**\n" + "\n".join(sources_list)
-                final_response += sources_section
+                if sources_list:
+                    sources_section_parts.append("\n**Sources:**\n" + "\n".join(sources_list))
+            
+            # Add failure notice if any sources failed
+            if failure_note:
+                sources_section_parts.append(f"\n*{failure_note.strip()}*")
+                
+            final_response += "".join(sources_section_parts)
 
         # Add follow-up questions to the workflow context to be used in the API response
         if follow_up_questions:
             state["workflow_context"]["follow_up_questions"] = follow_up_questions
 
-        # Log the formatted response
+        # Log the formatted response with source info
         display_formatted = final_response[:75] + "..." if len(final_response) > 75 else final_response
-        logger.info(f'✨ Renderer: Produced formatted response: "{display_formatted}"')
+        source_info = f" (from {len(successful_sources)} sources)" if successful_sources else ""
+        logger.info(f'✨ Renderer: Produced formatted response: "{display_formatted}"{source_info}')
 
         logger.debug(
             f"Renderer processed response. Original length: {len(raw_response)}, Formatted length: {len(final_response)}"

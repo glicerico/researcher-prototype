@@ -11,6 +11,14 @@ class RoutingAnalysis(BaseModel):
     reason: str = Field(description="Brief explanation of why this routing decision was made")
 
 
+class MultiSourceAnalysis(BaseModel):
+    """Structured output for multi-source search analysis."""
+    intent: str = Field(description="The intent classification: chat or search")
+    reason: str = Field(description="Brief explanation of why this intent was selected")
+    sources: List[str] = Field(default=[], description="List of sources to execute for search intent: search, academic_search, social_search, medical_search, analyzer")
+    confidence: float = Field(description="Confidence score 0.0-1.0 for the analysis")
+
+
 class AnalysisTask(BaseModel):
     """Structured analysis task description."""
     objective: str = Field(description="The primary objective of the analysis task")
