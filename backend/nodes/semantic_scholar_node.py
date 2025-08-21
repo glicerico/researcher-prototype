@@ -50,9 +50,9 @@ class SemanticScholarSearchNode(BaseAPISearchNode):
             
 
             
-            # Make API request
+            # Make API request (using regular search endpoint which respects limit)
             response = requests.get(
-                f"{self.base_url}/paper/search/bulk",
+                f"{self.base_url}/paper/search",
                 params=params,
                 headers=self.headers,
                 timeout=30
