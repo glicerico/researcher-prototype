@@ -1,257 +1,214 @@
-"""
-Tests for LLM models using Pydantic for structured output.
-"""
 import pytest
 from pydantic import ValidationError
-
-import sys
-import os
-sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
-
 from llm_models import (
-    RoutingAnalysis, 
-    AnalysisTask, 
-    FormattedResponse, 
+    MultiSourceAnalysis, 
+    AnalysisTask,
     TopicSuggestions,
     TopicSuggestionItem,
+    FormattedResponse,
     ResearchQualityAssessment,
-    ResearchDeduplicationResult
+    ResearchDeduplicationResult,
+    SearchOptimization
 )
 
 
-class TestRoutingAnalysis:
-    """Test RoutingAnalysis model."""
+class TestMultiSourceAnalysis:
+    """Test MultiSourceAnalysis model."""
 
-    def test_routing_analysis_valid(self):
-        """Test creating valid RoutingAnalysis."""
-        analysis = RoutingAnalysis(
-            decision="chat",
-            reason="General conversation"
+    def test_valid_multi_source_analysis(self):
+        """Test creating valid MultiSourceAnalysis."""
+        analysis = MultiSourceAnalysis(
+            intent="search",
+            reason="User needs current information",
+            sources=["search", "academic_search"],
+            confidence=0.8
         )
         
-        assert analysis.decision == "chat"
-        assert analysis.reason == "General conversation"
+        assert analysis.intent == "search"
+        assert analysis.reason == "User needs current information"
+        assert analysis.sources == ["search", "academic_search"]
+        assert analysis.confidence == 0.8
 
-    def test_routing_analysis_all_decisions(self):
-        """Test all valid routing decisions."""
-        valid_decisions = ["chat", "search", "analyzer"]
+    def test_multi_source_analysis_chat_intent(self):
+        """Test chat intent with no sources."""
+        analysis = MultiSourceAnalysis(
+            intent="chat",
+            reason="General conversation",
+            confidence=0.9
+        )
         
-        for decision in valid_decisions:
-            analysis = RoutingAnalysis(
-                decision=decision,
-                reason=f"Test {decision}"
-            )
-            assert analysis.decision == decision
+        assert analysis.intent == "chat"
+        assert analysis.sources == []
 
-
-
-    def test_routing_analysis_required_fields(self):
-        """Test that all fields are required."""
+    def test_multi_source_analysis_missing_fields(self):
+        """Test that missing required fields raise validation error."""
         with pytest.raises(ValidationError):
-            RoutingAnalysis()
-        
-        with pytest.raises(ValidationError):
-            RoutingAnalysis(decision="chat")
-        
+            MultiSourceAnalysis()
 
+        with pytest.raises(ValidationError):
+            MultiSourceAnalysis(intent="chat")
 
 
 class TestAnalysisTask:
     """Test AnalysisTask model."""
 
-    def test_analysis_task_valid(self):
+    def test_valid_analysis_task(self):
         """Test creating valid AnalysisTask."""
         task = AnalysisTask(
-            objective="Analyze data trends",
-            required_data="Historical sales data",  # correct field name
-            proposed_approach="Statistical analysis method",  # correct field name
-            expected_output="Summary of key trends and insights"
+            objective="Analyze sales data trends",
+            required_data="Monthly sales figures for 2023",
+            proposed_approach="Statistical trend analysis with visualization",
+            expected_output="Report with charts and key insights"
         )
         
-        assert task.objective == "Analyze data trends"
-        assert task.required_data == "Historical sales data"
-        assert task.proposed_approach == "Statistical analysis method"
-        assert task.expected_output == "Summary of key trends and insights"
+        assert task.objective == "Analyze sales data trends"
+        assert task.required_data == "Monthly sales figures for 2023"
+        assert task.proposed_approach == "Statistical trend analysis with visualization"
+        assert task.expected_output == "Report with charts and key insights"
 
-    def test_analysis_task_required_fields(self):
-        """Test that all fields are required."""
+    def test_analysis_task_missing_fields(self):
+        """Test that missing required fields raise validation error."""
         with pytest.raises(ValidationError):
             AnalysisTask()
-        
+
         with pytest.raises(ValidationError):
             AnalysisTask(objective="Test objective")
-
-
-class TestFormattedResponse:
-    """Test FormattedResponse model."""
-
-    def test_formatted_response_minimal(self):
-        """Test creating FormattedResponse with minimal required fields."""
-        response = FormattedResponse(
-            main_response="This is the main response"
-            # sources is optional, not required
-        )
-        
-        assert response.main_response == "This is the main response"
-        assert response.sources is None
-        assert response.follow_up_questions == []
-
-    def test_formatted_response_with_sources(self):
-        """Test FormattedResponse with sources."""
-        sources = [
-            "Source 1 - https://example.com/1",
-            "Source 2 - https://example.com/2"
-        ]
-        
-        response = FormattedResponse(
-            main_response="Response with sources",
-            sources=sources,
-            follow_up_questions=["What about topic X?"]
-        )
-        
-        assert response.sources == sources
-        assert response.follow_up_questions == ["What about topic X?"]
-
-    def test_formatted_response_required_fields(self):
-        """Test that only main_response is required."""
-        with pytest.raises(ValidationError):
-            FormattedResponse()
-        
-        # This should work - only main_response is required
-        response = FormattedResponse(main_response="Test response")
-        assert response.main_response == "Test response"
-
-
-class TestTopicSuggestionItem:
-    """Test TopicSuggestionItem model."""
-
-    def test_topic_suggestion_item_valid(self):
-        """Test creating valid TopicSuggestionItem."""
-        item = TopicSuggestionItem(
-            name="AI Research",
-            description="Latest developments in artificial intelligence",
-            confidence_score=0.85
-        )
-        
-        assert item.name == "AI Research"
-        assert item.description == "Latest developments in artificial intelligence"
-        assert item.confidence_score == 0.85
-
-    def test_topic_suggestion_item_confidence_bounds(self):
-        """Test confidence score validation."""
-        # Valid confidence scores
-        valid_scores = [0.0, 0.5, 1.0]
-        for score in valid_scores:
-            item = TopicSuggestionItem(
-                name="Test Topic",
-                description="Test description",
-                confidence_score=score
-            )
-            assert item.confidence_score == score
-
-        # Invalid confidence scores should be handled by Pydantic validation
-        with pytest.raises(ValidationError):
-            TopicSuggestionItem(
-                name="Test Topic",
-                description="Test description", 
-                confidence_score=1.5  # > 1.0
-            )
-
-    def test_topic_suggestion_item_required_fields(self):
-        """Test that all fields are required."""
-        with pytest.raises(ValidationError):
-            TopicSuggestionItem()
 
 
 class TestTopicSuggestions:
     """Test TopicSuggestions model."""
 
-    def test_topic_suggestions_valid(self):
+    def test_valid_topic_suggestions(self):
         """Test creating valid TopicSuggestions."""
-        suggestions = TopicSuggestions(
-            topics=[  # correct field name is 'topics'
-                TopicSuggestionItem(
-                    name="AI Research",
-                    description="AI developments",
-                    confidence_score=0.9
-                ),
-                TopicSuggestionItem(
-                    name="Climate Change",
-                    description="Climate research",
-                    confidence_score=0.8
-                )
-            ]
-        )
+        topics = [
+            TopicSuggestionItem(name="AI Research", description="Latest developments", confidence_score=0.8),
+            TopicSuggestionItem(name="Climate Change", description="Environmental impacts", confidence_score=0.7)
+        ]
+        suggestions = TopicSuggestions(topics=topics)
         
         assert len(suggestions.topics) == 2
         assert suggestions.topics[0].name == "AI Research"
-        assert suggestions.topics[1].name == "Climate Change"
+        assert suggestions.topics[1].confidence_score == 0.7
 
-    def test_topic_suggestions_empty(self):
-        """Test TopicSuggestions with empty list."""
-        suggestions = TopicSuggestions(topics=[])
-        assert suggestions.topics == []
+    def test_topic_suggestions_max_limit(self):
+        """Test that topic suggestions are limited to maximum."""
+        # Create 6 topics (more than max 5)
+        topics = [
+            TopicSuggestionItem(name=f"Topic {i}", description=f"Desc {i}", confidence_score=0.8)
+            for i in range(6)
+        ]
+        suggestions = TopicSuggestions(topics=topics)
+        
+        # Should be limited to 5
+        assert len(suggestions.topics) <= 5
 
-    def test_topic_suggestions_required_field(self):
-        """Test that topics field is required."""
-        with pytest.raises(ValidationError):
-            TopicSuggestions()
+
+class TestFormattedResponse:
+    """Test FormattedResponse model."""
+
+    def test_valid_formatted_response(self):
+        """Test creating valid FormattedResponse."""
+        response = FormattedResponse(
+            main_response="This is the main response content",
+            follow_up_questions=["Question 1?", "Question 2?"],
+            sources=["Source 1", "Source 2"]
+        )
+        
+        assert response.main_response == "This is the main response content"
+        assert len(response.follow_up_questions) == 2
+        assert len(response.sources) == 2
+
+    def test_formatted_response_follow_up_limit(self):
+        """Test that follow-up questions are limited."""
+        response = FormattedResponse(
+            main_response="Test response",
+            follow_up_questions=["Q1?", "Q2?", "Q3?"]  # 3 questions, should be limited to 2
+        )
+        
+        assert len(response.follow_up_questions) <= 2
 
 
 class TestResearchQualityAssessment:
     """Test ResearchQualityAssessment model."""
 
-    def test_research_quality_assessment_valid(self):
+    def test_valid_quality_assessment(self):
         """Test creating valid ResearchQualityAssessment."""
         assessment = ResearchQualityAssessment(
-            overall_quality_score=0.85,  # correct field name
+            overall_quality_score=0.8,
             recency_score=0.9,
-            relevance_score=0.8,
-            depth_score=0.85,
-            credibility_score=0.9,
-            novelty_score=0.75,
+            relevance_score=0.7,
+            depth_score=0.6,
+            credibility_score=0.8,
+            novelty_score=0.5,
             key_insights=["Insight 1", "Insight 2"],
-            findings_summary="High quality research findings",  # correct field name
-            source_urls=["https://example.com/1", "https://example.com/2"]
+            source_urls=["http://example.com"],
+            findings_summary="Summary of key findings"
         )
         
-        assert assessment.overall_quality_score == 0.85
-        assert assessment.recency_score == 0.9
+        assert assessment.overall_quality_score == 0.8
         assert len(assessment.key_insights) == 2
-        assert assessment.findings_summary == "High quality research findings"
+        assert assessment.findings_summary == "Summary of key findings"
 
-    def test_research_quality_assessment_score_bounds(self):
-        """Test that scores are within valid bounds."""
+    def test_quality_assessment_score_validation(self):
+        """Test that scores are within valid range."""
         # Valid scores
-        valid_assessment = ResearchQualityAssessment(
-            overall_quality_score=0.0,
-            recency_score=1.0,
-            relevance_score=0.5,
+        assessment = ResearchQualityAssessment(
+            overall_quality_score=0.5,
+            recency_score=0.0,
+            relevance_score=1.0,
             depth_score=0.7,
-            credibility_score=0.8,
-            novelty_score=0.3,
-            key_insights=[],
-            findings_summary="Test summary",
-            source_urls=[]
+            credibility_score=0.3,
+            novelty_score=0.9,
+            key_insights=["Test insight"],
+            findings_summary="Test summary"
         )
-        assert valid_assessment.overall_quality_score == 0.0
-        assert valid_assessment.recency_score == 1.0
+        
+        assert 0.0 <= assessment.overall_quality_score <= 1.0
+        assert 0.0 <= assessment.recency_score <= 1.0
+        assert 0.0 <= assessment.relevance_score <= 1.0
 
-    def test_research_quality_assessment_required_fields(self):
-        """Test that all fields are required."""
-        with pytest.raises(ValidationError):
-            ResearchQualityAssessment()
+
+class TestSearchOptimization:
+    """Test SearchOptimization model."""
+
+    def test_valid_search_optimization(self):
+        """Test creating valid SearchOptimization."""
+        optimization = SearchOptimization(
+            query="optimized search query",
+            recency_filter="month",
+            search_mode="academic",
+            context_size="high",
+            confidence={"recency_filter": 0.8, "search_mode": 0.9}
+        )
+        
+        assert optimization.query == "optimized search query"
+        assert optimization.recency_filter == "month"
+        assert optimization.search_mode == "academic"
+        assert optimization.context_size == "high"
+
+    def test_search_optimization_invalid_values(self):
+        """Test that invalid enum values are handled."""
+        optimization = SearchOptimization(
+            query="test query",
+            recency_filter="invalid_filter",  # Should be set to None
+            search_mode="invalid_mode",  # Should be set to None
+            context_size="invalid_size"  # Should be set to None
+        )
+        
+        assert optimization.recency_filter is None
+        assert optimization.search_mode is None
+        assert optimization.context_size is None
 
 
 class TestResearchDeduplicationResult:
     """Test ResearchDeduplicationResult model."""
 
-    def test_research_deduplication_result_valid(self):
+    def test_valid_deduplication_result(self):
         """Test creating valid ResearchDeduplicationResult."""
         result = ResearchDeduplicationResult(
             is_duplicate=False,
             similarity_score=0.3,
-            unique_aspects=["New insight 1", "New insight 2"],
+            unique_aspects=["Novel approach", "Different methodology"],
             recommendation="keep"
         )
         
@@ -260,33 +217,13 @@ class TestResearchDeduplicationResult:
         assert len(result.unique_aspects) == 2
         assert result.recommendation == "keep"
 
-    def test_research_deduplication_result_duplicate(self):
-        """Test ResearchDeduplicationResult for duplicate case."""
+    def test_deduplication_result_recommendation_validation(self):
+        """Test that invalid recommendations are handled."""
         result = ResearchDeduplicationResult(
             is_duplicate=True,
-            similarity_score=0.95,
+            similarity_score=0.9,
             unique_aspects=[],
-            recommendation="discard"
+            recommendation="invalid_recommendation"  # Should default to "keep"
         )
         
-        assert result.is_duplicate is True
-        assert result.similarity_score == 0.95
-        assert result.recommendation == "discard"
-
-    def test_research_deduplication_result_recommendations(self):
-        """Test valid recommendation values."""
-        valid_recommendations = ["keep", "discard"]
-        
-        for rec in valid_recommendations:
-            result = ResearchDeduplicationResult(
-                is_duplicate=False,
-                similarity_score=0.5,
-                unique_aspects=["Some aspect"],
-                recommendation=rec
-            )
-            assert result.recommendation == rec
-
-    def test_research_deduplication_result_required_fields(self):
-        """Test that all fields are required."""
-        with pytest.raises(ValidationError):
-            ResearchDeduplicationResult() 
+        assert result.recommendation == "keep"

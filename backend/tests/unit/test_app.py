@@ -41,10 +41,10 @@ def test_models_endpoint():
     assert data["default_model"] in models
 
 
-@patch("nodes.router_node.ChatOpenAI")
+@patch("nodes.multi_source_analyzer_node.ChatOpenAI")
 @patch("nodes.integrator_node.ChatOpenAI")
 @patch("nodes.response_renderer_node.ChatOpenAI")
-def test_chat_endpoint(mock_renderer_openai, mock_integrator_openai, mock_router_openai, client, test_chat_state):
+def test_chat_endpoint(mock_renderer_openai, mock_integrator_openai, mock_analyzer_openai, client, test_chat_state):
     """Test the chat endpoint with a mocked LLM response."""
     # Mock the integrator LLM response
     mock_integrator_instance = MagicMock()
@@ -93,7 +93,7 @@ def test_invalid_request(client):
     assert response.status_code == 422  # Validation error
 
 
-@patch("nodes.router_node.ChatOpenAI")
+@patch("nodes.multi_source_analyzer_node.ChatOpenAI")
 @patch("nodes.integrator_node.ChatOpenAI")
 @patch("nodes.response_renderer_node.ChatOpenAI")
 @pytest.mark.anyio

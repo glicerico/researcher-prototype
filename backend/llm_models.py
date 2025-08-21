@@ -5,11 +5,6 @@ from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict
 
 
-class RoutingAnalysis(BaseModel):
-    """Analysis of user input to route to appropriate module."""
-    decision: str = Field(description="The routing decision: 'chat', 'search', 'analyzer', 'academic_search', 'social_search', or 'medical_search'")
-    reason: str = Field(description="Brief explanation of why this routing decision was made")
-
 
 class MultiSourceAnalysis(BaseModel):
     """Structured output for multi-source search analysis."""

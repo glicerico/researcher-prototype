@@ -27,8 +27,7 @@ from storage.personalization_manager import PersonalizationManager
 
 # Import all prompt templates from prompts.py
 from prompts import (
-    # Router prompts
-    ROUTER_SYSTEM_PROMPT,
+    # Multi-source analyzer prompts
     MULTI_SOURCE_SYSTEM_PROMPT,
     # Search prompts
     SEARCH_OPTIMIZER_SYSTEM_PROMPT,
@@ -45,7 +44,6 @@ from prompts import (
 
 # Internal imports - LLM models
 from llm_models import (
-    RoutingAnalysis,
     MultiSourceAnalysis,
     AnalysisTask,
     FormattedResponse,

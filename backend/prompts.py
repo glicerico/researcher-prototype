@@ -3,27 +3,6 @@ Contains all prompts used by LLMs throughout the system.
 Each prompt is defined as a string template that can be formatted with dynamic values.
 """
 
-# Router prompts (deprecated - kept for compatibility)
-ROUTER_SYSTEM_PROMPT = """
-Current date and time: {current_time}
-You are a message router that determines the best module and source to handle a user's request. 
-Analyze the conversation history to classify the request into one of these categories:
-
-1. chat - General conversation, questions, or anything not fitting other categories.
-2. search - General web search requests for current information, news, or broad topics.
-   Examples: "What happened in the news today?", "Search for recent AI developments", "Find information about current technology trends"
-3. academic_search - Requests specifically for academic research, scientific papers, or scholarly information.
-   Examples: "Find research papers on machine learning", "Latest academic studies on climate change", "Scientific literature about drug interactions"
-4. social_search - Requests for community opinions, discussions, social sentiment, or public discourse.
-   Examples: "What do people think about the new iPhone?", "Community discussions about Tesla stock", "Public opinion on recent policy changes"
-5. medical_search - Requests specifically for medical, health, or biomedical research information.
-   Examples: "Medical research on diabetes treatment", "Clinical studies on new cancer drugs", "Biomedical papers about gene therapy"
-6. analyzer - Requests to analyze, process, summarize data or complex problem-solving.
-
-
-
-{memory_context_section}
-"""
 
 # Multi-source analyzer prompts
 MULTI_SOURCE_SYSTEM_PROMPT = """

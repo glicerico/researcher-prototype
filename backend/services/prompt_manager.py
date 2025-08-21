@@ -79,7 +79,7 @@ class PromptManager:
     def _get_prompt_description(self, prompt_name: str) -> str:
         """Generate description for prompts based on their names."""
         descriptions = {
-            'ROUTER_SYSTEM_PROMPT': 'Routes user messages to appropriate modules (chat, search, analysis)',
+            'MULTI_SOURCE_SYSTEM_PROMPT': 'Analyzes user queries to determine optimal approach and sources',
             'SEARCH_OPTIMIZER_SYSTEM_PROMPT': 'Optimizes user questions into effective search queries',
             'ANALYSIS_REFINER_SYSTEM_PROMPT': 'Refines user requests into structured analytical tasks',
             'PERPLEXITY_SYSTEM_PROMPT': 'System prompt for web search functionality',
@@ -224,7 +224,7 @@ class PromptManager:
             
             # Group prompts by category for better organization
             categories = {
-                'Router prompts': ['ROUTER_SYSTEM_PROMPT'],
+                'Multi-source analyzer prompts': ['MULTI_SOURCE_SYSTEM_PROMPT'],
                 'Search optimizer prompts': ['SEARCH_OPTIMIZER_SYSTEM_PROMPT'],
                 'Analyzer task refiner prompts': ['ANALYSIS_REFINER_SYSTEM_PROMPT'],
                 'Web search prompts': ['PERPLEXITY_SYSTEM_PROMPT'],

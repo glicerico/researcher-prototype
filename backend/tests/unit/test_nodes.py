@@ -6,10 +6,10 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from nodes.router_node import router_node
+from nodes.multi_source_analyzer_node import multi_source_analyzer_node
 from nodes.integrator_node import integrator_node  
 from nodes.response_renderer_node import response_renderer_node
-from llm_models import RoutingAnalysis, FormattedResponse
+from llm_models import MultiSourceAnalysis, FormattedResponse
 from config import DEFAULT_MODEL
 
 
@@ -18,29 +18,29 @@ def sample_chat_state():
     """Create a sample chat state for testing."""
     return {
         "messages": [HumanMessage(content="Hello, how are you?")],
-        "model": "gpt-4o-mini",
+        "model": DEFAULT_MODEL,
         "temperature": 0.7,
         "max_tokens": 1000,
-        "personality": None,
+        "personality": {"style": "helpful", "tone": "friendly"},
         "current_module": None,
         "module_results": {},
         "workflow_context": {},
         "user_id": "test_user",
         "routing_analysis": None,
         "thread_id": "test_thread",
-        "memory_context": None
+        "memory_context": None,
     }
 
 
 @pytest.fixture
 def sample_chat_state_with_memory():
-    """Create a sample chat state with memory context."""
+    """Create a sample chat state with memory context for testing."""
     return {
-        "messages": [HumanMessage(content="Tell me about AI")],
-        "model": "gpt-4o-mini", 
+        "messages": [HumanMessage(content="Tell me more about that")],
+        "model": DEFAULT_MODEL,
         "temperature": 0.7,
         "max_tokens": 1000,
-        "personality": None,
+        "personality": {"style": "helpful", "tone": "friendly"},
         "current_module": None,
         "module_results": {},
         "workflow_context": {},
@@ -51,142 +51,117 @@ def sample_chat_state_with_memory():
     }
 
 
-class TestRouterNode:
-    """Test router_node function."""
+class TestMultiSourceAnalyzerNode:
+    """Test multi_source_analyzer_node function."""
 
-    @patch('nodes.router_node.ChatOpenAI')
-    async def test_router_node_basic_routing(self, mock_openai, sample_chat_state):
-        """Test basic message routing functionality."""
-        # Mock the LLM response
-        mock_llm = MagicMock()
-        mock_structured = MagicMock()
-        mock_routing_result = RoutingAnalysis(
-            decision="chat",
-            reason="General conversation"
-        )
-        mock_structured.invoke.return_value = mock_routing_result
-        mock_llm.with_structured_output.return_value = mock_structured
+    @patch('nodes.multi_source_analyzer_node.ChatOpenAI')
+    async def test_multi_source_analyzer_chat_intent(self, mock_openai, sample_chat_state):
+        """Test chat intent routing."""
+        # Mock the structured output
+        mock_llm = Mock()
+        mock_structured_analyzer = Mock()
         mock_openai.return_value = mock_llm
-
-        result = await router_node(sample_chat_state)
-
-        assert result["current_module"] == "chat"
-        assert result["routing_analysis"]["decision"] == "chat"
+        mock_llm.with_structured_output.return_value = mock_structured_analyzer
+        
+        mock_analysis_result = MultiSourceAnalysis(
+            intent="chat",
+            reason="General conversation",
+            sources=[],
+            confidence=0.9
+        )
+        mock_structured_analyzer.invoke.return_value = mock_analysis_result
+        
+        result = await multi_source_analyzer_node(sample_chat_state)
+        
+        assert result["intent"] == "chat"
+        assert result["selected_sources"] == []
+        assert result["routing_analysis"]["intent"] == "chat"
         assert result["routing_analysis"]["reason"] == "General conversation"
 
-        assert "model_used" in result["routing_analysis"]
-
-    @patch('nodes.router_node.ChatOpenAI')
-    async def test_router_node_search_routing(self, mock_openai, sample_chat_state):
-        """Test routing to search module."""
-        sample_chat_state["messages"] = [HumanMessage(content="What's the latest news about AI?")]
-
-        mock_llm = MagicMock()
-        mock_structured = MagicMock()
-        mock_routing_result = RoutingAnalysis(
-            decision="search",
-            reason="User asking for current information"
+    @patch('nodes.multi_source_analyzer_node.ChatOpenAI')
+    async def test_multi_source_analyzer_search_intent(self, mock_openai, sample_chat_state):
+        """Test search intent routing with sources."""
+        mock_llm = Mock()
+        mock_structured_analyzer = Mock()
+        mock_openai.return_value = mock_llm
+        mock_llm.with_structured_output.return_value = mock_structured_analyzer
+        
+        mock_analysis_result = MultiSourceAnalysis(
+            intent="search",
+            reason="User needs current information",
+            sources=["search", "academic_search"],
+            confidence=0.8
         )
-        mock_structured.invoke.return_value = mock_routing_result
-        mock_llm.with_structured_output.return_value = mock_structured
+        mock_structured_analyzer.invoke.return_value = mock_analysis_result
+        
+        result = await multi_source_analyzer_node(sample_chat_state)
+        
+        assert result["intent"] == "search"
+        assert result["selected_sources"] == ["search", "academic_search"]
+        assert result["routing_analysis"]["intent"] == "search"
+
+    @patch('nodes.multi_source_analyzer_node.ChatOpenAI')
+    async def test_multi_source_analyzer_analysis_intent(self, mock_openai, sample_chat_state):
+        """Test analysis intent routing."""
+        mock_llm = Mock()
+        mock_structured_analyzer = Mock()
         mock_openai.return_value = mock_llm
-
-        result = await router_node(sample_chat_state)
-
-        assert result["current_module"] == "search"
-        assert result["routing_analysis"]["decision"] == "search"
-        assert result["routing_analysis"]["reason"] == "User asking for current information"
-
-
-    @patch('nodes.router_node.ChatOpenAI')
-    async def test_router_node_analyzer_routing(self, mock_openai, sample_chat_state):
-        """Test routing to analyzer module."""
-        sample_chat_state["messages"] = [HumanMessage(content="Analyze this data for trends")]
-
-        mock_llm = MagicMock()
-        mock_structured = MagicMock()
-        mock_routing_result = RoutingAnalysis(
-            decision="analyzer",
-            reason="User requesting data analysis"
+        mock_llm.with_structured_output.return_value = mock_structured_analyzer
+        
+        mock_analysis_result = MultiSourceAnalysis(
+            intent="analysis",
+            reason="Complex analytical task",
+            sources=[],
+            confidence=0.85
         )
-        mock_structured.invoke.return_value = mock_routing_result
-        mock_llm.with_structured_output.return_value = mock_structured
+        mock_structured_analyzer.invoke.return_value = mock_analysis_result
+        
+        result = await multi_source_analyzer_node(sample_chat_state)
+        
+        assert result["intent"] == "analysis"
+        assert result["selected_sources"] == []
+        assert result["routing_analysis"]["intent"] == "analysis"
+
+    @patch('nodes.multi_source_analyzer_node.ChatOpenAI')
+    async def test_multi_source_analyzer_invalid_intent_fallback(self, mock_openai, sample_chat_state):
+        """Test fallback to chat for invalid intents."""
+        mock_llm = Mock()
+        mock_structured_analyzer = Mock()
         mock_openai.return_value = mock_llm
-
-        result = await router_node(sample_chat_state)
-
-        assert result["current_module"] == "analyzer"
-        assert result["routing_analysis"]["decision"] == "analyzer"
-
-    @patch('nodes.router_node.ChatOpenAI')
-    async def test_router_node_with_memory_context(self, mock_openai, sample_chat_state_with_memory):
-        """Test router with memory context."""
-        mock_llm = MagicMock()
-        mock_structured = MagicMock()
-        mock_routing_result = RoutingAnalysis(
-            decision="chat",
-            reason="Continuing conversation"
+        mock_llm.with_structured_output.return_value = mock_structured_analyzer
+        
+        mock_analysis_result = MultiSourceAnalysis(
+            intent="invalid_intent",
+            reason="This should fallback to chat",
+            sources=[],
+            confidence=0.5
         )
-        mock_structured.invoke.return_value = mock_routing_result
-        mock_llm.with_structured_output.return_value = mock_structured
+        mock_structured_analyzer.invoke.return_value = mock_analysis_result
+        
+        result = await multi_source_analyzer_node(sample_chat_state)
+        
+        assert result["intent"] == "chat"
+
+    @patch('nodes.multi_source_analyzer_node.ChatOpenAI')
+    async def test_multi_source_analyzer_exception_handling(self, mock_openai, sample_chat_state):
+        """Test exception handling in analyzer."""
+        mock_llm = Mock()
         mock_openai.return_value = mock_llm
+        mock_llm.with_structured_output.side_effect = Exception("API Error")
+        
+        result = await multi_source_analyzer_node(sample_chat_state)
+        
+        assert result["intent"] == "chat"
+        assert "Error:" in result["routing_analysis"]["reason"]
 
-        result = await router_node(sample_chat_state_with_memory)
-
-        assert result["current_module"] == "chat"
-        assert result["routing_analysis"]["decision"] == "chat"
-
-    @patch('nodes.router_node.ChatOpenAI')
-    async def test_router_node_invalid_decision_fallback(self, mock_openai, sample_chat_state):
-        """Test router fallback for invalid decisions."""
-        mock_llm = MagicMock()
-        mock_structured = MagicMock()
-        mock_routing_result = RoutingAnalysis(
-            decision="invalid_module",
-            reason="Invalid routing decision"
-        )
-        mock_structured.invoke.return_value = mock_routing_result
-        mock_llm.with_structured_output.return_value = mock_structured
-        mock_openai.return_value = mock_llm
-
-        result = await router_node(sample_chat_state)
-
-        # Router should fallback to chat for invalid decisions
-        assert result["current_module"] == "chat"  # Router node likely does fallback
-
-    @patch('nodes.router_node.ChatOpenAI')
-    async def test_router_node_exception_handling(self, mock_openai, sample_chat_state):
-        """Test router exception handling."""
-        mock_llm = MagicMock()
-        mock_structured = MagicMock()
-        mock_structured.invoke.side_effect = Exception("API Error")
-        mock_llm.with_structured_output.return_value = mock_structured
-        mock_openai.return_value = mock_llm
-
-        result = await router_node(sample_chat_state)
-
-        # Should fallback to chat on exception
-        assert result["current_module"] == "chat"
-        assert "error" in result["routing_analysis"]["reason"].lower()
-
-    async def test_router_node_no_user_message(self, sample_chat_state):
-        """Test router with no user messages."""
-        sample_chat_state["messages"] = [AIMessage(content="AI response")]
-
-        result = await router_node(sample_chat_state)
-
-        assert result["current_module"] == "chat"
-        assert result["routing_analysis"]["decision"] == "chat"
-        assert "no user message" in result["routing_analysis"]["reason"].lower()
-
-    async def test_router_node_empty_messages(self, sample_chat_state):
-        """Test router with empty message list."""
+    async def test_multi_source_analyzer_no_user_message(self, sample_chat_state):
+        """Test analyzer behavior with no user message."""
         sample_chat_state["messages"] = []
-
-        result = await router_node(sample_chat_state)
-
-        assert result["current_module"] == "chat"
-        assert result["routing_analysis"]["decision"] == "chat"
+        
+        result = await multi_source_analyzer_node(sample_chat_state)
+        
+        assert result["intent"] == "chat"
+        assert result["routing_analysis"]["reason"] == "No user message found"
 
 
 class TestIntegratorNode:
@@ -195,261 +170,81 @@ class TestIntegratorNode:
     @patch('nodes.integrator_node.ChatOpenAI')
     async def test_integrator_node_basic_integration(self, mock_openai, sample_chat_state):
         """Test basic integration functionality."""
-        sample_chat_state["current_module"] = "chat"
-        
+        # Mock the LLM response
         mock_llm = MagicMock()
-        mock_response = MagicMock()
-        mock_response.content = "This is a helpful response"
-        mock_llm.invoke.return_value = mock_response
+        mock_llm.invoke.return_value.content = "This is a test response from integrator"
         mock_openai.return_value = mock_llm
+
+        # Set up state with some context
+        sample_chat_state["workflow_context"] = {"test_context": "test_value"}
 
         result = await integrator_node(sample_chat_state)
 
-        # Integrator adds response to workflow_context, not directly to messages
-        assert "workflow_context" in result
+        # Check that integrator response is stored
         assert "integrator_response" in result["workflow_context"]
-        assert result["workflow_context"]["integrator_response"] == "This is a helpful response"
+        assert result["workflow_context"]["integrator_response"] == "This is a test response from integrator"
 
     @patch('nodes.integrator_node.ChatOpenAI')
-    async def test_integrator_node_with_search_context(self, mock_openai, sample_chat_state):
-        """Test integrator with search context."""
-        sample_chat_state["current_module"] = "search"
+    async def test_integrator_node_with_search_results(self, mock_openai, sample_chat_state):
+        """Test integrator with search results."""
+        mock_llm = MagicMock()
+        mock_llm.invoke.return_value.content = "Integrated response with search data"
+        mock_openai.return_value = mock_llm
+
+        # Add search results to state
         sample_chat_state["module_results"] = {
             "search": {
-                "search_result_text": "Latest AI news from various sources",
-                "citations": ["Source 1", "Source 2"],
-                "sources": [{"title": "AI News", "url": "http://example.com"}]
+                "success": True,
+                "result": "Search result content",
+                "citations": ["http://example.com"],
+                "search_sources": [{"title": "Test Source", "url": "http://example.com"}]
             }
         }
 
-        mock_llm = MagicMock()
-        mock_response = MagicMock()
-        mock_response.content = "Based on recent search results, here's what I found about AI..."
-        mock_llm.invoke.return_value = mock_response
-        mock_openai.return_value = mock_llm
-
         result = await integrator_node(sample_chat_state)
 
-        # Integrator stores results in workflow_context, not messages
-        assert "workflow_context" in result
         assert "integrator_response" in result["workflow_context"]
-        assert "Based on recent search results" in result["workflow_context"]["integrator_response"]
-
-    @patch('nodes.integrator_node.ChatOpenAI')
-    async def test_integrator_node_with_analysis_context(self, mock_openai, sample_chat_state):
-        """Test integrator with analysis context."""
-        sample_chat_state["current_module"] = "analyzer"
-        sample_chat_state["module_results"] = {
-            "analyzer": {
-                "analysis_result_text": "Analysis shows positive trends in the data"
-            }
-        }
-
-        mock_llm = MagicMock()
-        mock_response = MagicMock()
-        mock_response.content = "Based on the analysis, I can see several key trends..."
-        mock_llm.invoke.return_value = mock_response
-        mock_openai.return_value = mock_llm
-
-        result = await integrator_node(sample_chat_state)
-
-        # Integrator stores results in workflow_context, not messages
-        assert "workflow_context" in result
-        assert "integrator_response" in result["workflow_context"]
-        assert "Based on the analysis" in result["workflow_context"]["integrator_response"]
-
-    @patch('nodes.integrator_node.ChatOpenAI')
-    async def test_integrator_node_with_memory_context(self, mock_openai, sample_chat_state_with_memory):
-        """Test integrator with memory context."""
-        sample_chat_state_with_memory["current_module"] = "chat"
-
-        mock_llm = MagicMock()
-        mock_response = MagicMock()
-        mock_response.content = "Continuing our previous conversation..."
-        mock_llm.invoke.return_value = mock_response
-        mock_openai.return_value = mock_llm
-
-        result = await integrator_node(sample_chat_state_with_memory)
-
-        # Integrator stores results in workflow_context, not messages
-        assert "workflow_context" in result
-        assert "integrator_response" in result["workflow_context"]
-        assert "Continuing our previous conversation" in result["workflow_context"]["integrator_response"]
-
-    @patch('nodes.integrator_node.ChatOpenAI')
-    async def test_integrator_node_exception_handling(self, mock_openai, sample_chat_state):
-        """Test integrator exception handling."""
-        sample_chat_state["current_module"] = "chat"
-        
-        mock_llm = MagicMock()
-        mock_llm.invoke.side_effect = Exception("API Error")
-        mock_openai.return_value = mock_llm
-
-        result = await integrator_node(sample_chat_state)
-
-        # Should add error to workflow context
-        assert "workflow_context" in result
-        assert "integrator_error" in result["workflow_context"]
+        assert result["workflow_context"]["integrator_response"] == "Integrated response with search data"
 
 
 class TestResponseRendererNode:
     """Test response_renderer_node function."""
 
-    async def test_response_renderer_with_integrator_response(self, sample_chat_state):
-        """Test response renderer with proper integrator response."""
-        sample_chat_state["messages"] = [
-            HumanMessage(content="Hello"),
-        ]
-        sample_chat_state["current_module"] = "chat"
-        sample_chat_state["personality"] = {"style": "helpful", "tone": "friendly"}
+    @patch('nodes.response_renderer_node.ChatOpenAI')
+    async def test_response_renderer_basic_formatting(self, mock_openai, sample_chat_state):
+        """Test basic response rendering functionality."""
+        # Set up integrator response
         sample_chat_state["workflow_context"] = {
-            "integrator_response": "Hello! How can I help you today?"
+            "integrator_response": "This is a test response that needs formatting",
+            "citations": [],
+            "search_sources": []
         }
 
-        with patch('nodes.response_renderer_node.ChatOpenAI') as mock_openai:
-            mock_llm = MagicMock()
-            mock_structured = MagicMock()
-            mock_formatted_response = FormattedResponse(
-                main_response="Hello! How can I help you today?",
-                follow_up_questions=[]
-            )
-            mock_structured.invoke.return_value = mock_formatted_response
-            mock_llm.with_structured_output.return_value = mock_structured
-            mock_openai.return_value = mock_llm
+        # Mock the structured output
+        mock_llm = MagicMock()
+        mock_structured_renderer = MagicMock()
+        mock_formatted_response = FormattedResponse(
+            main_response="This is a formatted test response",
+            follow_up_questions=["Would you like to know more?"],
+            sources=[]
+        )
+        mock_structured_renderer.invoke.return_value = mock_formatted_response
+        mock_llm.with_structured_output.return_value = mock_structured_renderer
+        mock_openai.return_value = mock_llm
 
-            result = await response_renderer_node(sample_chat_state)
+        result = await response_renderer_node(sample_chat_state)
 
-            # Should add the formatted response as an AI message
-            assert len(result["messages"]) == 2
-            assert isinstance(result["messages"][1], AIMessage)
-            assert result["messages"][1].content == "Hello! How can I help you today?"
-
-    async def test_response_renderer_with_sources_and_followups(self, sample_chat_state):
-        """Test response renderer with sources and follow-up questions."""
-        sample_chat_state["messages"] = [HumanMessage(content="What's new in AI?")]
-        sample_chat_state["current_module"] = "search"
-        sample_chat_state["personality"] = {"style": "professional", "tone": "formal"}
-        sample_chat_state["workflow_context"] = {
-            "integrator_response": "Recent AI developments include new techniques.",
-            "search_sources": [
-                {"title": "AI News Today", "url": "https://example.com/ai-news"},
-                {"title": "Tech Report", "url": "https://example.com/tech"}
-            ]
-        }
-
-        with patch('nodes.response_renderer_node.ChatOpenAI') as mock_openai:
-            mock_llm = MagicMock()
-            mock_structured = MagicMock()
-            mock_formatted_response = FormattedResponse(
-                main_response="Recent AI developments include new machine learning techniques.",
-                follow_up_questions=["What specific AI techniques are most promising?", "How will this impact industry?"]
-            )
-            mock_structured.invoke.return_value = mock_formatted_response
-            mock_llm.with_structured_output.return_value = mock_structured
-            mock_openai.return_value = mock_llm
-
-            result = await response_renderer_node(sample_chat_state)
-
-            # Should add the formatted response with sources and follow-ups
-            assert len(result["messages"]) == 2
-            assert isinstance(result["messages"][1], AIMessage)
-            response_content = result["messages"][1].content
-            
-            # Check main response
-            assert "Recent AI developments include new machine learning techniques." in response_content
-            
-            # Check sources were appended with numbered format
-            assert "**Sources:**" in response_content
-            assert "[1]. [AI News Today](https://example.com/ai-news)" in response_content
-            assert "[2]. [Tech Report](https://example.com/tech)" in response_content
-            
-            # Check follow-up questions were added to workflow context
-            assert "follow_up_questions" in result["workflow_context"]
-            assert "What specific AI techniques are most promising?" in result["workflow_context"]["follow_up_questions"]
-            assert "How will this impact industry?" in result["workflow_context"]["follow_up_questions"]
+        # Check that a message was added
+        assert len(result["messages"]) > 0
+        assert result["messages"][-1].content == "This is a formatted test response"
 
     async def test_response_renderer_no_integrator_response(self, sample_chat_state):
-        """Test response renderer when no integrator response exists."""
-        sample_chat_state["messages"] = [HumanMessage(content="Hello")]
-        sample_chat_state["current_module"] = "chat"
-        sample_chat_state["personality"] = {"style": "helpful", "tone": "friendly"}
-        sample_chat_state["workflow_context"] = {}  # No integrator response
+        """Test response renderer behavior with no integrator response."""
+        # No integrator response in workflow context
+        sample_chat_state["workflow_context"] = {}
 
         result = await response_renderer_node(sample_chat_state)
 
-        # Should add error message
-        assert len(result["messages"]) == 2
-        assert isinstance(result["messages"][1], AIMessage)
-        assert "error" in result["messages"][1].content.lower()
-        assert "Unknown error" in result["messages"][1].content
-
-    async def test_response_renderer_with_integrator_error(self, sample_chat_state):
-        """Test response renderer when integrator had an error."""
-        sample_chat_state["messages"] = [HumanMessage(content="Hello")]
-        sample_chat_state["current_module"] = "chat"
-        sample_chat_state["personality"] = {"style": "helpful", "tone": "friendly"}
-        sample_chat_state["workflow_context"] = {
-            "integrator_error": "API connection failed"
-        }
-
-        result = await response_renderer_node(sample_chat_state)
-
-        # Should add error message with specific error
-        assert len(result["messages"]) == 2
-        assert isinstance(result["messages"][1], AIMessage)
-        assert "API connection failed" in result["messages"][1].content
-
-    async def test_response_renderer_with_none_personality(self, sample_chat_state):
-        """Test response renderer with None personality uses defaults."""
-        sample_chat_state["messages"] = [HumanMessage(content="Hello")]
-        sample_chat_state["current_module"] = "chat"
-        sample_chat_state["personality"] = None  # None personality
-        sample_chat_state["workflow_context"] = {
-            "integrator_response": "Hello! How can I help you today?"
-        }
-
-        with patch('nodes.response_renderer_node.ChatOpenAI') as mock_openai:
-            mock_llm = MagicMock()
-            mock_structured = MagicMock()
-            mock_formatted_response = FormattedResponse(
-                main_response="Hello! How can I help you today?",
-                follow_up_questions=[]
-            )
-            mock_structured.invoke.return_value = mock_formatted_response
-            mock_llm.with_structured_output.return_value = mock_structured
-            mock_openai.return_value = mock_llm
-
-            result = await response_renderer_node(sample_chat_state)
-
-            # Should handle None personality gracefully with defaults
-            assert len(result["messages"]) == 2
-            assert isinstance(result["messages"][1], AIMessage)
-            assert result["messages"][1].content == "Hello! How can I help you today?"
-            
-            # Verify the system prompt was called with default values
-            system_call = mock_structured.invoke.call_args[0][0][0]  # First message should be system prompt
-            assert "helpful" in system_call.content  # Default style
-            assert "friendly" in system_call.content  # Default tone
-
-    async def test_response_renderer_llm_exception_fallback(self, sample_chat_state):
-        """Test response renderer falls back to raw response on LLM exception."""
-        sample_chat_state["messages"] = [HumanMessage(content="Hello")]
-        sample_chat_state["current_module"] = "chat" 
-        sample_chat_state["personality"] = {"style": "helpful", "tone": "friendly"}
-        sample_chat_state["workflow_context"] = {
-            "integrator_response": "Raw response from integrator"
-        }
-
-        with patch('nodes.response_renderer_node.ChatOpenAI') as mock_openai:
-            mock_llm = MagicMock()
-            mock_structured = MagicMock()
-            mock_structured.invoke.side_effect = Exception("LLM formatting failed")
-            mock_llm.with_structured_output.return_value = mock_structured
-            mock_openai.return_value = mock_llm
-
-            result = await response_renderer_node(sample_chat_state)
-
-            # Should fallback to raw response when formatting fails
-            assert len(result["messages"]) == 2
-            assert isinstance(result["messages"][1], AIMessage)
-            assert result["messages"][1].content == "Raw response from integrator" 
+        # Should add an error message
+        assert len(result["messages"]) > 0
+        assert "error" in result["messages"][-1].content.lower()

@@ -13,7 +13,7 @@
       {
         "id": "router",
         "type": "decision",
-        "prompt": "ROUTER_SYSTEM_PROMPT",
+        "prompt": "MULTI_SOURCE_SYSTEM_PROMPT",
         "category": "Router",
         "description": "Determines conversation flow path",
         "color": "#FFE6E6"
@@ -226,7 +226,7 @@
       }
     },
     "prompt_usage": {
-      "ROUTER_SYSTEM_PROMPT": [
+      "MULTI_SOURCE_SYSTEM_PROMPT": [
         "router"
       ],
       "SEARCH_OPTIMIZER_SYSTEM_PROMPT": [
@@ -274,7 +274,7 @@
       "color": "#E8F4FD"
     },
     "router": {
-      "prompt": "ROUTER_SYSTEM_PROMPT",
+      "prompt": "MULTI_SOURCE_SYSTEM_PROMPT",
       "category": "Router",
       "description": "Determines conversation flow path",
       "color": "#FFE6E6"

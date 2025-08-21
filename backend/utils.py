@@ -41,10 +41,10 @@ def get_node_prompt_mapping() -> Dict[str, Dict[str, Any]]:
             "description": "Sets up user state and session",
             "color": "#E8F4FD"
         },
-        "router": {
-            "prompt": "ROUTER_SYSTEM_PROMPT",
-            "category": "Router",
-            "description": "Determines conversation flow path",
+        "multi_source_analyzer": {
+            "prompt": "MULTI_SOURCE_SYSTEM_PROMPT",
+            "category": "Analyzer",
+            "description": "Analyzes queries and selects information sources",
             "color": "#FFE6E6"
         },
         "search_prompt_optimizer": {
