@@ -38,7 +38,7 @@ class HackerNewsSearchNode(BaseAPISearchNode):
                 "query": query,
                 "tags": "(story,comment)",
                 "hitsPerPage": min(max(limit, 1), 50),
-                "typoTolerance": True,
+                "typoTolerance": "min",
                 "restrictSearchableAttributes": "title,comment_text,url"
             }
 
