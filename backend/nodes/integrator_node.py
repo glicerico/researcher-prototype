@@ -63,15 +63,15 @@ async def integrator_node(state: ChatState) -> ChatState:
     failed_sources = []
     
     # Process each potential source
-    for source, config in source_config.items():
+    for source, source_info in source_config.items():
         search_results_data = state.get("module_results", {}).get(source, {})
         
         if search_results_data.get("success", False):
             search_result_text = search_results_data.get("result", "")
             if search_result_text:
                 # Build source-specific context
-                source_name = config["name"]
-                source_type = config["type"]
+                source_name = source_info["name"]
+                source_type = source_info["type"]
                 
                 # Create context with source information
                 search_context = f"""INFORMATION FROM {source_name.upper()} (Type: {source_type}):
