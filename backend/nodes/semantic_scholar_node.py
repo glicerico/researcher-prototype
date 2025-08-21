@@ -44,15 +44,15 @@ class SemanticScholarSearchNode(BaseAPISearchNode):
             params = {
                 "query": query,
                 "limit": min(limit, 100),  # API max is 100
-                # Request nested fields explicitly to ensure stable response shape
-                "fields": "paperId,title,abstract,authors.name,year,citationCount,venue,url,openAccessPdf.url,fieldsOfStudy"
+                # Request fields - some APIs don't support nested field syntax
+                "fields": "paperId,title,abstract,authors,year,citationCount,venue,url,openAccessPdf,fieldsOfStudy"
             }
             
 
             
             # Make API request
             response = requests.get(
-                f"{self.base_url}/paper/search",
+                f"{self.base_url}/paper/search/bulk",
                 params=params,
                 headers=self.headers,
                 timeout=30
