@@ -88,7 +88,23 @@ The system integrates results from multiple sources when appropriate. For exampl
 
 ## Testing
 
-Test individual search nodes:
+Use the dedicated integration test script to test all search APIs:
+
+```bash
+cd backend && source venv/bin/activate
+
+# Test all APIs at once
+python tests/integration/test_search_apis.py --all --query "machine learning"
+
+# Test individual APIs
+python tests/integration/test_search_apis.py --semantic-scholar --query "transformers" --limit 5
+python tests/integration/test_search_apis.py --hn --query "python frameworks" --limit 3
+python tests/integration/test_search_apis.py --pubmed --query "diabetes treatment" --limit 5
+```
+
+The script provides both raw JSON output and formatted results for easy debugging.
+
+Alternatively, test individual search nodes directly:
 
 ```bash
 # Test Semantic Scholar
