@@ -6,6 +6,7 @@ import TypingIndicator from './TypingIndicator';
 import SessionHistory from './SessionHistory';
 import ConversationTopics from './ConversationTopics';
 import { sendChatMessage, triggerUserActivity, API_URL } from '../services/api';
+import { useEngagementTracking } from '../utils/engagementTracker';
 import '../App.css';
 
 const ChatPage = () => {
@@ -19,6 +20,8 @@ const ChatPage = () => {
     updateConversationTopics,
   } = useSession();
 
+  const { trackSessionContinuation } = useEngagementTracking();
+
   // Local state for UI components
   const [isTyping, setIsTyping] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -29,6 +32,8 @@ const ChatPage = () => {
   const [isTopicsSidebarCollapsed, setIsTopicsSidebarCollapsed] = useState(false);
   
   const messagesEndRef = useRef(null);
+
+
 
   // Subscribe to backend status updates via SSE
   useEffect(() => {
@@ -74,7 +79,7 @@ const ChatPage = () => {
     updateMessages(updatedMessages);
     setChatInputValue(''); // Clear the input after sending
     
-    // Show typing indicator
+    // Show typing indicator and start timing
     setIsTyping(true);
     setIsLoading(true);
     
@@ -132,6 +137,11 @@ const ChatPage = () => {
       };
       
       updateMessages(prev => [...prev, assistantMessage]);
+      
+      // Track session continuation (user continuing conversation)
+      if (sessionId && messages.length > 0) {
+        trackSessionContinuation(sessionId, 'new_message');
+      }
       
       // Clear status message immediately when response is displayed
       setStatusMessage('');
@@ -270,6 +280,7 @@ const ChatPage = () => {
               routingInfo={msg.routingInfo}
               followUpQuestions={msg.follow_up_questions}
               onFollowUpClick={handleFollowUpClick}
+              messageId={`${sessionId}_${index}`}
             />
           ))}
           {isTyping && <TypingIndicator />}

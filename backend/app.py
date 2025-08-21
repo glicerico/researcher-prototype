@@ -7,7 +7,10 @@ import traceback
 import time
 from contextlib import asynccontextmanager
 
-# Import and configure logging first, before other imports
+# Import config first to load environment variables
+import config
+
+# Import and configure logging after environment variables are loaded
 from logging_config import configure_logging, get_logger
 
 # Configure application logging
@@ -37,8 +40,6 @@ from dependencies import (
 from autonomous_research_engine import initialize_autonomous_researcher
 
 # Global motivation config override (persists across reinitializations)
-
-import config
 
 
 @asynccontextmanager

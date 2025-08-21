@@ -10,6 +10,112 @@ class PersonalityConfig(BaseModel):
     additional_traits: Optional[Dict[str, Any]] = {}
 
 
+class ContentPreferences(BaseModel):
+    """User content preferences."""
+    research_depth: str = "balanced"  # quick, balanced, detailed
+    source_types: Dict[str, float] = {
+        "academic_papers": 0.7,
+        "news_articles": 0.8,
+        "expert_blogs": 0.7,
+        "government_reports": 0.6,
+        "industry_reports": 0.6
+    }
+    topic_categories: Dict[str, float] = {}
+
+
+class FormatPreferences(BaseModel):
+    """User format preferences."""
+    response_length: str = "medium"  # short, medium, long
+    detail_level: str = "balanced"  # concise, balanced, comprehensive
+    use_bullet_points: bool = True
+    include_key_insights: bool = True
+
+
+class InteractionPreferences(BaseModel):
+    """User interaction preferences."""
+    notification_frequency: str = "moderate"  # low, moderate, high
+
+
+class PreferencesConfig(BaseModel):
+    """Complete user preferences configuration."""
+    content_preferences: ContentPreferences = ContentPreferences()
+    format_preferences: FormatPreferences = FormatPreferences()
+    interaction_preferences: InteractionPreferences = InteractionPreferences()
+
+
+class FeedbackSignals(BaseModel):
+    """User feedback signals."""
+    thumbs_feedback: Dict[str, int] = {
+        "up": 0,
+        "down": 0
+    }
+
+
+class InteractionSignals(BaseModel):
+    """User interaction signals."""
+    most_engaged_source_types: List[str] = []
+    follow_up_question_frequency: float = 0.0
+
+
+class FormatOptimizations(BaseModel):
+    """Learned format optimizations."""
+    prefers_structured_responses: Optional[bool] = None
+    optimal_response_length: Optional[int] = None
+
+
+class LearnedAdaptations(BaseModel):
+    """Learned user adaptations."""
+    tone_adjustments: Dict[str, str] = {}
+    format_optimizations: FormatOptimizations = FormatOptimizations()
+
+
+class EngagementAnalytics(BaseModel):
+    """User engagement analytics."""
+    feedback_signals: FeedbackSignals = FeedbackSignals()
+    interaction_signals: InteractionSignals = InteractionSignals()
+    learned_adaptations: LearnedAdaptations = LearnedAdaptations()
+    user_overrides: Dict[str, Any] = {}
+
+
+class AdaptationLogEntry(BaseModel):
+    """Single adaptation log entry."""
+    timestamp: float
+    adaptation_type: str
+    change_made: str
+    changes_detail: Optional[Dict[str, Any]] = None
+    user_feedback: Optional[str] = None
+    effectiveness_score: Optional[float] = None
+
+
+class PreferenceEvolution(BaseModel):
+    """Preference evolution tracking."""
+    source_type_preferences: List[Dict[str, Any]] = []
+    format_preferences: List[Dict[str, Any]] = []
+    content_preferences: List[Dict[str, Any]] = []
+
+
+class PersonalizationHistory(BaseModel):
+    """User personalization history."""
+    adaptation_log: List[AdaptationLogEntry] = []
+    preference_evolution: PreferenceEvolution = PreferenceEvolution()
+
+
+class PersonalizationContext(BaseModel):
+    """Personalization context for request processing."""
+    content_preferences: ContentPreferences
+    format_preferences: FormatPreferences  
+    interaction_preferences: InteractionPreferences
+    learned_adaptations: LearnedAdaptations
+    engagement_patterns: Dict[str, Any]
+
+
+class PreferenceOverride(BaseModel):
+    """Request to override a learned preference."""
+    preference_type: str
+    override_value: Any
+    disable_learning: bool = False
+
+
 class Message(BaseModel):
     """A chat message."""
     role: str
@@ -60,4 +166,5 @@ class UserProfile(BaseModel):
     user_id: str
     created_at: float
     metadata: Optional[Dict[str, Any]] = {}
-    personality: PersonalityConfig 
+    personality: PersonalityConfig
+    preferences: Optional[PreferencesConfig] = None

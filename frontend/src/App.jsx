@@ -3,7 +3,6 @@ import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
 import { SessionProvider } from './context/SessionContext';
 import { AdminProvider } from './context/AdminContext';
 import { NotificationProvider } from './context/NotificationContext';
-import Navigation from './components/Navigation';
 import ChatPage from './components/ChatPage';
 import TopicsDashboard from './components/TopicsDashboard';
 import ResearchResultsDashboard from './components/ResearchResultsDashboard';
@@ -11,6 +10,7 @@ import AdminLogin from './components/admin/AdminLogin';
 import AdminDashboard from './components/admin/AdminDashboard';
 import ProtectedAdminRoute from './components/admin/ProtectedAdminRoute';
 import ToastNotifications from './components/ToastNotifications';
+import Layout from './components/Layout';
 import './utils/testDataIsolation'; // Import test utilities for debugging
 import './App.css';
 
@@ -19,12 +19,7 @@ function App() {
     <SessionProvider>
       <AdminProvider>
         <NotificationProvider>
-          <Router
-            future={{
-              v7_startTransition: true,
-              v7_relativeSplatPath: true
-            }}
-          >
+          <Router>
             <div className="app">
               <Routes>
                 {/* Admin routes - no navigation header */}
@@ -34,20 +29,13 @@ function App() {
                     <AdminDashboard />
                   </ProtectedAdminRoute>
                 } />
-                
-                {/* Main app routes - with navigation */}
-                <Route path="/*" element={
-                  <>
-                    <Navigation />
-                    <main className="main-content">
-                      <Routes>
-                        <Route path="/" element={<ChatPage />} />
-                        <Route path="/topics" element={<TopicsDashboard />} />
-                        <Route path="/research-results" element={<ResearchResultsDashboard />} />
-                      </Routes>
-                    </main>
-                  </>
-                } />
+
+                {/* Main app routes - with navigation via Layout */}
+                <Route element={<Layout />}>
+                  <Route index element={<ChatPage />} />
+                  <Route path="topics" element={<TopicsDashboard />} />
+                  <Route path="research-results" element={<ResearchResultsDashboard />} />
+                </Route>
               </Routes>
               <ToastNotifications />
             </div>

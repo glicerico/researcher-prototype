@@ -5,6 +5,7 @@ A full-stack prototype that pairs a conversational AI with an autonomous backgro
 * React 19 front-end
 * FastAPI + LangGraph back-end
 * Motivation-driven research scheduler
+* **Privacy-preserving AI personalization system**
 * Knowledge Graph visualization (powered by Zep)
 * JWT-secured admin console & prompt editor
 * Local JSON storage – no external DB needed
@@ -52,10 +53,30 @@ setup.sh   one-shot installer for dev stacks
 docs/      extended documentation (setup, research engine, admin debug …)
 ```
 
+## Key Features
+
+### 🤖 AI Personalization System
+The assistant learns your preferences and adapts its responses while keeping all data private and transparent:
+
+* **Privacy-First**: All personalization data stored locally, never transmitted externally
+* **Adaptive Learning**: Learns from your reading patterns, source preferences, and interaction habits  
+* **Transparent Control**: See exactly what the system has learned with full override capabilities
+* **Smart Formatting**: Automatically adjusts response length, detail level, and structure
+* **Source Intelligence**: Prioritizes research sources based on your engagement patterns
+
+👤 **User Experience**: Three-tab interface (Personality, Preferences, What I've Learned) gives you complete control over how the AI adapts to your needs.
+
+### 🔬 Autonomous Research Engine  
+Motivation-driven background research that continuously learns about topics you're interested in.
+
+### 📊 Knowledge Graph Visualization
+Visual representation of research findings and topic relationships powered by Zep memory.
+
 ## Learn More
 
-* docs/setup.md – prerequisites, env variables, testing
+* docs/setup.md – prerequisites, env variables, testing  
 * docs/research_engine.md – how autonomous research & motivation work
+* **docs/personalization.md – AI personalization system (complete guide + API reference)**
 * docs/admin_debugging.md – admin UI, debug APIs, logging & tracing
 * docs/user_guide.md – everyday usage including Knowledge Graph
 * docs/zep_graph_visualization.md – Knowledge Graph implementation details

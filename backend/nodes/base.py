@@ -23,6 +23,7 @@ from storage.storage_manager import StorageManager
 from storage.profile_manager import ProfileManager
 from storage.research_manager import ResearchManager
 from storage.zep_manager import ZepManager
+from storage.personalization_manager import PersonalizationManager
 
 # Import all prompt templates from prompts.py
 from prompts import (
@@ -58,6 +59,7 @@ storage_manager = StorageManager(storage_dir)
 profile_manager = ProfileManager(storage_manager)
 research_manager = ResearchManager(storage_manager, profile_manager)
 zep_manager = ZepManager()
+personalization_manager = PersonalizationManager(storage_manager, profile_manager)
 
 
 class ChatState(TypedDict):

@@ -44,9 +44,9 @@ async def integrator_node(state: ChatState) -> ChatState:
     memory_context_section = ""
     if memory_context:
         memory_context_section = f"CONVERSATION MEMORY:\n{memory_context}\n\nUse this context to maintain conversation continuity and reference previous topics when relevant."
-        logger.info("🧠 Integrator: Including memory context from previous conversations")
+        logger.info("🧠 Integrator: ✅ Including memory context from previous conversations")
     else:
-        logger.debug("🧠 Integrator: No memory context available")
+        logger.debug("🧠 Integrator: ⚠️ No memory context available")
 
     # Add search results to context from all search sources
     search_sources = ["search", "academic_search", "social_search", "medical_search"]
@@ -84,7 +84,7 @@ async def integrator_node(state: ChatState) -> ChatState:
             # Directly construct the analysis context string
             analysis_context = f"ANALYTICAL INSIGHTS:\nThe following analysis was performed related to the user's query:\n\n{analysis_result_text}\n\nIncorporate these insights naturally into your response where relevant."
             context_sections.append(analysis_context)
-            logger.info("🧠 Integrator: Added analysis results to system context")
+            logger.info("🧠 Integrator: ✅ Added analysis results to system context")
 
     # Combine all context sections
     context_section = "\n\n".join(context_sections) if context_sections else ""
@@ -115,7 +115,7 @@ async def integrator_node(state: ChatState) -> ChatState:
 
         # Log the response for traceability
         display_response = response.content[:75] + "..." if len(response.content) > 75 else response.content
-        logger.info(f'🧠 Integrator: Generated response: "{display_response}"')
+        logger.info(f'🧠 Integrator: ✅ Generated response: "{display_response}"')
 
         # Store the Integrator's response in the workflow context for the renderer
         state["workflow_context"]["integrator_response"] = response.content

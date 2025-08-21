@@ -1,5 +1,6 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { getSessionTopicSuggestions, deleteTopicById, enableTopicResearchById, disableTopicResearchById } from '../services/api';
+import { trackEngagement } from '../utils/engagementTracker';
 import TopicSidebarItem from './TopicSidebarItem';
 import '../styles/ConversationTopics.css';
 
@@ -76,6 +77,16 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
     try {
       // Use the new safe ID-based API instead of index-based
       await enableTopicResearchById(topic.topic_id);
+      
+      // Track research activation
+      console.log('👤 ConversationTopics: ✅ Research activation tracked for topic:', topic.name);
+      trackEngagement({
+        type: 'research_activation',
+        topicId: topic.topic_id,
+        topicName: topic.name,
+        activationType: 'conversation_topic_enable',
+        timestamp: Date.now()
+      });
       
       // Optimistically update the UI
       setTopics(prevTopics => 

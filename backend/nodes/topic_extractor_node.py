@@ -35,7 +35,7 @@ def topic_extractor_node(state: ChatState) -> ChatState:
     user_id = state.get("user_id")
     
     if len(messages) < 2:  # Need at least one user message and one AI response
-        logger.debug("🔍 Topic Extractor: Insufficient conversation history for topic extraction")
+        logger.debug("🔍 Topic Extractor: ⚠️ Insufficient conversation history for topic extraction")
         state["module_results"]["topic_extractor"] = {
             "success": False,
             "result": [],
@@ -68,16 +68,16 @@ def topic_extractor_node(state: ChatState) -> ChatState:
                     logger.debug(f"🔍 Topic Extractor: Including {len(active_topics)} active research topics for context")
                 else:
                     active_topics_section = ""
-                    logger.debug("🔍 Topic Extractor: No active research topics found")
+                    logger.debug("🔍 Topic Extractor: ⚠️ No active research topics found")
             else:
                 active_topics_section = ""
-                logger.debug("🔍 Topic Extractor: No existing topics found for user")
+                logger.debug("🔍 Topic Extractor: ⚠️ No existing topics found for user")
         except Exception as e:
             logger.warning(f"🔍 Topic Extractor: Error retrieving active research topics: {str(e)}")
             active_topics_section = ""
     else:
         active_topics_section = ""
-        logger.debug("🔍 Topic Extractor: No user_id available for active topics lookup")
+        logger.debug("🔍 Topic Extractor: ⚠️ No user_id available for active topics lookup")
     
     # Create system message with formatted prompt including active topics and memory context
     memory_context = state.get("memory_context")
@@ -86,9 +86,9 @@ def topic_extractor_node(state: ChatState) -> ChatState:
         # Limit memory context to avoid overwhelming the prompt
         memory_preview = memory_context[:1000] + "..." if len(memory_context) > 1000 else memory_context
         memory_context_section = f"CONVERSATION MEMORY (for context only):\n{memory_preview}\n\nUse this to understand the user's interests and conversation style, but focus on the current question."
-        logger.debug("🔍 Topic Extractor: Including limited memory context")
+        logger.debug("🔍 Topic Extractor: ✅ Including limited memory context")
     else:
-        logger.debug("🔍 Topic Extractor: No memory context available")
+        logger.debug("🔍 Topic Extractor: ⚠️ No memory context available")
     
     # Create the full system prompt
     full_prompt = TOPIC_EXTRACTOR_SYSTEM_PROMPT.format(
@@ -161,9 +161,9 @@ def topic_extractor_node(state: ChatState) -> ChatState:
         
         if valid_topics:
             topic_names = [t["name"] for t in valid_topics]
-            logger.info(f"🔍 Topic Extractor: Extracted {len(valid_topics)} topics: {', '.join(topic_names)}")
+            logger.info(f"🔍 Topic Extractor: ✅ Extracted {len(valid_topics)} topics: {', '.join(topic_names)}")
         else:
-            logger.info("🔍 Topic Extractor: No research-worthy topics identified above confidence threshold")
+            logger.info("🔍 Topic Extractor: ⚠️ No research-worthy topics identified above confidence threshold")
             
     except Exception as e:
         logger.error(f"Error in topic_extractor_node: {str(e)}", exc_info=True)

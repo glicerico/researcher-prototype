@@ -69,7 +69,7 @@ def research_query_generator_node(state: ChatState) -> ChatState:
             # Update the human message with the generated query
             state["messages"][-1].content = research_query
         
-        logger.info(f"🔍 Research Query Generator: Generated query: '{research_query[:100]}...'")
+        logger.info(f"🔍 Research Query Generator: ✅ Generated query: '{research_query[:100]}...'")
         
         # Mark the query generation as successful
         state["module_results"]["research_query_generator"] = {
@@ -80,7 +80,7 @@ def research_query_generator_node(state: ChatState) -> ChatState:
         
     except Exception as e:
         error_message = f"Error generating research query: {str(e)}"
-        logger.error(f"🔍 Research Query Generator: {error_message}")
+        logger.error(f"🔍 Research Query Generator: ❌ {error_message}")
         
         # Fallback to a simple query
         fallback_query = f"Recent developments and new information about {topic_name}"

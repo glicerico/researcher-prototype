@@ -9,17 +9,21 @@ import {
   deleteResearchFinding,
   deleteAllTopicFindings
 } from '../services/api';
+import { useEngagementTracking } from '../utils/engagementTracker';
 import '../styles/ResearchResultsDashboard.css';
 
 const ResearchResultsDashboard = () => {
   const { userId } = useSession();
   const { markResearchNotificationsRead } = useNotifications();
+  const { trackInteraction } = useEngagementTracking();
+  
   const [researchData, setResearchData] = useState({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [expandedTopics, setExpandedTopics] = useState(new Set());
   const [bookmarkedFindings, setBookmarkedFindings] = useState(new Set());
+  // Removed unused readingTimers state
   const [filters, setFilters] = useState({
     searchTerm: '',
     dateRange: 'all',
@@ -37,7 +41,13 @@ const ResearchResultsDashboard = () => {
     
     if (isExternal) {
       return (
-        <a href={href} target="_blank" rel="noopener noreferrer" {...props}>
+        <a 
+          href={href} 
+          target="_blank" 
+          rel="noopener noreferrer" 
+          onClick={(e) => e.stopPropagation()} // Prevent parent click handlers from interfering
+          {...props}
+        >
           {children}
         </a>
       );
@@ -112,7 +122,9 @@ const ResearchResultsDashboard = () => {
   // Mark research notifications as read when user visits this page (only once)
   useEffect(() => {
     markResearchNotificationsRead();
-  }, [markResearchNotificationsRead]); // Include markResearchNotificationsRead in dependencies
+  }, [markResearchNotificationsRead]);
+
+
 
   // Auto-refresh research data every 10 seconds when user is selected
   useEffect(() => {
@@ -201,11 +213,19 @@ const ResearchResultsDashboard = () => {
       newExpanded.add(topicName);
     }
     setExpandedTopics(newExpanded);
+    
+    // Track topic expansion interaction - useful for personalization
+    trackInteraction(`topic_${topicName}`, newExpanded.has(topicName) ? 'expand' : 'collapse', {
+      findings_count: (researchData[topicName] || []).length,
+      topicName
+    });
   };
 
   // Handle bookmark toggle
   const toggleBookmark = (findingId) => {
     const newBookmarked = new Set(bookmarkedFindings);
+    const isBookmarking = !newBookmarked.has(findingId);
+    
     if (newBookmarked.has(findingId)) {
       newBookmarked.delete(findingId);
     } else {
@@ -214,6 +234,12 @@ const ResearchResultsDashboard = () => {
     setBookmarkedFindings(newBookmarked);
     
     localStorage.setItem('bookmarkedFindings', JSON.stringify([...newBookmarked]));
+    
+    // Track bookmark interaction - shows user interest
+    trackInteraction(`finding_${findingId}`, isBookmarking ? 'bookmark' : 'unbookmark', {
+      action: isBookmarking ? 'add' : 'remove',
+      findingId
+    });
   };
 
   // Handle mark as read
@@ -221,6 +247,12 @@ const ResearchResultsDashboard = () => {
     try {
       await markFindingAsRead(findingId);
       await loadResearchData();
+      
+      // Track mark as read interaction - shows content consumption
+      trackInteraction(`finding_${findingId}`, 'mark_read', {
+        action: 'mark_as_read',
+        findingId
+      });
     } catch (err) {
       console.error('Error marking finding as read:', err);
     }
