@@ -37,7 +37,6 @@ async def source_coordinator_node(state: ChatState) -> ChatState:
         "academic_search": semantic_scholar_search_node,
         "social_search": reddit_search_node,
         "medical_search": pubmed_search_node,
-        "analyzer": _analyzer_with_refiner,  # Special case that needs refiner first
     }
     
     # Execute all selected sources in parallel
@@ -93,18 +92,4 @@ async def _execute_source(source_func, state: Dict[str, Any], source_name: str) 
         return state
 
 
-async def _analyzer_with_refiner(state: ChatState) -> ChatState:
-    """Special handler for analyzer that needs refiner first."""
-    try:
-        # First run the analysis task refiner
-        refined_state = await analysis_task_refiner_node(state)
-        # Then run the analyzer
-        final_state = await analyzer_node(refined_state)
-        return final_state
-    except Exception as e:
-        logger.error(f"❌ Error in analyzer pipeline: {str(e)}")
-        state.setdefault("module_results", {})["analyzer"] = {
-            "success": False,
-            "error": str(e)
-        }
-        return state
+# Removed _analyzer_with_refiner since analyzer is now handled as separate intent path

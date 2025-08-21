@@ -88,17 +88,21 @@ async def multi_source_analyzer_node(state: ChatState) -> ChatState:
         confidence = analysis_result.confidence
 
         # Validate intent
-        if intent not in ["chat", "search"]:
+        if intent not in ["chat", "search", "analysis"]:
             intent = "chat"  # Default to chat for invalid intents
 
-        # Validate and filter sources
-        valid_sources = ["search", "academic_search", "social_search", "medical_search", "analyzer"]
-        sources = [s for s in sources if s in valid_sources]
-
-        # For search intent, ensure we have at least one source
-        if intent == "search" and not sources:
-            sources = ["search"]  # Default fallback
-            logger.info("🔍 Multi-Source Analyzer: No valid sources selected, defaulting to general search")
+        # Validate and filter sources (only applies to search intent)
+        if intent == "search":
+            valid_sources = ["search", "academic_search", "social_search", "medical_search"]
+            sources = [s for s in sources if s in valid_sources]
+            
+            # For search intent, ensure we have at least one source
+            if not sources:
+                sources = ["search"]  # Default fallback
+                logger.info("🔍 Multi-Source Analyzer: No valid sources selected, defaulting to general search")
+        else:
+            # For chat and analysis intents, no sources are needed
+            sources = []
 
         # Limit to max 3 sources to control costs
         if len(sources) > 3:

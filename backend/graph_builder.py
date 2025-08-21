@@ -48,7 +48,7 @@ def create_chat_graph():
     
     # Define the intent router function
     def intent_router(state: ChatState) -> str:
-        """Route based on intent: chat or search."""
+        """Route based on intent: chat, search, or analysis."""
         intent = state.get("intent", "chat")
         logger.info(f"⚡ Flow: Intent routing to '{intent}'")
         return intent
@@ -80,13 +80,14 @@ def create_chat_graph():
     builder.set_entry_point("initializer")
     builder.add_edge("initializer", "multi_source_analyzer")
     
-    # Route based on intent: chat or search
+    # Route based on intent: chat, search, or analysis
     builder.add_conditional_edges(
         "multi_source_analyzer",
         intent_router,
         {
             "chat": "integrator",
-            "search": "search_prompt_optimizer"
+            "search": "search_prompt_optimizer",
+            "analysis": "analysis_task_refiner"
         }
     )
     
@@ -95,6 +96,10 @@ def create_chat_graph():
     
     # Source coordinator goes directly to integrator after parallel execution
     builder.add_edge("source_coordinator", "integrator")
+    
+    # Analysis path goes directly to integrator
+    builder.add_edge("analysis_task_refiner", "analyzer")
+    builder.add_edge("analyzer", "integrator")
     
     # Final processing
     builder.add_edge("integrator", "response_renderer")

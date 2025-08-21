@@ -44,6 +44,13 @@ Analyze the conversation to determine the user's intent:
    - Factual queries requiring up-to-date information
    - Any topic that would benefit from multiple information sources
 
+3. **ANALYSIS** - Use for:
+   - Complex problem-solving requiring analytical thinking
+   - Data analysis, calculations, or processing tasks
+   - Breaking down complex concepts or workflows
+   - Comparative analysis or decision-making support
+   - Strategic planning or optimization problems
+
 For SEARCH intent, determine which sources would be most valuable (select 1-3):
 
 **Available Sources:**
@@ -51,7 +58,6 @@ For SEARCH intent, determine which sources would be most valuable (select 1-3):
 - **academic_search**: Academic papers (Semantic Scholar) - for research, scientific information
 - **social_search**: Community discussions (Reddit) - for opinions, experiences, sentiment
 - **medical_search**: Medical research (PubMed) - for health, biomedical, clinical information
-- **analyzer**: Data analysis and complex problem-solving
 
 **Source Selection Guidelines:**
 - Academic topics → academic_search + search
@@ -63,6 +69,8 @@ For SEARCH intent, determine which sources would be most valuable (select 1-3):
 
 Always include "search" as one source unless the query is purely academic/medical.
 Limit to maximum 3 sources to control costs and latency.
+
+For ANALYSIS intent, no sources are needed as this uses pure analytical reasoning.
 
 {memory_context_section}
 """

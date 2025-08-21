@@ -54,7 +54,7 @@ async def integrator_node(state: ChatState) -> ChatState:
         "academic_search": {"weight": 0.9, "name": "Academic Papers", "type": "scholarly"},
         "social_search": {"weight": 0.6, "name": "Social Media", "type": "sentiment"},
         "medical_search": {"weight": 0.9, "name": "Medical Research", "type": "clinical"},
-        "analyzer": {"weight": 0.7, "name": "Analysis", "type": "analytical"}
+        "analyzer": {"weight": 0.8, "name": "Analysis", "type": "analytical"}
     }
     
     all_citations = []
