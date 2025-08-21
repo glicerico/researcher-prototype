@@ -5,7 +5,7 @@
 The researcher prototype now supports multiple specialized search APIs in addition to Perplexity:
 
 - **Semantic Scholar** - Academic research papers (free)
-- **Reddit** - Community discussions and social sentiment (free tier available)
+- **Hacker News** - Community discussions and social sentiment (free)
 - **PubMed** - Medical and biomedical research (free)
 - **Perplexity** - General web search (existing)
 
@@ -15,7 +15,7 @@ The router now supports these search types:
 
 1. **search** - General web search via Perplexity (existing)
 2. **academic_search** - Academic papers via Semantic Scholar
-3. **social_search** - Community discussions via Reddit
+3. **social_search** - Community discussions via Hacker News
 4. **medical_search** - Medical research via PubMed
 5. **chat** - General conversation (existing)
 6. **analyzer** - Data analysis (existing)
@@ -27,28 +27,19 @@ The router now supports these search types:
 Add these to your `.env` file:
 
 ```bash
-# Reddit API (optional - for social search)
-REDDIT_CLIENT_ID=your_reddit_client_id
-REDDIT_CLIENT_SECRET=your_reddit_client_secret
-REDDIT_USER_AGENT=ResearcherPrototype:1.0 (by /u/your_reddit_username)
-
 # PubMed (optional - email recommended)
 PUBMED_EMAIL=your_email@example.com
 ```
 
-### Reddit API Setup
+### Hacker News Setup
 
-1. Go to https://www.reddit.com/prefs/apps
-2. Click "Create App" or "Create Another App"
-3. Choose "script" type
-4. Note the client ID (under app name) and client secret
-5. Add these to your `.env` file
+No setup required. We use the public Algolia HN Search API.
 
 ### Cost Considerations
 
 - **Semantic Scholar**: Free (no API key required)
 - **PubMed**: Free (no API key required, email recommended)
-- **Reddit**: Free up to 100 queries per minute, then $0.24/1000 requests
+- **Hacker News**: Free
 
 ## Usage Examples
 
@@ -69,7 +60,7 @@ User: "Medical studies on diabetes treatment"
 ### Social Sentiment
 ```
 User: "What do people think about the new iPhone?"
-→ Routes to: social_search (Reddit)
+→ Routes to: social_search (Hacker News)
 ```
 
 ### General Web Search
@@ -92,7 +83,7 @@ The router also sets scope filters that affect search behavior:
 The system integrates results from multiple sources when appropriate. For example, a query about "Tesla stock analysis" might use:
 
 1. Perplexity for general market information
-2. Reddit for community sentiment
+2. Hacker News for community sentiment
 3. Academic sources for financial research papers
 
 ## Testing
@@ -108,11 +99,11 @@ node = SemanticScholarSearchNode()
 asyncio.run(node.search('your query here', limit=3))
 "
 
-# Test Reddit (requires API keys)
+# Test Hacker News
 python -c "
 import asyncio
-from nodes.reddit_search_node import RedditSearchNode
-node = RedditSearchNode()
+from nodes.hacker_news_search_node import HackerNewsSearchNode
+node = HackerNewsSearchNode()
 asyncio.run(node.search('your query here', limit=5))
 "
 
@@ -128,7 +119,7 @@ asyncio.run(node.search('your medical query here', limit=3))
 ## Performance
 
 - **Semantic Scholar**: ~2-3 seconds per query
-- **Reddit**: ~1-2 seconds per query (requires OAuth)
+- **Hacker News**: ~0.5-1.0 seconds per query
 - **PubMed**: ~3-5 seconds per query (XML parsing required)
 - **Perplexity**: ~2-4 seconds per query (existing)
 

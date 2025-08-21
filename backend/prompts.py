@@ -35,7 +35,7 @@ For SEARCH intent, determine which sources would be most valuable (select 1-3):
 **Available Sources:**
 - **search**: General web search (Perplexity) - for current information, news, trends
 - **academic_search**: Academic papers (Semantic Scholar) - for research, scientific information
-- **social_search**: Community discussions (Reddit) - for opinions, experiences, sentiment
+- **social_search**: Community discussions (Hacker News) - for opinions, experiences, sentiment
 - **medical_search**: Medical research (PubMed) - for health, biomedical, clinical information
 
 **Source Selection Guidelines:**

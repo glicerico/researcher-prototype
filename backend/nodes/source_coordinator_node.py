@@ -13,7 +13,7 @@ from nodes.base import (
 # Import all search nodes
 from nodes.search_node import search_node
 from nodes.semantic_scholar_node import semantic_scholar_search_node  
-from nodes.reddit_search_node import reddit_search_node
+from nodes.hacker_news_search_node import hacker_news_search_node
 from nodes.pubmed_search_node import pubmed_search_node
 from nodes.analyzer_node import analyzer_node
 from nodes.analysis_refiner_node import analysis_task_refiner_node
@@ -35,7 +35,7 @@ async def source_coordinator_node(state: ChatState) -> ChatState:
     source_map = {
         "search": search_node,
         "academic_search": semantic_scholar_search_node,
-        "social_search": reddit_search_node,
+        "social_search": hacker_news_search_node,
         "medical_search": pubmed_search_node,
     }
     
