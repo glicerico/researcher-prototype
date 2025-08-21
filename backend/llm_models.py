@@ -11,7 +11,6 @@ class MultiSourceAnalysis(BaseModel):
     intent: str = Field(description="The intent classification: chat, search, or analysis")
     reason: str = Field(description="Brief explanation of why this intent was selected")
     sources: List[str] = Field(default=[], description="List of sources to execute for search intent: search, academic_search, social_search, medical_search")
-    confidence: float = Field(description="Confidence score 0.0-1.0 for the analysis")
 
 
 class AnalysisTask(BaseModel):

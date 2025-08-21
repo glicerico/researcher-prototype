@@ -66,8 +66,7 @@ class TestMultiSourceAnalyzerNode:
         mock_analysis_result = MultiSourceAnalysis(
             intent="chat",
             reason="General conversation",
-            sources=[],
-            confidence=0.9
+            sources=[]
         )
         mock_structured_analyzer.invoke.return_value = mock_analysis_result
         
@@ -89,8 +88,7 @@ class TestMultiSourceAnalyzerNode:
         mock_analysis_result = MultiSourceAnalysis(
             intent="search",
             reason="User needs current information",
-            sources=["search", "academic_search"],
-            confidence=0.8
+            sources=["search", "academic_search"]
         )
         mock_structured_analyzer.invoke.return_value = mock_analysis_result
         
@@ -111,8 +109,7 @@ class TestMultiSourceAnalyzerNode:
         mock_analysis_result = MultiSourceAnalysis(
             intent="analysis",
             reason="Complex analytical task",
-            sources=[],
-            confidence=0.85
+            sources=[]
         )
         mock_structured_analyzer.invoke.return_value = mock_analysis_result
         
@@ -133,8 +130,7 @@ class TestMultiSourceAnalyzerNode:
         mock_analysis_result = MultiSourceAnalysis(
             intent="invalid_intent",
             reason="This should fallback to chat",
-            sources=[],
-            confidence=0.5
+            sources=[]
         )
         mock_structured_analyzer.invoke.return_value = mock_analysis_result
         

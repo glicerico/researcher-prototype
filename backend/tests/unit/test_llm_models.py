@@ -20,21 +20,18 @@ class TestMultiSourceAnalysis:
         analysis = MultiSourceAnalysis(
             intent="search",
             reason="User needs current information",
-            sources=["search", "academic_search"],
-            confidence=0.8
+            sources=["search", "academic_search"]
         )
         
         assert analysis.intent == "search"
         assert analysis.reason == "User needs current information"
         assert analysis.sources == ["search", "academic_search"]
-        assert analysis.confidence == 0.8
 
     def test_multi_source_analysis_chat_intent(self):
         """Test chat intent with no sources."""
         analysis = MultiSourceAnalysis(
             intent="chat",
-            reason="General conversation",
-            confidence=0.9
+            reason="General conversation"
         )
         
         assert analysis.intent == "chat"

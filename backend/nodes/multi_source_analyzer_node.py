@@ -31,7 +31,7 @@ async def multi_source_analyzer_node(state: ChatState) -> ChatState:
         # Default to chat if no user message found
         state["intent"] = "chat"
         state["selected_sources"] = []
-        state["routing_analysis"] = {"intent": "chat", "reason": "No user message found", "sources": [], "confidence": 1.0}
+        state["routing_analysis"] = {"intent": "chat", "reason": "No user message found", "sources": []}
         logger.info("🔍 Multi-Source Analyzer: No user message found, defaulting to chat")
         return state
 
@@ -85,7 +85,6 @@ async def multi_source_analyzer_node(state: ChatState) -> ChatState:
         intent = analysis_result.intent.lower()
         reason = analysis_result.reason
         sources = analysis_result.sources
-        confidence = analysis_result.confidence
 
         # Validate intent
         if intent not in ["chat", "search", "analysis"]:
@@ -116,7 +115,6 @@ async def multi_source_analyzer_node(state: ChatState) -> ChatState:
             "intent": intent,
             "reason": reason,
             "sources": sources,
-            "confidence": confidence,
             "model_used": config.ROUTER_MODEL,
             "context_messages_used": len(analyzer_messages) - 1,
         }
@@ -129,7 +127,7 @@ async def multi_source_analyzer_node(state: ChatState) -> ChatState:
         logger.error(f"Error in multi_source_analyzer_node: {str(e)}")
         state["intent"] = "chat"
         state["selected_sources"] = []
-        state["routing_analysis"] = {"intent": "chat", "reason": f"Error: {str(e)}", "sources": [], "confidence": 0.0}
+        state["routing_analysis"] = {"intent": "chat", "reason": f"Error: {str(e)}", "sources": []}
         logger.info("🔍 Multi-Source Analyzer: Exception occurred, defaulting to chat")
 
     return state
