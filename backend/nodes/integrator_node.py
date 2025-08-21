@@ -48,13 +48,13 @@ async def integrator_node(state: ChatState) -> ChatState:
     else:
         logger.debug("🧠 Integrator: ⚠️ No memory context available")
 
-    # Enhanced multi-source processing with weighting and cross-referencing
+    # Multi-source processing with cross-referencing
     source_config = {
-        "search": {"weight": 0.8, "name": "Web Search", "type": "current_info"},
-        "academic_search": {"weight": 0.9, "name": "Academic Papers", "type": "scholarly"},
-        "social_search": {"weight": 0.6, "name": "Social Media", "type": "sentiment"},
-        "medical_search": {"weight": 0.9, "name": "Medical Research", "type": "clinical"},
-        "analyzer": {"weight": 0.8, "name": "Analysis", "type": "analytical"}
+        "search": {"name": "Web Search", "type": "current_info"},
+        "academic_search": {"name": "Academic Papers", "type": "scholarly"},
+        "social_search": {"name": "Social Media", "type": "sentiment"},
+        "medical_search": {"name": "Medical Research", "type": "clinical"},
+        "analyzer": {"name": "Analysis", "type": "analytical"}
     }
     
     all_citations = []
@@ -69,18 +69,17 @@ async def integrator_node(state: ChatState) -> ChatState:
         if search_results_data.get("success", False):
             search_result_text = search_results_data.get("result", "")
             if search_result_text:
-                # Build weighted source-specific context
+                # Build source-specific context
                 source_name = config["name"]
-                source_weight = config["weight"]
                 source_type = config["type"]
                 
-                # Create enhanced context with metadata
-                search_context = f"""INFORMATION FROM {source_name.upper()} (Reliability: {source_weight:.1f}/1.0, Type: {source_type}):
+                # Create context with source information
+                search_context = f"""INFORMATION FROM {source_name.upper()} (Type: {source_type}):
 {search_result_text}
 """
                 context_sections.append(search_context)
-                successful_sources.append({"name": source_name, "type": source_type, "weight": source_weight})
-                logger.info(f"🧠 Integrator: ✅ Added {source_name} results (weight: {source_weight}) to context")
+                successful_sources.append({"name": source_name, "type": source_type})
+                logger.info(f"🧠 Integrator: ✅ Added {source_name} results to context")
                 
                 # Collect citations and sources for renderer
                 citations = search_results_data.get("citations", [])
@@ -98,8 +97,7 @@ async def integrator_node(state: ChatState) -> ChatState:
         source_summary = f"""
 MULTI-SOURCE ANALYSIS SUMMARY:
 Successfully retrieved information from {len(successful_sources)} sources: {', '.join([s['name'] for s in successful_sources])}.
-When synthesizing, consider source reliability weights and cross-reference information between sources.
-Highlight areas where sources agree or provide complementary information.
+When synthesizing, cross-reference information between sources and highlight areas where sources agree or provide complementary information.
 """
         context_sections.insert(0, source_summary)
         logger.info(f"🧠 Integrator: 📊 Multi-source analysis with {len(successful_sources)} sources")

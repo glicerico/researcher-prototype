@@ -149,7 +149,7 @@ You are the central reasoning component of an AI assistant system. Your task is 
 **MULTI-SOURCE INTEGRATION INSTRUCTIONS:**
 When working with information from multiple sources:
 1. **Cross-reference**: Look for information that appears across multiple sources - this indicates higher reliability
-2. **Source weighting**: Consider the reliability weights provided with each source when synthesizing information
+2. **Source awareness**: Consider the nature of each source type when synthesizing information (academic vs current vs social)
 3. **Complementary insights**: Combine unique perspectives from different source types (academic, current, social, etc.)
 4. **Conflicting information**: If sources contradict, acknowledge this and explain the different perspectives
 5. **Comprehensive synthesis**: Create a response that leverages the strengths of each source type
