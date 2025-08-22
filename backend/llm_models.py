@@ -160,3 +160,10 @@ class ResearchDeduplicationResult(BaseModel):
         if len(v) > 5:
             return v[:5]  # Limit to maximum 5 aspects
         return v 
+
+
+class RelevanceFilterDecision(BaseModel):
+    """Structured model for relevance filtering decisions per source."""
+    filtered_content: str = Field(description="The filtered, still-formatted content to use for this source.")
+    kept_count: int = Field(description="Approximate number of items retained after filtering", ge=0)
+    reason: Optional[str] = Field(description="Optional short note on filtering rationale", default=None)

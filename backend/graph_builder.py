@@ -28,6 +28,7 @@ from nodes.semantic_scholar_node import semantic_scholar_search_node
 from nodes.hacker_news_search_node import hacker_news_search_node
 from nodes.pubmed_search_node import pubmed_search_node
 from nodes.source_coordinator_node import source_coordinator_node
+from nodes.search_results_reviewer_node import search_results_reviewer_node
 
 
 def setup_tracing():
@@ -77,6 +78,8 @@ def create_chat_graph():
     
     # Add source coordinator node for parallel execution
     builder.add_node("source_coordinator", source_coordinator_node)
+    # Add results reviewer node to filter irrelevant items before integration
+    builder.add_node("results_reviewer", search_results_reviewer_node)
     
     # Define the main workflow
     builder.set_entry_point("initializer")
@@ -96,8 +99,9 @@ def create_chat_graph():
     # After query optimization, coordinate parallel searches
     builder.add_edge("search_prompt_optimizer", "source_coordinator")
     
-    # Source coordinator goes directly to integrator after parallel execution
-    builder.add_edge("source_coordinator", "integrator")
+    # After parallel execution, run a relevance review step
+    builder.add_edge("source_coordinator", "results_reviewer")
+    builder.add_edge("results_reviewer", "integrator")
     
     # Analysis path goes directly to integrator
     builder.add_edge("analysis_task_refiner", "analyzer")
