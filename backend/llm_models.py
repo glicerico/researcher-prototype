@@ -90,6 +90,10 @@ class ResearchQualityAssessment(BaseModel):
 class SearchOptimization(BaseModel):
     """Optimized search query with parameters and confidences."""
     query: str = Field(description="The optimized search query")
+    social_query: Optional[str] = Field(
+        description="Hacker News optimized query (only when social_search is selected)",
+        default=None
+    )
     recency_filter: Optional[str] = Field(
         description="Recency filter preference: 'week' | 'month' | 'year' | null",
         default=None

@@ -142,7 +142,28 @@ class HackerNewsSearchNode(BaseAPISearchNode):
 hacker_news_search_node_instance = HackerNewsSearchNode()
 
 async def hacker_news_search_node(state: ChatState) -> ChatState:
-    """Hacker News search node entry point."""
-    return await hacker_news_search_node_instance.execute_search_node(state, RESULT_KEY)
+    """Hacker News search node entry point with social query optimization."""
+    # Check if there's a social-optimized query from the search optimizer
+    social_query = state.get("workflow_context", {}).get("social_search_query")
+    
+    if social_query:
+        # Use the LLM-optimized social query
+        logger.info(f"🔍 Hacker News: Using LLM-optimized social query: '{social_query}'")
+        # Temporarily store the social query as the refined query for the base class
+        original_refined_query = state.get("workflow_context", {}).get("refined_search_query")
+        state["workflow_context"]["refined_search_query"] = social_query
+        
+        # Execute search with social query
+        result_state = await hacker_news_search_node_instance.execute_search_node(state, RESULT_KEY)
+        
+        # Restore the original refined query
+        if original_refined_query:
+            state["workflow_context"]["refined_search_query"] = original_refined_query
+        
+        return result_state
+    else:
+        # Fall back to standard refined query
+        logger.info("🔍 Hacker News: No social query available, using standard refined query")
+        return await hacker_news_search_node_instance.execute_search_node(state, RESULT_KEY)
 
 
