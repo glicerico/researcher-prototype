@@ -67,7 +67,7 @@ async def integrator_node(state: ChatState) -> ChatState:
         search_results_data = state.get("module_results", {}).get(source, {})
         
         if search_results_data.get("success", False):
-            search_result_text = search_results_data.get("result", "")
+            search_result_text = search_results_data.get("content", "")
             if search_result_text:
                 # Build source-specific context
                 source_name = source_info["name"]

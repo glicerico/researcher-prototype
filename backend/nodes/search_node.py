@@ -187,7 +187,7 @@ async def search_node(state: ChatState) -> ChatState:
 
             state["module_results"][RESULT_KEY] = {
                 "success": True,
-                "result": search_result,
+                "content": search_result,
                 "query_used": query_to_search,
                 "citations": citations,
                 "search_results": search_results,
