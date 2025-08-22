@@ -26,6 +26,7 @@ from nodes.response_renderer_node import response_renderer_node
 # Import multi-source search coordination
 from nodes.research_source_selector_node import research_source_selector_node
 from nodes.source_coordinator_node import source_coordinator_node
+from nodes.search_optimizer_node import search_prompt_optimizer_node
 
 
 def setup_research_tracing():
@@ -55,6 +56,8 @@ def create_research_graph():
     
     # Add source coordinator node (handles all search sources internally)
     builder.add_node("source_coordinator", source_coordinator_node)
+    # Add shared search optimizer to refine queries before multi-source search
+    builder.add_node("search_prompt_optimizer", search_prompt_optimizer_node)
     
     # Add processing nodes
     builder.add_node("integrator", integrator_node)
@@ -70,7 +73,9 @@ def create_research_graph():
     # Initialize -> Generate Query -> Select Sources -> Coordinate Multi-Source Search -> Integrate -> Process
     builder.add_edge("research_initializer", "research_query_generator")
     builder.add_edge("research_query_generator", "research_source_selector")
-    builder.add_edge("research_source_selector", "source_coordinator")
+    # Run optimizer after selecting sources so it can generate source-aware queries (e.g., HN social_query)
+    builder.add_edge("research_source_selector", "search_prompt_optimizer")
+    builder.add_edge("search_prompt_optimizer", "source_coordinator")
     builder.add_edge("source_coordinator", "integrator")
     builder.add_edge("integrator", "response_renderer")
     builder.add_edge("response_renderer", "research_quality_assessor")

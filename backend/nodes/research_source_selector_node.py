@@ -69,8 +69,9 @@ async def research_source_selector_node(state: ChatState) -> ChatState:
         # Limit to maximum 3 sources for research efficiency
         selected_sources = selected_sources[:3]
         
-        # Store results
+        # Store results (both in workflow_context and top-level for downstream components)
         state["workflow_context"]["selected_sources"] = selected_sources
+        state["selected_sources"] = selected_sources
         state["intent"] = "search"  # Research always uses search intent
         
         # Store source selection analysis
