@@ -10,6 +10,9 @@ from datetime import datetime
 from nodes.base_api_search_node import BaseAPISearchNode
 from nodes.base import ChatState, logger
 
+# Fixed result key for this search source
+RESULT_KEY = "social_search"
+
 
 class HackerNewsSearchNode(BaseAPISearchNode):
     """Search node for Hacker News discussions and threads."""
@@ -140,6 +143,6 @@ hacker_news_search_node_instance = HackerNewsSearchNode()
 
 async def hacker_news_search_node(state: ChatState) -> ChatState:
     """Hacker News search node entry point."""
-    return await hacker_news_search_node_instance.execute_search_node(state)
+    return await hacker_news_search_node_instance.execute_search_node(state, RESULT_KEY)
 
 

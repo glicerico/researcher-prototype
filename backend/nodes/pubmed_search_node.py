@@ -12,6 +12,9 @@ from urllib.parse import quote_plus
 from nodes.base_api_search_node import BaseAPISearchNode
 from nodes.base import ChatState, logger, config
 
+# Fixed result key for this search source
+RESULT_KEY = "medical_search"
+
 
 class PubMedSearchNode(BaseAPISearchNode):
     """Search node for PubMed medical and biomedical research."""
@@ -296,4 +299,4 @@ pubmed_search_node_instance = PubMedSearchNode()
 
 async def pubmed_search_node(state: ChatState) -> ChatState:
     """PubMed search node entry point."""
-    return await pubmed_search_node_instance.execute_search_node(state)
+    return await pubmed_search_node_instance.execute_search_node(state, RESULT_KEY)

@@ -79,16 +79,15 @@ async def _execute_source(source_func, state: Dict[str, Any], source_name: str) 
     """Execute a single source function and return the updated state."""
     try:
         logger.debug(f"🔍 Executing {source_name}")
+        # Each search node stores results directly to its hardcoded key
         result_state = await source_func(state)
         logger.debug(f"✅ Completed {source_name}")
         return result_state
     except Exception as e:
         logger.error(f"❌ Error in {source_name}: {str(e)}")
-        # Return state with error recorded
-        state.setdefault("module_results", {})[source_name] = {
-            "success": False,
-            "error": str(e)
-        }
+        # If there's an exception at this level, the search node couldn't even run
+        # We can't store to the specific key since we don't know it here
+        logger.error(f"🎛️ Source Coordinator: Critical error in {source_name} execution")
         return state
 
 

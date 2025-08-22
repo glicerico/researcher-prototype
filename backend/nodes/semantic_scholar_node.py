@@ -10,6 +10,9 @@ from datetime import datetime
 from nodes.base_api_search_node import BaseAPISearchNode
 from nodes.base import ChatState, logger, config
 
+# Fixed result key for this search source
+RESULT_KEY = "academic_search"
+
 
 class SemanticScholarSearchNode(BaseAPISearchNode):
     """Search node for Semantic Scholar academic papers."""
@@ -164,4 +167,4 @@ semantic_scholar_search_node_instance = SemanticScholarSearchNode()
 
 async def semantic_scholar_search_node(state: ChatState) -> ChatState:
     """Semantic Scholar search node entry point."""
-    return await semantic_scholar_search_node_instance.execute_search_node(state)
+    return await semantic_scholar_search_node_instance.execute_search_node(state, RESULT_KEY)
