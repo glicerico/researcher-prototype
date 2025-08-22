@@ -8,6 +8,7 @@ from abc import ABC, abstractmethod
 from typing import Dict, Any
 from nodes.base import ChatState, logger, queue_status
 from utils import get_last_user_message
+from config import SEARCH_RESULTS_LIMIT
 
 
 class BaseAPISearchNode(ABC):
@@ -25,7 +26,7 @@ class BaseAPISearchNode(ABC):
         pass
     
     @abstractmethod
-    async def search(self, query: str, limit: int = 10, **kwargs) -> Dict[str, Any]:
+    async def search(self, query: str, limit: int = SEARCH_RESULTS_LIMIT, **kwargs) -> Dict[str, Any]:
         """
         Perform the actual API search.
         
@@ -85,8 +86,8 @@ class BaseAPISearchNode(ABC):
             return state
         
         try:
-            # Perform the search with max 10 results (API-specific)
-            search_results = await self.search(query_to_search, limit=10)
+            # Perform the search with max results limit (API-specific)
+            search_results = await self.search(query_to_search, limit=SEARCH_RESULTS_LIMIT)
             
             if search_results.get("success", False):
                 # Format results for readability (API-specific)

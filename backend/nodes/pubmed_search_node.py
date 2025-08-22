@@ -10,7 +10,9 @@ from datetime import datetime, timedelta
 from xml.etree import ElementTree as ET
 from urllib.parse import quote_plus
 from nodes.base_api_search_node import BaseAPISearchNode
-from nodes.base import ChatState, logger, config
+from nodes.base import ChatState, logger
+from config import SEARCH_RESULTS_LIMIT
+import config
 
 # Fixed result key for this search source
 RESULT_KEY = "medical_search"
@@ -31,13 +33,13 @@ class PubMedSearchNode(BaseAPISearchNode):
         # Always return True since email is optional but recommended
         return True
     
-    async def search(self, query: str, limit: int = 20, **kwargs) -> Dict[str, Any]:
+    async def search(self, query: str, limit: int = SEARCH_RESULTS_LIMIT, **kwargs) -> Dict[str, Any]:
         """
         Search PubMed for medical/biomedical research papers.
         
         Args:
             query: Search query
-            limit: Maximum number of results (default 20, max 200)
+            limit: Maximum number of results (default from SEARCH_RESULTS_LIMIT, max 200)
             
         Returns:
             Dict with search results

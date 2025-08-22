@@ -8,7 +8,9 @@ from typing import Dict, Any, List
 import requests
 from datetime import datetime
 from nodes.base_api_search_node import BaseAPISearchNode
-from nodes.base import ChatState, logger, config
+from nodes.base import ChatState, logger
+from config import SEARCH_RESULTS_LIMIT
+import config
 
 # Fixed result key for this search source
 RESULT_KEY = "academic_search"
@@ -31,13 +33,13 @@ class SemanticScholarSearchNode(BaseAPISearchNode):
         """Semantic Scholar API is free and doesn't require API keys."""
         return True
     
-    async def search(self, query: str, limit: int = 20, **kwargs) -> Dict[str, Any]:
+    async def search(self, query: str, limit: int = SEARCH_RESULTS_LIMIT, **kwargs) -> Dict[str, Any]:
         """
         Search Semantic Scholar for academic papers.
         
         Args:
             query: Search query
-            limit: Maximum number of results (default 20, max 100)
+            limit: Maximum number of results (default from SEARCH_RESULTS_LIMIT, max 100)
             
         Returns:
             Dict with search results

@@ -12,6 +12,7 @@ from nodes.base import (
     queue_status,
 )
 from prompts import SEARCH_RESULTS_REVIEWER_PROMPT
+from config import SEARCH_RESULTS_LIMIT
 
 
 async def search_results_reviewer_node(state: ChatState) -> ChatState:
@@ -61,7 +62,7 @@ async def search_results_reviewer_node(state: ChatState) -> ChatState:
             source_name=source_human_name,
             query=query,
             original_content=original_content,
-            max_items=10,
+            max_items=SEARCH_RESULTS_LIMIT,
         )
 
         messages = [SystemMessage(content=prompt)]

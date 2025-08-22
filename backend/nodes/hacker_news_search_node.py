@@ -9,6 +9,7 @@ import requests
 from datetime import datetime
 from nodes.base_api_search_node import BaseAPISearchNode
 from nodes.base import ChatState, logger
+from config import SEARCH_RESULTS_LIMIT
 
 # Fixed result key for this search source
 RESULT_KEY = "social_search"
@@ -25,13 +26,13 @@ class HackerNewsSearchNode(BaseAPISearchNode):
         """No API key required for HN Algolia endpoint."""
         return True
 
-    async def search(self, query: str, limit: int = 20, **kwargs) -> Dict[str, Any]:
+    async def search(self, query: str, limit: int = SEARCH_RESULTS_LIMIT, **kwargs) -> Dict[str, Any]:
         """
         Search Hacker News for stories and comments related to the query.
 
         Args:
             query: Search query
-            limit: Max number of results (default 20)
+            limit: Max number of results (default from SEARCH_RESULTS_LIMIT)
 
         Returns:
             Dict with search results
