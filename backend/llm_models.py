@@ -167,3 +167,9 @@ class RelevanceFilterDecision(BaseModel):
     filtered_content: str = Field(description="The filtered, still-formatted content to use for this source.")
     kept_count: int = Field(description="Approximate number of items retained after filtering", ge=0)
     reason: Optional[str] = Field(description="Optional short note on filtering rationale", default=None)
+
+
+class RelevanceSelection(BaseModel):
+    """Indices-based relevance selection to avoid text regeneration risk."""
+    selected_indices: List[int] = Field(description="Zero-based indices of relevant items from the provided list")
+    reason: Optional[str] = Field(description="Optional short rationale for the selection", default=None)

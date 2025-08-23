@@ -193,22 +193,28 @@ Your response should be a clear synthesis that demonstrates you've considered mu
 # Search results reviewer prompt
 SEARCH_RESULTS_REVIEWER_PROMPT = """
 Current date and time: {current_time}
-You are a precise relevance reviewer. Given a user query and a list-like block of extracted results from a specific source, keep only the items that are directly relevant to the query. Remove generic, off-topic, or weakly related items.
+You are a precise relevance reviewer. Given a user query and a list of items from a specific source, select the indices of items that are directly relevant to the query. Use strict relevance criteria.
 
 GUIDELINES:
 - Judge relevance strictly against the query intent.
 - Prefer items that directly answer, provide strong evidence, or add substantial context.
 - Discard tangents, low-signal commentary, and items that only mention a keyword without substance.
-- Preserve the original formatting style where possible, but it's OK to shorten overly long snippets.
-- Keep at most {max_items} of the strongest items.
+- Select at most {max_items} of the strongest items.
 
 SOURCE: {source_name}
 QUERY: {query}
 
-ORIGINAL ITEMS:
-{original_content}
+ITEMS (zero-based indexed):
+{enumerated_items}
 
-RETURN THE FILTERED ITEMS ONLY (no preamble, no JSON). If nothing is relevant, return: "No highly relevant items found."
+REQUIRED JSON FORMAT:
+{{
+  "selected_indices": [0, 3, 5],
+  "reason": "short rationale (optional)"
+}}
+
+If nothing is relevant, return:
+{{"selected_indices": [], "reason": "no highly relevant items"}}
 """
 
 # Context templates for system prompt integration

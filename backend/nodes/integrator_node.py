@@ -67,7 +67,41 @@ async def integrator_node(state: ChatState) -> ChatState:
         search_results_data = state.get("module_results", {}).get(source, {})
         
         if search_results_data.get("success", False):
-            search_result_text = search_results_data.get("content", "")
+            # Prefer reviewer-filtered raw results if available to avoid LLM regeneration drift
+            filtered_items_text = ""
+            try:
+                raw = search_results_data.get("raw_results", {}) or {}
+                items = raw.get("results")
+                if items and search_results_data.get("filtered_by_reviewer"):
+                    # Build a concise list from filtered items
+                    lines = []
+                    for idx, item in enumerate(items, 1):
+                        title = (
+                            item.get("title")
+                            or item.get("story_title")
+                            or item.get("paperTitle")
+                            or "(no title)"
+                        )
+                        url = (
+                            item.get("url")
+                            or item.get("story_url")
+                            or (item.get("openAccessPdf", {}) or {}).get("url")
+                            or ""
+                        )
+                        snippet = item.get("text") or item.get("abstract") or ""
+                        if snippet and len(snippet) > 220:
+                            snippet = snippet[:220] + "..."
+                        parts = [f"{idx}. {title}"]
+                        if snippet:
+                            parts.append(f" — {snippet}")
+                        if url:
+                            parts.append(f"\n   🔗 {url}")
+                        lines.append("".join(parts))
+                    filtered_items_text = "\n".join(lines)
+            except Exception:
+                filtered_items_text = ""
+
+            search_result_text = filtered_items_text or search_results_data.get("content", "")
             if search_result_text:
                 # Build source-specific context
                 source_name = source_info["name"]
