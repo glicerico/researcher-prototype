@@ -19,6 +19,7 @@ from llm_models import RelevanceSelection
 async def search_results_reviewer_node(state: ChatState) -> ChatState:
     """Review and filter each source's content for relevance to the query before integration."""
     logger.info("🧹 Results Reviewer: Filtering source outputs for relevance")
+    logger.info("🧹 Results Reviewer: Skipping 'search' (Perplexity) - single comprehensive result with citations")
     queue_status(state.get("thread_id"), "Reviewing results for relevance...")
 
     current_time = get_current_datetime_str()
@@ -40,11 +41,10 @@ async def search_results_reviewer_node(state: ChatState) -> ChatState:
             except Exception:
                 query = ""
 
-    # Apply to known sources only
+    # Apply to known sources only (skip "search" as Perplexity returns single comprehensive result)
     source_names = {
-        "search": "Web Search",
         "academic_search": "Academic Papers",
-        "social_search": "Hacker News",
+        "social_search": "Hacker News", 
         "medical_search": "PubMed",
     }
 
