@@ -73,41 +73,39 @@ async def integrator_node(state: ChatState) -> ChatState:
                 raw = search_results_data.get("raw_results", {}) or {}
                 all_items = raw.get("results")
                 if all_items and search_results_data.get("filtered_by_reviewer"):
-                    # Use only the items selected by the reviewer
-                    selected_indices = search_results_data.get("selected_indices", [])
-                    if selected_indices:
-                        # Build a concise list from only the selected items
+                    # Use the items that were already filtered by the reviewer
+                    # (raw_results["results"] now contains only the selected items)
+                    if all_items:
+                        # Build a concise list from the filtered items
                         lines = []
-                        for display_idx, original_idx in enumerate(selected_indices, 1):
-                            if original_idx < len(all_items):
-                                item = all_items[original_idx]
-                                title = (
-                                    item.get("title")
-                                    or item.get("story_title")
-                                    or item.get("paperTitle")
-                                    or "(no title)"
-                                )
-                                url = (
-                                    item.get("url")
-                                    or item.get("story_url")
-                                    or (item.get("openAccessPdf", {}) or {}).get("url")
-                                    or ""
-                                )
-                                snippet = item.get("text") or item.get("abstract") or ""
-                                if snippet and len(snippet) > 220:
-                                    snippet = snippet[:220] + "..."
-                                parts = [f"{display_idx}. {title}"]
-                                if snippet:
-                                    parts.append(f" — {snippet}")
-                                if url:
-                                    parts.append(f"\n   🔗 {url}")
-                                lines.append("".join(parts))
+                        for display_idx, item in enumerate(all_items, 1):
+                            title = (
+                                item.get("title")
+                                or item.get("story_title")
+                                or item.get("paperTitle")
+                                or "(no title)"
+                            )
+                            url = (
+                                item.get("url")
+                                or item.get("story_url")
+                                or (item.get("openAccessPdf", {}) or {}).get("url")
+                                or ""
+                            )
+                            snippet = item.get("text") or item.get("abstract") or ""
+                            if snippet and len(snippet) > 220:
+                                snippet = snippet[:220] + "..."
+                            parts = [f"{display_idx}. {title}"]
+                            if snippet:
+                                parts.append(f" — {snippet}")
+                            if url:
+                                parts.append(f"\n   🔗 {url}")
+                            lines.append("".join(parts))
                         filtered_items_text = "\n".join(lines)
-                        logger.info(f"🧠 Integrator: Using {len(selected_indices)} reviewer-filtered items from {source}")
+                        logger.info(f"🧠 Integrator: Using {len(all_items)} reviewer-filtered items from {source}")
                     else:
-                        # No items selected by reviewer - use empty content
+                        # No items after reviewer filtering
                         filtered_items_text = ""
-                        logger.info(f"🧠 Integrator: No relevant items selected by reviewer for {source}")
+                        logger.info(f"🧠 Integrator: No relevant items after reviewer filtering for {source}")
             except Exception:
                 filtered_items_text = ""
 

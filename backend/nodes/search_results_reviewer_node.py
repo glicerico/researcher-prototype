@@ -127,7 +127,7 @@ async def search_results_reviewer_node(state: ChatState) -> ChatState:
                 raw_results["results"] = filtered_results
                 # Mark and leave formatting to integrator (or existing content remains acceptable)
                 state["module_results"][key]["raw_results"] = raw_results
-                state["module_results"][key]["filtered_indices"] = selected
+                state["module_results"][key]["selected_indices"] = selected
                 state["module_results"][key]["filtered_by_reviewer"] = True
                 logger.info(f"🧹 Results Reviewer: ✅ Selected {len(filtered_results)} items for {source_human_name}")
                 # If content exists from formatter, we can regenerate via formatter by signaling downstream if needed
