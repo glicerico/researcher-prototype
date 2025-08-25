@@ -223,12 +223,13 @@ FILTERED RESULTS FROM {source_name_upper}:
 {enumerated_items}
 
 INSTRUCTIONS:
-1. Extract the most important and relevant claims from these results
+1. Analyze the full abstracts and content provided (academic papers, research summaries, discussion content) to extract the most important and relevant claims
 2. Write each claim as a clear, concise sentence
 3. Add citation markers [0], [1], [2], etc. at the end of each claim, using the index numbers from the enumerated results above
 4. Focus on claims that are directly relevant to the user's query
 5. Preserve factual accuracy - do not paraphrase in ways that change meaning
 6. If results contain contradictory information, mention both perspectives with their respective citations
+7. Synthesize information across multiple papers when they support the same claim (e.g., "Multiple studies show... [0][1][3]")
 
 REQUIRED JSON FORMAT:
 {{

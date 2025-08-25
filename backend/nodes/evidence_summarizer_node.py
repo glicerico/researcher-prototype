@@ -62,31 +62,53 @@ async def evidence_summarizer_node(state: ChatState) -> ChatState:
 
         logger.info(f"📝 Evidence Summarizer: Processing {len(filtered_items)} filtered items from {source_human_name}")
 
-        # Build enumerated items for the LLM
+        # Build enumerated items for the LLM with full abstracts for richer context
         enumerated_items = []
         for idx, item in enumerate(filtered_items):
             try:
                 title = (
                     item.get("title") 
                     or item.get("story_title") 
-                    or item.get("paperTitle") 
+                    or item.get("paperTitle")
+                    or item.get("display_name")  # OpenAlex format
                     or "(no title)"
                 )
-                url = (
-                    item.get("url") 
-                    or item.get("story_url") 
-                    or (item.get("openAccessPdf", {}) or {}).get("url")
-                    or ""
-                )
-                snippet = item.get("text") or item.get("abstract") or ""
-                if snippet and len(snippet) > 300:
-                    snippet = snippet[:300] + "..."
                 
-                parts = [f"[{idx}] {title}"]
-                if snippet:
-                    parts.append(f" - {snippet}")
-                if url:
-                    parts.append(f" (URL: {url})")
+                
+                # Get full content/abstract from all sources without truncation
+                abstract_content = ""
+                if item.get("abstract_inverted_index"):
+                    # OpenAlex: Reconstruct from inverted index for full abstract
+                    abstract_inverted = item.get("abstract_inverted_index", {})
+                    if abstract_inverted:
+                        try:
+                            word_positions = []
+                            for word, positions in abstract_inverted.items():
+                                for pos in positions:
+                                    word_positions.append((pos, word))
+                            word_positions.sort(key=lambda x: x[0])
+                            abstract_content = " ".join([word for pos, word in word_positions])
+                        except Exception:
+                            # Fallback to other fields if reconstruction fails
+                            abstract_content = item.get("abstract") or item.get("text") or ""
+                elif item.get("abstract"):
+                    # PubMed and other sources: Use full abstract directly (no truncation)
+                    abstract_content = item.get("abstract")
+                elif item.get("text"):
+                    # Hacker News: Use full comment/story text (no truncation)  
+                    abstract_content = item.get("text")
+                elif item.get("comment_text"):
+                    # HN alternative field
+                    abstract_content = item.get("comment_text")
+                else:
+                    abstract_content = "No content available"
+                
+                # Build the item entry with title and full abstract (URLs not needed for analysis)
+                parts = [f"[{idx}] **{title}**"]
+                if abstract_content:
+                    parts.append(f"\nAbstract: {abstract_content}")
+                parts.append("\n")  # Add spacing between papers
+                
                 enumerated_items.append("".join(parts))
             except Exception:
                 enumerated_items.append(f"[{idx}] (unreadable item)")
