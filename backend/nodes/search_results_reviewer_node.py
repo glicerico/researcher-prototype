@@ -57,10 +57,17 @@ async def search_results_reviewer_node(state: ChatState) -> ChatState:
         raw_results = module_data.get("raw_results", {})
         items = raw_results.get("results")
 
-        # If we don't have structured items, fall back to content-based filtering
+        # Skip processing if no results to review
         if items is None:
             if not original_content:
+                logger.info(f"🧹 Results Reviewer: Skipping {source_human_name} - no content to review")
                 continue
+        elif len(items) == 0:
+            logger.info(f"🧹 Results Reviewer: Skipping {source_human_name} - no results to review")
+            continue
+        
+        # If we don't have structured items, fall back to content-based filtering
+        if items is None:
             prompt = SEARCH_RESULTS_REVIEWER_PROMPT.format(
                 current_time=current_time,
                 source_name=source_human_name,
