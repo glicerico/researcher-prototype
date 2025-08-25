@@ -133,6 +133,9 @@ async def search_results_reviewer_node(state: ChatState) -> ChatState:
                 # If content exists from formatter, we can regenerate via formatter by signaling downstream if needed
                 # For simplicity, leave content as-is; integrator uses 'content'.
             else:
+                # Clear the raw_results when no items are selected
+                raw_results["results"] = []
+                state["module_results"][key]["raw_results"] = raw_results
                 state["module_results"][key]["content"] = ""
                 state["module_results"][key]["filtered_by_reviewer"] = True
                 state["module_results"][key]["no_relevant_items"] = True
