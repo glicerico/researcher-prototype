@@ -43,17 +43,21 @@ class OpenAlexSearchNode(BaseAPISearchNode):
             Dict with search results
         """
         try:
-            # Prepare search parameters
+            # Use targeted search strategy for better relevance:
+            # 1. First try title search for most relevant results
+            # 2. If insufficient results, complement with abstract search
+            # This avoids the noise from general fulltext search
+            
+            # Prepare search parameters for title search
             params = {
-                "search": query,
+                "filter": f"title.search:{query},type:article,is_retracted:false",
                 "per-page": min(limit, 200),  # API max is 200
                 "sort": "relevance_score:desc",
-                "filter": "type:article,is_retracted:false",  # Only articles, not retracted
                 # Specify which fields to include in response
                 "select": "id,title,display_name,publication_year,publication_date,doi,cited_by_count,abstract_inverted_index,authorships,primary_location,open_access,type"
             }
             
-            # Make API request
+            # Make API request for title search
             response = requests.get(
                 f"{self.base_url}/works",
                 params=params,
@@ -63,8 +67,49 @@ class OpenAlexSearchNode(BaseAPISearchNode):
             
             if response.status_code == 200:
                 data = response.json()
-                works = data.get("results", [])
-                total_count = data.get("meta", {}).get("count", len(works))
+                title_works = data.get("results", [])
+                title_count = data.get("meta", {}).get("count", len(title_works))
+                
+                # If title search yields few results (less than half of limit), try abstract search too
+                if title_count < limit // 2 and title_count < 10:
+                    # Try abstract search to supplement results
+                    abstract_params = {
+                        "filter": f"abstract.search:{query},type:article,is_retracted:false",
+                        "per-page": min(limit - len(title_works), 200),
+                        "sort": "relevance_score:desc",
+                        "select": "id,title,display_name,publication_year,publication_date,doi,cited_by_count,abstract_inverted_index,authorships,primary_location,open_access,type"
+                    }
+                    
+                    try:
+                        abstract_response = requests.get(
+                            f"{self.base_url}/works",
+                            params=abstract_params,
+                            headers=self.headers,
+                            timeout=30
+                        )
+                        
+                        if abstract_response.status_code == 200:
+                            abstract_data = abstract_response.json()
+                            abstract_works = abstract_data.get("results", [])
+                            
+                            # Deduplicate by ID and combine results
+                            title_ids = {work.get("id") for work in title_works}
+                            unique_abstract_works = [work for work in abstract_works if work.get("id") not in title_ids]
+                            
+                            works = title_works + unique_abstract_works
+                            total_count = title_count + abstract_data.get("meta", {}).get("count", 0)
+                        else:
+                            # Fall back to title results only
+                            works = title_works
+                            total_count = title_count
+                    except Exception:
+                        # Fall back to title results only on any error
+                        works = title_works
+                        total_count = title_count
+                else:
+                    # Title search gave sufficient results
+                    works = title_works
+                    total_count = title_count
                 
                 return {
                     "success": True,
