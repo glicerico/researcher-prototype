@@ -27,7 +27,7 @@ PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar")
 PUBMED_EMAIL = os.getenv("PUBMED_EMAIL", "researcher@example.com")
 
 # Semantic Scholar API key (optional, increases rate limits)
-SEMANTIC_SCHOLAR_API_KEY = os.getenv("SEMANTIC_SCHOLAR_API_KEY")
+# OpenAlex API doesn't require an API key
 
 # Zep configuration
 ZEP_API_KEY = os.getenv("ZEP_API_KEY")

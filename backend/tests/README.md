@@ -9,7 +9,7 @@ This folder contains all the automated tests for the backend, separated into `un
 
 ## Notable Integration Tests
 
-- **`test_search_apis.py`** - Direct testing of external search APIs (Semantic Scholar, PubMed, Hacker News)
+- **`test_search_apis.py`** - Direct testing of external search APIs (OpenAlex, PubMed, Hacker News)
   ```bash
   # Test all APIs
   python tests/integration/test_search_apis.py --all --query "your query"

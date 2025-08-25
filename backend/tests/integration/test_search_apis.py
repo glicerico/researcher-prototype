@@ -38,14 +38,14 @@ def _ensure_backend_on_path() -> None:
 
 _ensure_backend_on_path()
 
-from nodes.semantic_scholar_node import SemanticScholarSearchNode  # noqa: E402
+from nodes.openalex_node import OpenAlexSearchNode  # noqa: E402
 from nodes.pubmed_search_node import PubMedSearchNode  # noqa: E402
 from nodes.hacker_news_search_node import HackerNewsSearchNode  # noqa: E402
 
 
-async def run_semantic_scholar(query: str, limit: int) -> None:
-    node = SemanticScholarSearchNode()
-    print("\n=== Semantic Scholar ===")
+async def run_openalex(query: str, limit: int) -> None:
+    node = OpenAlexSearchNode()
+    print("\n=== OpenAlex ===")
     print(f"Query: {query} | Limit: {limit}")
     result = await node.search(query=query, limit=limit)
     print("\nRaw JSON:")
@@ -82,7 +82,7 @@ async def main() -> None:
     parser = argparse.ArgumentParser(description="Test external search APIs via node search methods")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--all", action="store_true", help="Run all search APIs")
-    group.add_argument("--semantic-scholar", action="store_true", help="Run Semantic Scholar only")
+    group.add_argument("--openalex", action="store_true", help="Run OpenAlex only")
     group.add_argument("--pubmed", action="store_true", help="Run PubMed only")
     group.add_argument("--hn", action="store_true", help="Run Hacker News only")
 
@@ -91,8 +91,8 @@ async def main() -> None:
 
     args = parser.parse_args()
 
-    if args.all or args.semantic_scholar:
-        await run_semantic_scholar(args.query, args.limit)
+    if args.all or args.openalex:
+        await run_openalex(args.query, args.limit)
     if args.all or args.pubmed:
         await run_pubmed(args.query, args.limit)
     if args.all or args.hn:

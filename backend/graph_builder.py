@@ -24,7 +24,7 @@ from nodes.integrator_node import integrator_node
 from nodes.response_renderer_node import response_renderer_node
 
 # Import specialized search nodes
-from nodes.semantic_scholar_node import semantic_scholar_search_node
+from nodes.openalex_node import openalex_search_node
 from nodes.hacker_news_search_node import hacker_news_search_node
 from nodes.pubmed_search_node import pubmed_search_node
 from nodes.source_coordinator_node import source_coordinator_node
@@ -69,7 +69,7 @@ def create_chat_graph():
     # Add search-related nodes
     builder.add_node("search_prompt_optimizer", search_prompt_optimizer_node)
     builder.add_node("search", search_node)
-    builder.add_node("academic_search", semantic_scholar_search_node)
+    builder.add_node("academic_search", openalex_search_node)
     builder.add_node("social_search", hacker_news_search_node)
     builder.add_node("medical_search", pubmed_search_node)
     
