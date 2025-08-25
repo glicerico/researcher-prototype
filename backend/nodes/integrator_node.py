@@ -86,7 +86,7 @@ async def integrator_node(state: ChatState) -> ChatState:
                         "summary": evidence_summary,
                         "items": all_items
                     })
-                    filtered_items_text = ""  # Will be set after renumbering
+                    filtered_items_text = "EVIDENCE_SUMMARY_PLACEHOLDER"  # Flag to skip raw content
                     logger.info(f"🧠 Integrator: Stored evidence summary from {source} for citation renumbering")
                 elif all_items and search_results_data.get("filtered_by_reviewer"):
                     # Fallback: Use the items that were already filtered by the reviewer
@@ -126,8 +126,9 @@ async def integrator_node(state: ChatState) -> ChatState:
             except Exception:
                 filtered_items_text = ""
 
+            # Skip adding raw content if we have evidence summaries to process
             search_result_text = filtered_items_text or search_results_data.get("content", "")
-            if search_result_text:
+            if search_result_text and search_result_text != "EVIDENCE_SUMMARY_PLACEHOLDER":
                 # Build source-specific context
                 source_name = source_info["name"]
                 source_type = source_info["type"]
