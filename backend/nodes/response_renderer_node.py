@@ -41,11 +41,14 @@ async def response_renderer_node(state: ChatState) -> ChatState:
         return state
 
     # Retrieve enhanced citation and source data from the workflow context
-    citations = state.get("workflow_context", {}).get("citations", [])
+    unified_citations = state.get("workflow_context", {}).get("unified_citations", [])
+    citations = state.get("workflow_context", {}).get("citations", [])  # Fallback for Perplexity
     search_sources = state.get("workflow_context", {}).get("search_sources", [])
     successful_sources = state.get("workflow_context", {}).get("successful_sources", [])
     source_failures = state.get("workflow_context", {}).get("source_failures", [])
     failure_note = state.get("workflow_context", {}).get("failure_note", "")
+    
+
 
     # Log the raw response
     display_raw = raw_response[:75] + "..." if len(raw_response) > 75 else raw_response
@@ -143,8 +146,11 @@ async def response_renderer_node(state: ChatState) -> ChatState:
         stylized_response = llm_response.main_response
         follow_up_questions = llm_response.follow_up_questions
 
-        # Create the URL map from the raw citations list
-        citation_url_map = {i + 1: url for i, url in enumerate(citations)}
+        # Create the URL map from unified citations (preferred) or fallback to old citations
+        if unified_citations:
+            citation_url_map = {i + 1: citation.get("url", "") for i, citation in enumerate(unified_citations)}
+        else:
+            citation_url_map = {i + 1: url for i, url in enumerate(citations)}
 
         # Replace citation markers [n] with markdown hyperlinks
         def replace_citation(match):
@@ -158,8 +164,8 @@ async def response_renderer_node(state: ChatState) -> ChatState:
         # Apply the replacement to the stylized response
         final_response = re.sub(r"\[(\d+)\]", replace_citation, stylized_response)
 
-        # Enhanced sources section with multi-source attribution
-        if search_sources or successful_sources:
+        # Enhanced sources section with unified citations
+        if unified_citations or search_sources or successful_sources:
             sources_section_parts = []
             
             # Add source attribution summary if multiple sources were used
@@ -168,23 +174,91 @@ async def response_renderer_node(state: ChatState) -> ChatState:
                 attribution = f"\n\n*Information synthesized from {len(successful_sources)} sources: {', '.join(source_names)}*"
                 sources_section_parts.append(attribution)
             
-            # Add detailed sources list
-            if search_sources:
+            # Add detailed sources list from unified citations (preferred)
+            if unified_citations:
                 sources_list = []
-                for i, s in enumerate(search_sources, 1):  # Start numbering from 1
+                for i, citation in enumerate(unified_citations, 1):
+                    title = citation.get("title", "Unknown Title")
+                    url = citation.get("url", "")
+                    source = citation.get("source", "Unknown")
+                    citation_type = citation.get("type", "")
+                    
+                    if url:
+                        # Build rich citation with metadata
+                        citation_parts = [f"[{i}]. [{title}]({url})"]
+                        
+                        # Add source-specific metadata
+                        if citation_type == "academic":
+                            authors = citation.get("authors", [])
+                            year = citation.get("year")
+                            venue = citation.get("venue")
+                            metadata_parts = []
+                            if authors and len(authors) > 0:
+                                author_names = [a.get("name", "") for a in authors[:2]]  # First 2 authors
+                                if author_names:
+                                    metadata_parts.append(f"Authors: {', '.join(author_names)}")
+                            if year:
+                                metadata_parts.append(f"Year: {year}")
+                            if venue:
+                                metadata_parts.append(f"Venue: {venue}")
+                            if metadata_parts:
+                                citation_parts.append(f" — {'; '.join(metadata_parts)}")
+                        
+                        elif citation_type == "clinical":
+                            authors = citation.get("authors", [])
+                            journal = citation.get("journal")
+                            pubdate = citation.get("pubdate")
+                            metadata_parts = []
+                            if authors and len(authors) > 0:
+                                author_names = [a.get("name", "") for a in authors[:2]]
+                                if author_names:
+                                    metadata_parts.append(f"Authors: {', '.join(author_names)}")
+                            if journal:
+                                metadata_parts.append(f"Journal: {journal}")
+                            if pubdate:
+                                metadata_parts.append(f"Published: {pubdate}")
+                            if metadata_parts:
+                                citation_parts.append(f" — {'; '.join(metadata_parts)}")
+                        
+                        elif citation_type == "sentiment":
+                            author = citation.get("author")
+                            points = citation.get("points")
+                            comments = citation.get("comments")
+                            metadata_parts = []
+                            if author:
+                                metadata_parts.append(f"Author: {author}")
+                            if points:
+                                metadata_parts.append(f"Points: {points}")
+                            if comments:
+                                metadata_parts.append(f"Comments: {comments}")
+                            if metadata_parts:
+                                citation_parts.append(f" — {'; '.join(metadata_parts)}")
+                        
+                        citation_parts.append(f" ({source})")
+                        sources_list.append("".join(citation_parts))
+
+                if sources_list:
+                    sources_section_parts.append("\n\n**Sources:**\n" + "\n".join(sources_list))
+            
+            # Fallback to old search_sources format if no unified citations
+            elif search_sources:
+                sources_list = []
+                for i, s in enumerate(search_sources, 1):
                     title = s.get("title", "Unknown Title")
                     url = s.get("url")
                     if url:
                         sources_list.append(f"[{i}]. [{title}]({url})")
 
                 if sources_list:
-                    sources_section_parts.append("\n**Sources:**\n" + "\n".join(sources_list))
+                    sources_section_parts.append("\n\n**Sources:**\n" + "\n".join(sources_list))
             
             # Add failure notice if any sources failed
             if failure_note:
                 sources_section_parts.append(f"\n*{failure_note.strip()}*")
                 
-            final_response += "".join(sources_section_parts)
+            # Only append sources if they exist, so frontend can split them properly
+            if sources_section_parts:
+                final_response += "".join(sources_section_parts)
 
         # Add follow-up questions to the workflow context to be used in the API response
         if follow_up_questions:

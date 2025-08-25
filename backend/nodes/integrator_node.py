@@ -61,6 +61,7 @@ async def integrator_node(state: ChatState) -> ChatState:
     all_search_sources = []
     successful_sources = []
     failed_sources = []
+    unified_citations = []  # New unified citations list with deduplication
     
     # Process each potential source
     for source, source_info in source_config.items():
@@ -76,7 +77,7 @@ async def integrator_node(state: ChatState) -> ChatState:
                     # Use the items that were already filtered by the reviewer
                     # (raw_results["results"] now contains only the selected items)
                     if all_items:
-                        # Build a concise list from the filtered items
+                        # Build evidence bullets with inline citation tokens
                         lines = []
                         for display_idx, item in enumerate(all_items, 1):
                             title = (
@@ -94,11 +95,21 @@ async def integrator_node(state: ChatState) -> ChatState:
                             snippet = item.get("text") or item.get("abstract") or ""
                             if snippet and len(snippet) > 220:
                                 snippet = snippet[:220] + "..."
-                            parts = [f"{display_idx}. {title}"]
-                            if snippet:
-                                parts.append(f" — {snippet}")
+                            
+                            # Find citation number for this URL
+                            citation_num = None
                             if url:
-                                parts.append(f"\n   🔗 {url}")
+                                for i, citation in enumerate(unified_citations, 1):
+                                    if citation.get("url") == url:
+                                        citation_num = i
+                                        break
+                            
+                            # Build evidence bullet with citation token
+                            parts = [f"• {title}"]
+                            if snippet:
+                                parts.append(f": {snippet}")
+                            if citation_num:
+                                parts.append(f" [{citation_num}]")
                             lines.append("".join(parts))
                         filtered_items_text = "\n".join(lines)
                         logger.info(f"🧠 Integrator: Using {len(all_items)} reviewer-filtered items from {source}")
@@ -123,11 +134,72 @@ async def integrator_node(state: ChatState) -> ChatState:
                 successful_sources.append({"name": source_name, "type": source_type})
                 logger.info(f"🧠 Integrator: ✅ Added {source_name} results to context")
                 
-                # Collect citations and sources for renderer
-                citations = search_results_data.get("citations", [])
-                search_sources_data = search_results_data.get("search_sources", [])
-                all_citations.extend(citations)
-                all_search_sources.extend(search_sources_data)
+                # Build unified citations from all sources
+                if source == "search":
+                    # Perplexity: use existing citations
+                    citations = search_results_data.get("citations", [])
+                    search_sources_data = search_results_data.get("search_sources", [])
+                    all_citations.extend(citations)
+                    all_search_sources.extend(search_sources_data)
+                    
+                    # Add to unified citations (Perplexity URLs)
+                    for citation_url in citations:
+                        if citation_url and citation_url not in [c.get("url") for c in unified_citations]:
+                            unified_citations.append({
+                                "title": "Web Search Result",
+                                "url": citation_url,
+                                "source": "Perplexity",
+                                "type": "web"
+                            })
+                else:
+                    # Specialized APIs: build citations from filtered items
+                    raw = search_results_data.get("raw_results", {}) or {}
+                    filtered_items = raw.get("results", [])
+                    
+                    if filtered_items and search_results_data.get("filtered_by_reviewer"):
+                        for item in filtered_items:
+                            title = (
+                                item.get("title") 
+                                or item.get("story_title") 
+                                or item.get("paperTitle") 
+                                or "Untitled"
+                            )
+                            url = (
+                                item.get("url") 
+                                or item.get("story_url") 
+                                or (item.get("openAccessPdf", {}) or {}).get("url")
+                                or ""
+                            )
+                            
+                            if url:
+                                if url not in [c.get("url") for c in unified_citations]:
+                                    # Build citation metadata based on source type
+                                    citation = {
+                                        "title": title,
+                                        "url": url,
+                                        "source": source_info["name"],
+                                        "type": source_info["type"]
+                                    }
+                                
+                                    # Add source-specific metadata
+                                    if source == "academic_search":
+                                        citation["authors"] = item.get("authors", [])
+                                        citation["year"] = item.get("year")
+                                        citation["venue"] = item.get("venue")
+                                    elif source == "medical_search":
+                                        citation["authors"] = item.get("authorList", [])
+                                        citation["journal"] = item.get("source")
+                                        citation["pubdate"] = item.get("pubdate")
+                                    elif source == "social_search":
+                                        citation["author"] = item.get("author")
+                                        citation["points"] = item.get("points")
+                                        citation["comments"] = item.get("num_comments")
+                                    
+                                    unified_citations.append(citation)
+                                else:
+                                    logger.debug(f"🧠 Integrator: Skipped duplicate URL {url} from {source}")
+                            else:
+                                logger.debug(f"🧠 Integrator: Skipped item without URL: {title} from {source}")
         else:
             # Track failed sources for graceful degradation reporting
             if source in state.get("selected_sources", []):
@@ -153,12 +225,14 @@ When synthesizing, cross-reference information between sources and highlight are
         state["workflow_context"]["failure_note"] = failure_note
         logger.info(f"🧠 Integrator: ⚠️ {len(failed_sources)} sources failed, graceful degradation in effect")
     
-    # Pass enhanced citation data and source metadata to renderer
-    if all_citations or all_search_sources:
-        state["workflow_context"]["citations"] = all_citations
+    # Pass unified citation data and source metadata to renderer
+    if unified_citations or all_citations or all_search_sources:
+        # Use unified citations for new pipeline, keep old ones for backward compatibility
+        state["workflow_context"]["unified_citations"] = unified_citations
+        state["workflow_context"]["citations"] = all_citations  # Keep for Perplexity compatibility
         state["workflow_context"]["search_sources"] = all_search_sources
         state["workflow_context"]["successful_sources"] = successful_sources
-        logger.info(f"🧠 Integrator: 📚 Passing {len(all_citations)} citations from {len(successful_sources)} sources to renderer")
+        logger.info(f"🧠 Integrator: 📚 Passing {len(unified_citations)} unified citations from {len(successful_sources)} sources to renderer")
 
     # Add analysis results to context if available
     analysis_results = state.get("module_results", {}).get("analyzer", {})
