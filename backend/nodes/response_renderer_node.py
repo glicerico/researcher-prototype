@@ -176,8 +176,15 @@ async def response_renderer_node(state: ChatState) -> ChatState:
             
             # Add detailed sources list from unified citations (preferred)
             if unified_citations:
-                sources_list = []
-                for i, citation in enumerate(unified_citations, 1):
+                # Group citations by source type
+                web_citations = []
+                academic_citations = []
+                social_citations = []
+                medical_citations = []
+                
+                citation_counter = 1
+                
+                for citation in unified_citations:
                     title = citation.get("title", "Unknown Title")
                     url = citation.get("url", "")
                     source = citation.get("source", "Unknown")
@@ -185,7 +192,8 @@ async def response_renderer_node(state: ChatState) -> ChatState:
                     
                     if url:
                         # Build rich citation with metadata
-                        citation_parts = [f"[{i}]. [{title}]({url})"]
+                        citation_parts = [f"[{citation_counter}]. [{title}]({url})"]
+                        citation_counter += 1
                         
                         # Add source-specific metadata
                         if citation_type == "academic":
@@ -203,6 +211,7 @@ async def response_renderer_node(state: ChatState) -> ChatState:
                                 metadata_parts.append(f"Venue: {venue}")
                             if metadata_parts:
                                 citation_parts.append(f" — {'; '.join(metadata_parts)}")
+                            academic_citations.append("".join(citation_parts))
                         
                         elif citation_type == "clinical":
                             authors = citation.get("authors", [])
@@ -219,6 +228,7 @@ async def response_renderer_node(state: ChatState) -> ChatState:
                                 metadata_parts.append(f"Published: {pubdate}")
                             if metadata_parts:
                                 citation_parts.append(f" — {'; '.join(metadata_parts)}")
+                            medical_citations.append("".join(citation_parts))
                         
                         elif citation_type == "sentiment":
                             author = citation.get("author")
@@ -233,12 +243,38 @@ async def response_renderer_node(state: ChatState) -> ChatState:
                                 metadata_parts.append(f"Comments: {comments}")
                             if metadata_parts:
                                 citation_parts.append(f" — {'; '.join(metadata_parts)}")
+                            social_citations.append("".join(citation_parts))
                         
-                        citation_parts.append(f" ({source})")
-                        sources_list.append("".join(citation_parts))
+                        elif citation_type == "web":
+                            web_citations.append("".join(citation_parts))
 
-                if sources_list:
-                    sources_section_parts.append("\n\n**Sources:**\n" + "\n".join(sources_list))
+                # Build sources section with grouped headers
+                sources_content_parts = []
+                
+                if web_citations:
+                    sources_content_parts.append("**Web Search:**")
+                    sources_content_parts.extend(web_citations)
+                
+                if academic_citations:
+                    if sources_content_parts:
+                        sources_content_parts.append("")  # Empty line between sections
+                    sources_content_parts.append("**Academic Papers:**")
+                    sources_content_parts.extend(academic_citations)
+                
+                if social_citations:
+                    if sources_content_parts:
+                        sources_content_parts.append("")
+                    sources_content_parts.append("**Social Media:**")
+                    sources_content_parts.extend(social_citations)
+                
+                if medical_citations:
+                    if sources_content_parts:
+                        sources_content_parts.append("")
+                    sources_content_parts.append("**Medical Research:**")
+                    sources_content_parts.extend(medical_citations)
+
+                if sources_content_parts:
+                    sources_section_parts.append("\n\n**Sources:**\n" + "\n".join(sources_content_parts))
             
             # Fallback to old search_sources format if no unified citations
             elif search_sources:

@@ -138,19 +138,33 @@ async def integrator_node(state: ChatState) -> ChatState:
                 if source == "search":
                     # Perplexity: use existing citations
                     citations = search_results_data.get("citations", [])
-                    search_sources_data = search_results_data.get("search_sources", [])
+                    search_sources_data = search_results_data.get("search_results", [])
                     all_citations.extend(citations)
                     all_search_sources.extend(search_sources_data)
                     
-                    # Add to unified citations (Perplexity URLs)
-                    for citation_url in citations:
-                        if citation_url and citation_url not in [c.get("url") for c in unified_citations]:
-                            unified_citations.append({
-                                "title": "Web Search Result",
-                                "url": citation_url,
-                                "source": "Perplexity",
-                                "type": "web"
-                            })
+                    # Add to unified citations (use search_sources for proper titles)
+                    if search_sources_data:
+                        # Use search_sources which have titles and URLs
+                        for source_item in search_sources_data:
+                            url = source_item.get("url", "")
+                            title = source_item.get("title", "Web Search Result")
+                            if url and url not in [c.get("url") for c in unified_citations]:
+                                unified_citations.append({
+                                    "title": title,
+                                    "url": url,
+                                    "source": "Web Search",
+                                    "type": "web"
+                                })
+                    else:
+                        # Fallback to citations URLs only (no titles available)
+                        for citation_url in citations:
+                            if citation_url and citation_url not in [c.get("url") for c in unified_citations]:
+                                unified_citations.append({
+                                    "title": "Web Search Result",
+                                    "url": citation_url,
+                                    "source": "Web Search",
+                                    "type": "web"
+                                })
                 else:
                     # Specialized APIs: build citations from filtered items
                     raw = search_results_data.get("raw_results", {}) or {}

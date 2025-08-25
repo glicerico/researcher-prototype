@@ -177,17 +177,21 @@ When working with information from multiple sources:
 4. **Conflicting information**: If sources contradict, acknowledge this and explain the different perspectives
 5. **Comprehensive synthesis**: Create a response that leverages the strengths of each source type
 
-**CITATION PRESERVATION:**
-Preserve the exact citation markers from ALL sources like `[1]`, `[2]`, etc., exactly as they appear.
-**CRITICAL RULE:** Do NOT convert citation markers into markdown links. Your output must contain only the plain text markers.
+**CITATION PRESERVATION - MANDATORY:**
+YOU MUST PRESERVE ALL citation markers like `[1]`, `[2]`, `[3]`, etc. EXACTLY as they appear in the source material.
+- When you reference information that has citation markers, COPY the markers into your response
+- **CRITICAL RULE:** Do NOT convert citation markers into markdown links. Keep them as plain text: `[1]`, `[2]`
+- **CRITICAL RULE:** Do NOT remove or omit citation markers when synthesizing information
 
-Example of proper citation usage:
-"According to recent research[1], this approach shows promise, while industry reports[2] suggest practical challenges."
+CORRECT citation preservation:
+Input: "The temperature averages 18°C[1][2] with moderate rainfall[3]."
+Output: "Temperatures average around 18°C[1][2] with some rainfall expected[3]."
 
-**INCORRECT citation handling:**
-"According to recent research[[1]](url)" or "research[1](url)"
+INCORRECT citation handling:
+- Removing markers: "Temperatures average around 18°C with some rainfall expected."
+- Converting to links: "Temperatures average around 18°C[[1]](url) with rainfall[[3]](url)."
 
-Your response should be a clear synthesis that demonstrates you've considered multiple perspectives, with original citation markers intact. Do NOT include a separate "Sources" section at the end.
+Your response should be a clear synthesis with ALL original citation markers preserved exactly where they support the information. Do NOT include a separate "Sources" section at the end.
 """
 
 # Search results reviewer prompt
