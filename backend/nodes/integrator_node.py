@@ -192,6 +192,18 @@ async def integrator_node(state: ChatState) -> ChatState:
                                 or ""
                             )
                             
+                            # Handle OpenAlex DOI to URL conversion
+                            if not url and item.get("doi"):
+                                doi = item.get("doi")
+                                if not doi.startswith("http"):
+                                    url = f"https://doi.org/{doi.replace('https://doi.org/', '')}"
+                                else:
+                                    url = doi
+                            
+                            # Handle PubMed URLs
+                            if not url and item.get("pmid"):
+                                url = f"https://pubmed.ncbi.nlm.nih.gov/{item.get('pmid')}/"
+                            
                             if url:
                                 if url not in [c.get("url") for c in unified_citations]:
                                     # Build citation metadata based on source type
@@ -268,7 +280,7 @@ When synthesizing, cross-reference information between sources and highlight are
             # Build mapping from local indices to global citation numbers
             local_to_global = {}
             for local_idx, item in enumerate(items):
-                # Get URL for this item
+                # Use same URL extraction logic as unified citations builder
                 url = (
                     item.get("url") 
                     or item.get("story_url") 
@@ -276,15 +288,35 @@ When synthesizing, cross-reference information between sources and highlight are
                     or ""
                 )
                 
+                # Handle OpenAlex DOI to URL conversion (match unified citations logic)
+                if not url and item.get("doi"):
+                    doi = item.get("doi")
+                    if not doi.startswith("http"):
+                        url = f"https://doi.org/{doi.replace('https://doi.org/', '')}"
+                    else:
+                        url = doi
+                
+                # Handle PubMed URLs
+                if not url and item.get("pmid"):
+                    url = f"https://pubmed.ncbi.nlm.nih.gov/{item.get('pmid')}/"
+                
                 if url:
                     # Find this URL in unified citations to get global number
                     for global_idx, citation in enumerate(unified_citations, 1):
                         if citation.get("url") == url:
                             local_to_global[local_idx] = global_idx
                             break
+                    
+                    # Debug: log if URL not found in unified citations
+                    if local_idx not in local_to_global:
+                        logger.warning(f"🧠 Integrator: URL not found in unified citations for {source} item {local_idx}: {url[:50]}...")
+                else:
+                    logger.warning(f"🧠 Integrator: No URL found for {source} item {local_idx}")
             
             # Renumber citation markers in the summary text
             renumbered_summary = summary_text
+            
+            logger.info(f"🧠 Integrator: Citation mapping for {source}: {local_to_global}")
             
             def replace_citation(match):
                 local_num = int(match.group(1))
@@ -293,9 +325,12 @@ When synthesizing, cross-reference information between sources and highlight are
                     return f"[{global_num}]"
                 else:
                     # Remove citation marker if no URL mapping found
+                    logger.warning(f"🧠 Integrator: No mapping found for citation [{local_num}] in {source}")
                     return ""
             
             renumbered_summary = re.sub(r"\[(\d+)\]", replace_citation, renumbered_summary)
+            
+            logger.info(f"🧠 Integrator: Original summary length: {len(summary_text)}, Renumbered length: {len(renumbered_summary)}")
             
             # Add renumbered summary to context sections
             source_name = source_info["name"]
