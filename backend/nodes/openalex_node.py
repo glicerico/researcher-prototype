@@ -9,8 +9,9 @@ from typing import Dict, Any, List
 import requests
 from datetime import datetime
 from nodes.base_api_search_node import BaseAPISearchNode
-from nodes.base import ChatState, logger
+from nodes.base import ChatState, logger, queue_status
 from config import SEARCH_RESULTS_LIMIT
+from utils import get_last_user_message
 import config
 
 # Fixed result key for this search source
@@ -43,39 +44,32 @@ class OpenAlexSearchNode(BaseAPISearchNode):
             Dict with search results
         """
         try:
-            # Use targeted search strategy for better relevance:
-            # 1. First try title search for most relevant results
-            # 2. If insufficient results, complement with abstract search
-            # This avoids the noise from general fulltext search
-            
-            # Prepare search parameters for title search
-            params = {
+            # Smart search strategy: try title/abstract search first, then general search
+            # 1. Try title search for high precision
+            title_params = {
                 "filter": f"title.search:{query},type:article,is_retracted:false",
-                "per-page": min(limit, 200),  # API max is 200
+                "per-page": min(limit, 200),
                 "sort": "relevance_score:desc",
-                # Specify which fields to include in response
                 "select": "id,title,display_name,publication_year,publication_date,doi,cited_by_count,abstract_inverted_index,authorships,primary_location,open_access,type"
             }
             
-            # Make API request for title search
             response = requests.get(
                 f"{self.base_url}/works",
-                params=params,
+                params=title_params,
                 headers=self.headers,
                 timeout=30
             )
             
             if response.status_code == 200:
                 data = response.json()
-                title_works = data.get("results", [])
-                title_count = data.get("meta", {}).get("count", len(title_works))
+                works = data.get("results", [])
+                total_count = data.get("meta", {}).get("count", len(works))
                 
-                # If title search yields few results (less than half of limit), try abstract search too
-                if title_count < limit // 2 and title_count < 10:
-                    # Try abstract search to supplement results
+                # If title search yields insufficient results, supplement with abstract search
+                if len(works) < limit // 2 and len(works) < 10:
                     abstract_params = {
                         "filter": f"abstract.search:{query},type:article,is_retracted:false",
-                        "per-page": min(limit - len(title_works), 200),
+                        "per-page": min(limit - len(works), 200),
                         "sort": "relevance_score:desc",
                         "select": "id,title,display_name,publication_year,publication_date,doi,cited_by_count,abstract_inverted_index,authorships,primary_location,open_access,type"
                     }
@@ -93,23 +87,46 @@ class OpenAlexSearchNode(BaseAPISearchNode):
                             abstract_works = abstract_data.get("results", [])
                             
                             # Deduplicate by ID and combine results
-                            title_ids = {work.get("id") for work in title_works}
+                            title_ids = {work.get("id") for work in works}
                             unique_abstract_works = [work for work in abstract_works if work.get("id") not in title_ids]
                             
-                            works = title_works + unique_abstract_works
-                            total_count = title_count + abstract_data.get("meta", {}).get("count", 0)
-                        else:
-                            # Fall back to title results only
-                            works = title_works
-                            total_count = title_count
+                            works = works + unique_abstract_works
+                            total_count = total_count + abstract_data.get("meta", {}).get("count", 0)
                     except Exception:
-                        # Fall back to title results only on any error
-                        works = title_works
-                        total_count = title_count
-                else:
-                    # Title search gave sufficient results
-                    works = title_works
-                    total_count = title_count
+                        # Keep title results only on any error
+                        pass
+                
+                # If still insufficient results, try general search as final fallback
+                if len(works) < limit // 3 and len(works) < 5:
+                    general_params = {
+                        "search": query,
+                        "filter": "type:article,is_retracted:false",
+                        "per-page": min(limit - len(works), 200),
+                        "sort": "relevance_score:desc",
+                        "select": "id,title,display_name,publication_year,publication_date,doi,cited_by_count,abstract_inverted_index,authorships,primary_location,open_access,type"
+                    }
+                    
+                    try:
+                        general_response = requests.get(
+                            f"{self.base_url}/works",
+                            params=general_params,
+                            headers=self.headers,
+                            timeout=30
+                        )
+                        
+                        if general_response.status_code == 200:
+                            general_data = general_response.json()
+                            general_works = general_data.get("results", [])
+                            
+                            # Deduplicate and combine with existing results
+                            existing_ids = {work.get("id") for work in works}
+                            unique_general_works = [work for work in general_works if work.get("id") not in existing_ids]
+                            
+                            works = works + unique_general_works
+                            total_count = total_count + general_data.get("meta", {}).get("count", 0)
+                    except Exception:
+                        # Keep existing results on any error
+                        pass
                 
                 return {
                     "success": True,
@@ -243,5 +260,80 @@ class OpenAlexSearchNode(BaseAPISearchNode):
 openalex_search_node_instance = OpenAlexSearchNode()
 
 async def openalex_search_node(state: ChatState) -> ChatState:
-    """OpenAlex search node entry point."""
-    return await openalex_search_node_instance.execute_search_node(state, RESULT_KEY)
+    """OpenAlex search node entry point with academic query optimization."""
+    logger.info(f"🔍 {openalex_search_node_instance.source_name}: Preparing to search")
+    queue_status(state.get("thread_id"), f"Searching {openalex_search_node_instance.source_name.lower()}...")
+    
+    # Get academic-optimized query first, then fall back to refined, then original
+    academic_query = state.get("workflow_context", {}).get("academic_search_query")
+    refined_query = state.get("workflow_context", {}).get("refined_search_query")
+    original_user_query = get_last_user_message(state.get("messages", []))
+    
+    # Priority: academic_query > refined_query > original_query
+    query_to_search = academic_query if academic_query else (refined_query if refined_query else original_user_query)
+    
+    if not query_to_search:
+        state["module_results"][RESULT_KEY] = {
+            "success": False,
+            "error": f"No query found for {openalex_search_node_instance.source_name} search (no academic, refined, or original query).",
+        }
+        return state
+    
+    # Log which query type is being used
+    if academic_query:
+        logger.info(f"🔍 {openalex_search_node_instance.source_name}: Using academic-optimized query")
+    elif refined_query:
+        logger.info(f"🔍 {openalex_search_node_instance.source_name}: Using refined query (no academic optimization)")
+    else:
+        logger.info(f"🔍 {openalex_search_node_instance.source_name}: Using original user query (no optimization)")
+    
+    # Log the search query
+    display_msg = query_to_search[:75] + "..." if len(query_to_search) > 75 else query_to_search
+    logger.info(f'🔍 {openalex_search_node_instance.source_name}: Searching for: "{display_msg}"')
+    
+    # Validate configuration
+    if not openalex_search_node_instance.validate_config():
+        error_message = f"{openalex_search_node_instance.source_name} API configuration not available or incomplete."
+        logger.warning(error_message)
+        state["module_results"][RESULT_KEY] = {
+            "success": False, 
+            "error": error_message
+        }
+        return state
+    
+    try:
+        # Perform the search with max results limit
+        search_results = await openalex_search_node_instance.search(query_to_search, limit=SEARCH_RESULTS_LIMIT)
+        
+        if search_results.get("success", False):
+            # Format results for readability
+            formatted_content = openalex_search_node_instance.format_results(search_results)
+            
+            # Store successful results
+            state["module_results"][RESULT_KEY] = {
+                "success": True,
+                "content": formatted_content,
+                "raw_results": search_results,
+                "source": openalex_search_node_instance.source_name,
+                "query_used": query_to_search
+            }
+            
+            result_count = len(search_results.get('results', []))
+            logger.info(f"🔍 {openalex_search_node_instance.source_name}: ✅ Found {result_count} results")
+        else:
+            error_msg = search_results.get("error", "Unknown search error")
+            state["module_results"][RESULT_KEY] = {
+                "success": False,
+                "error": error_msg
+            }
+            logger.warning(f"🔍 {openalex_search_node_instance.source_name}: ❌ Search failed: {error_msg}")
+            
+    except Exception as e:
+        error_message = f"{openalex_search_node_instance.source_name} search error: {str(e)}"
+        logger.error(f"🔍 {openalex_search_node_instance.source_name}: ❌ Exception: {error_message}")
+        state["module_results"][RESULT_KEY] = {
+            "success": False,
+            "error": error_message
+        }
+    
+    return state

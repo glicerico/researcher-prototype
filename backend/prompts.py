@@ -90,6 +90,24 @@ Examples:
 - Web query: "API design best practices 2025 guidelines"
 - HN query: "API design practices"
 
+ACADEMIC SEARCH OPTIMIZATION (when academic_search is selected):
+If "academic_search" is in the selected sources, generate an additional query optimized for OpenAlex academic search:
+- Extract core scientific concepts and terminology from the original query
+- Focus on 2-4 key terms that would appear in paper titles or abstracts
+- Remove casual language, questions words (what/how/why), and temporal references
+- Use precise scientific vocabulary that researchers would use in publications
+- Combine related concepts with domain-specific terms
+- Avoid overly long phrases - OpenAlex works best with focused keyword combinations
+
+Examples:
+- Original: "what evidence causes supernova explosions astrophysics 2025"
+- Web query: "supernova explosion mechanisms astrophysics evidence 2025" 
+- Academic query: "supernova explosions astrophysics mechanisms"
+
+- Original: "how does machine learning improve medical diagnosis accuracy"
+- Web query: "machine learning medical diagnosis accuracy improvement 2025"
+- Academic query: "machine learning medical diagnosis accuracy"
+
 RECENCY ANALYSIS (intent-first):
 Determine if the query benefits from a recency filter based on the question intent:
 - "week": Breaking news, very recent events, stock prices, current weather, trending topics

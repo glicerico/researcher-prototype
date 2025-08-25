@@ -94,6 +94,10 @@ class SearchOptimization(BaseModel):
         description="Hacker News optimized query (only when social_search is selected)",
         default=None
     )
+    academic_query: Optional[str] = Field(
+        description="OpenAlex optimized query (only when academic_search is selected)",
+        default=None
+    )
     recency_filter: Optional[str] = Field(
         description="Recency filter preference: 'week' | 'month' | 'year' | null",
         default=None

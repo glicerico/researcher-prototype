@@ -100,6 +100,7 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         
         refined_query = search_optimization.query
         social_query = search_optimization.social_query
+        academic_query = search_optimization.academic_query
         recency_filter = search_optimization.recency_filter
         search_mode = search_optimization.search_mode
         context_size = search_optimization.context_size
@@ -116,6 +117,9 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         if social_query:
             display_social = social_query[:75] + "..." if len(social_query) > 75 else social_query
             logger.info(f'🔬 Search Optimizer: Produced HN-optimized query: "{display_social}"')
+        if academic_query:
+            display_academic = academic_query[:75] + "..." if len(academic_query) > 75 else academic_query
+            logger.info(f'🔬 Search Optimizer: Produced academic-optimized query: "{display_academic}"')
         if recency_filter:
             logger.info(f'🔬 Search Optimizer: Determined recency filter: "{recency_filter}"')
         else:
@@ -125,6 +129,7 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         wc = state["workflow_context"]
         wc["refined_search_query"] = refined_query
         wc["social_search_query"] = social_query
+        wc["academic_search_query"] = academic_query
         wc["search_recency_filter"] = recency_filter
         wc["optimizer_search_mode"] = search_mode
         wc["optimizer_context_size"] = context_size
@@ -140,6 +145,7 @@ def search_prompt_optimizer_node(state: ChatState) -> ChatState:
         wc = state["workflow_context"]
         wc["refined_search_query"] = last_user_message_content
         wc["social_search_query"] = None
+        wc["academic_search_query"] = None
         wc["search_recency_filter"] = None
         wc["optimizer_search_mode"] = None
         wc["optimizer_context_size"] = None
