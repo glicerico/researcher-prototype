@@ -3,6 +3,7 @@ Integrator node that combines all available information to generate a coherent r
 """
 
 import asyncio
+import re
 from nodes.base import (
     ChatState,
     logger,
@@ -62,6 +63,7 @@ async def integrator_node(state: ChatState) -> ChatState:
     successful_sources = []
     failed_sources = []
     unified_citations = []  # New unified citations list with deduplication
+    evidence_summaries_to_renumber = []  # Store summaries that need citation renumbering
     
     # Process each potential source
     for source, source_info in source_config.items():
@@ -76,10 +78,16 @@ async def integrator_node(state: ChatState) -> ChatState:
                 
                 # Check if we have evidence summary (preferred) or fall back to raw items
                 evidence_summary = search_results_data.get("evidence_summary", "")
-                if evidence_summary:
-                    # Use the evidence summary with citations that need to be renumbered
-                    filtered_items_text = evidence_summary
-                    logger.info(f"🧠 Integrator: Using evidence summary from {source}")
+                if evidence_summary and all_items:
+                    # Store evidence summary and items for later renumbering after unified citations are built
+                    evidence_summaries_to_renumber.append({
+                        "source": source,
+                        "source_info": source_info,
+                        "summary": evidence_summary,
+                        "items": all_items
+                    })
+                    filtered_items_text = ""  # Will be set after renumbering
+                    logger.info(f"🧠 Integrator: Stored evidence summary from {source} for citation renumbering")
                 elif all_items and search_results_data.get("filtered_by_reviewer"):
                     # Fallback: Use the items that were already filtered by the reviewer
                     if all_items:
@@ -245,6 +253,59 @@ When synthesizing, cross-reference information between sources and highlight are
         state["workflow_context"]["search_sources"] = all_search_sources
         state["workflow_context"]["successful_sources"] = successful_sources
         logger.info(f"🧠 Integrator: 📚 Passing {len(unified_citations)} unified citations from {len(successful_sources)} sources to renderer")
+
+    # Renumber evidence summaries to match unified citations
+    if evidence_summaries_to_renumber:
+        logger.info(f"🧠 Integrator: Renumbering citations for {len(evidence_summaries_to_renumber)} evidence summaries")
+        
+        for summary_data in evidence_summaries_to_renumber:
+            source = summary_data["source"]
+            source_info = summary_data["source_info"]
+            summary_text = summary_data["summary"]
+            items = summary_data["items"]
+            
+            # Build mapping from local indices to global citation numbers
+            local_to_global = {}
+            for local_idx, item in enumerate(items):
+                # Get URL for this item
+                url = (
+                    item.get("url") 
+                    or item.get("story_url") 
+                    or (item.get("openAccessPdf", {}) or {}).get("url")
+                    or ""
+                )
+                
+                if url:
+                    # Find this URL in unified citations to get global number
+                    for global_idx, citation in enumerate(unified_citations, 1):
+                        if citation.get("url") == url:
+                            local_to_global[local_idx] = global_idx
+                            break
+            
+            # Renumber citation markers in the summary text
+            renumbered_summary = summary_text
+            
+            def replace_citation(match):
+                local_num = int(match.group(1))
+                global_num = local_to_global.get(local_num)
+                if global_num is not None:
+                    return f"[{global_num}]"
+                else:
+                    # Remove citation marker if no URL mapping found
+                    return ""
+            
+            renumbered_summary = re.sub(r"\[(\d+)\]", replace_citation, renumbered_summary)
+            
+            # Add renumbered summary to context sections
+            source_name = source_info["name"]
+            source_type = source_info["type"]
+            
+            search_context = f"""INFORMATION FROM {source_name.upper()} (Type: {source_type}):
+{renumbered_summary}
+"""
+            context_sections.append(search_context)
+            successful_sources.append({"name": source_name, "type": source_type})
+            logger.info(f"🧠 Integrator: ✅ Added renumbered {source_name} summary to context")
 
     # Add analysis results to context if available
     analysis_results = state.get("module_results", {}).get("analyzer", {})
