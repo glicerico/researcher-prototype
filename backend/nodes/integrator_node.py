@@ -73,9 +73,15 @@ async def integrator_node(state: ChatState) -> ChatState:
             try:
                 raw = search_results_data.get("raw_results", {}) or {}
                 all_items = raw.get("results")
-                if all_items and search_results_data.get("filtered_by_reviewer"):
-                    # Use the items that were already filtered by the reviewer
-                    # (raw_results["results"] now contains only the selected items)
+                
+                # Check if we have evidence summary (preferred) or fall back to raw items
+                evidence_summary = search_results_data.get("evidence_summary", "")
+                if evidence_summary:
+                    # Use the evidence summary with citations that need to be renumbered
+                    filtered_items_text = evidence_summary
+                    logger.info(f"🧠 Integrator: Using evidence summary from {source}")
+                elif all_items and search_results_data.get("filtered_by_reviewer"):
+                    # Fallback: Use the items that were already filtered by the reviewer
                     if all_items:
                         # Build evidence bullets with inline citation tokens
                         lines = []
@@ -96,20 +102,10 @@ async def integrator_node(state: ChatState) -> ChatState:
                             if snippet and len(snippet) > 220:
                                 snippet = snippet[:220] + "..."
                             
-                            # Find citation number for this URL
-                            citation_num = None
-                            if url:
-                                for i, citation in enumerate(unified_citations, 1):
-                                    if citation.get("url") == url:
-                                        citation_num = i
-                                        break
-                            
-                            # Build evidence bullet with citation token
+                            # Build evidence bullet without citation tokens (will be added by summarizer)
                             parts = [f"• {title}"]
                             if snippet:
                                 parts.append(f": {snippet}")
-                            if citation_num:
-                                parts.append(f" [{citation_num}]")
                             lines.append("".join(parts))
                         filtered_items_text = "\n".join(lines)
                         logger.info(f"🧠 Integrator: Using {len(all_items)} reviewer-filtered items from {source}")
@@ -117,6 +113,8 @@ async def integrator_node(state: ChatState) -> ChatState:
                         # No items after reviewer filtering
                         filtered_items_text = ""
                         logger.info(f"🧠 Integrator: No relevant items after reviewer filtering for {source}")
+                else:
+                    filtered_items_text = ""
             except Exception:
                 filtered_items_text = ""
 

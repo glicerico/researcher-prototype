@@ -29,6 +29,7 @@ from nodes.hacker_news_search_node import hacker_news_search_node
 from nodes.pubmed_search_node import pubmed_search_node
 from nodes.source_coordinator_node import source_coordinator_node
 from nodes.search_results_reviewer_node import search_results_reviewer_node
+from nodes.evidence_summarizer_node import evidence_summarizer_node
 
 
 def setup_tracing():
@@ -80,6 +81,8 @@ def create_chat_graph():
     builder.add_node("source_coordinator", source_coordinator_node)
     # Add results reviewer node to filter irrelevant items before integration
     builder.add_node("results_reviewer", search_results_reviewer_node)
+    # Add evidence summarizer node to create concise summaries with citations
+    builder.add_node("evidence_summarizer", evidence_summarizer_node)
     
     # Define the main workflow
     builder.set_entry_point("initializer")
@@ -101,7 +104,9 @@ def create_chat_graph():
     
     # After parallel execution, run a relevance review step
     builder.add_edge("source_coordinator", "results_reviewer")
-    builder.add_edge("results_reviewer", "integrator")
+    # After reviewing, create evidence summaries with proper citations
+    builder.add_edge("results_reviewer", "evidence_summarizer")
+    builder.add_edge("evidence_summarizer", "integrator")
     
     # Analysis path goes directly to integrator
     builder.add_edge("analysis_task_refiner", "analyzer")

@@ -173,3 +173,8 @@ class RelevanceSelection(BaseModel):
     """Indices-based relevance selection to avoid text regeneration risk."""
     selected_indices: List[int] = Field(description="Zero-based indices of relevant items from the provided list")
     reason: Optional[str] = Field(description="Optional short rationale for the selection", default=None)
+
+
+class EvidenceSummary(BaseModel):
+    """Model for evidence summarizer output."""
+    summary_text: str = Field(description="Concise summary with citation markers")

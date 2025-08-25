@@ -194,6 +194,34 @@ INCORRECT citation handling:
 Your response should be a clear synthesis with ALL original citation markers preserved exactly where they support the information. Do NOT include a separate "Sources" section at the end.
 """
 
+# Evidence summarizer prompt
+EVIDENCE_SUMMARIZER_PROMPT = """Current date and time: {current_time}
+
+You are an evidence summarizer. Your task is to create a concise summary of the most important claims from {source_name} results, with proper citations.
+
+USER QUERY: {query}
+
+FILTERED RESULTS FROM {source_name_upper}:
+{enumerated_items}
+
+INSTRUCTIONS:
+1. Extract the most important and relevant claims from these results
+2. Write each claim as a clear, concise sentence
+3. Add citation markers [0], [1], [2], etc. at the end of each claim, using the index numbers from the enumerated results above
+4. Focus on claims that are directly relevant to the user's query
+5. Preserve factual accuracy - do not paraphrase in ways that change meaning
+6. If results contain contradictory information, mention both perspectives with their respective citations
+
+REQUIRED JSON FORMAT:
+{{
+    "summary_text": "Concise summary with citation markers like [0], [1], [2]"
+}}
+
+EXAMPLE OUTPUT:
+{{
+    "summary_text": "Recent studies show promising results for new treatment approaches[0]. However, some researchers note potential side effects that require further investigation[1][2]. The methodology used in these studies has been validated across multiple institutions[0]."
+}}"""
+
 # Search results reviewer prompt
 SEARCH_RESULTS_REVIEWER_PROMPT = """
 Current date and time: {current_time}
