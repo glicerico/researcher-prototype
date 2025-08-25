@@ -65,8 +65,11 @@ class OpenAlexSearchNode(BaseAPISearchNode):
                 works = data.get("results", [])
                 total_count = data.get("meta", {}).get("count", len(works))
                 
+                logger.info(f"🔍 OpenAlex: Title search found {len(works)} results (total available: {total_count})")
+                
                 # If title search yields insufficient results, supplement with abstract search
                 if len(works) < limit // 2 and len(works) < 10:
+                    logger.info(f"🔍 OpenAlex: Title search insufficient ({len(works)} < {min(limit // 2, 10)}), trying abstract search fallback")
                     abstract_params = {
                         "filter": f"abstract.search:{query},type:article,is_retracted:false",
                         "per-page": min(limit - len(works), 200),
@@ -85,19 +88,28 @@ class OpenAlexSearchNode(BaseAPISearchNode):
                         if abstract_response.status_code == 200:
                             abstract_data = abstract_response.json()
                             abstract_works = abstract_data.get("results", [])
+                            abstract_total = abstract_data.get("meta", {}).get("count", 0)
+                            
+                            logger.info(f"🔍 OpenAlex: Abstract search found {len(abstract_works)} results (total available: {abstract_total})")
                             
                             # Deduplicate by ID and combine results
                             title_ids = {work.get("id") for work in works}
                             unique_abstract_works = [work for work in abstract_works if work.get("id") not in title_ids]
                             
+                            logger.info(f"🔍 OpenAlex: Added {len(unique_abstract_works)} unique results from abstract search (after deduplication)")
+                            
                             works = works + unique_abstract_works
-                            total_count = total_count + abstract_data.get("meta", {}).get("count", 0)
-                    except Exception:
+                            total_count = total_count + abstract_total
+                    except Exception as e:
                         # Keep title results only on any error
+                        logger.warning(f"🔍 OpenAlex: Abstract search failed: {str(e)}, keeping title results only")
                         pass
+                else:
+                    logger.info(f"🔍 OpenAlex: Title search sufficient ({len(works)} >= {min(limit // 2, 10)}), skipping abstract search")
                 
                 # If still insufficient results, try general search as final fallback
                 if len(works) < limit // 3 and len(works) < 5:
+                    logger.info(f"🔍 OpenAlex: Combined results still insufficient ({len(works)} < {min(limit // 3, 5)}), trying general search fallback")
                     general_params = {
                         "search": query,
                         "filter": "type:article,is_retracted:false",
@@ -117,16 +129,26 @@ class OpenAlexSearchNode(BaseAPISearchNode):
                         if general_response.status_code == 200:
                             general_data = general_response.json()
                             general_works = general_data.get("results", [])
+                            general_total = general_data.get("meta", {}).get("count", 0)
+                            
+                            logger.info(f"🔍 OpenAlex: General search found {len(general_works)} results (total available: {general_total})")
                             
                             # Deduplicate and combine with existing results
                             existing_ids = {work.get("id") for work in works}
                             unique_general_works = [work for work in general_works if work.get("id") not in existing_ids]
                             
+                            logger.info(f"🔍 OpenAlex: Added {len(unique_general_works)} unique results from general search (after deduplication)")
+                            
                             works = works + unique_general_works
-                            total_count = total_count + general_data.get("meta", {}).get("count", 0)
-                    except Exception:
+                            total_count = total_count + general_total
+                    except Exception as e:
                         # Keep existing results on any error
+                        logger.warning(f"🔍 OpenAlex: General search failed: {str(e)}, keeping existing results")
                         pass
+                else:
+                    logger.info(f"🔍 OpenAlex: Combined results sufficient ({len(works)} >= {min(limit // 3, 5)}), skipping general search")
+                
+                logger.info(f"🔍 OpenAlex: Final result summary - {len(works)} papers selected for processing")
                 
                 return {
                     "success": True,
