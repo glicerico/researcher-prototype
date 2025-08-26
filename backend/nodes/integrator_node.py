@@ -220,7 +220,9 @@ async def integrator_node(state: ChatState) -> ChatState:
                                 logger.debug(f"🧠 Integrator: Skipped item without URL: {title} from {source}")
             
             # Add raw content to context only if we're not using evidence summaries
-            search_result_text = filtered_items_text or search_results_data.get("content", "")
+            # For Perplexity, content is stored in "result" field, for others in "content"
+            fallback_content = search_results_data.get("result", "") or search_results_data.get("content", "")
+            search_result_text = filtered_items_text or fallback_content
             if search_result_text and search_result_text != "EVIDENCE_SUMMARY_PLACEHOLDER":
                 # Build source-specific context
                 source_name = source_info["name"]

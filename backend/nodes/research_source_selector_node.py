@@ -39,7 +39,7 @@ async def research_source_selector_node(state: ChatState) -> ChatState:
         
         # Initialize LLM for source selection
         llm = ChatOpenAI(
-            model=config.CHAT_MODEL,
+            model=config.ROUTER_MODEL,  # Use router model for source selection decisions
             temperature=0.1,
             max_tokens=300,
             api_key=config.OPENAI_API_KEY
@@ -96,6 +96,7 @@ async def research_source_selector_node(state: ChatState) -> ChatState:
         # Fallback to balanced source selection
         fallback_sources = ["search", "academic_search"]
         state["workflow_context"]["selected_sources"] = fallback_sources
+        state["selected_sources"] = fallback_sources  # Also set top-level for downstream components
         state["intent"] = "search"
         
         state["module_results"]["research_source_selector"] = {
