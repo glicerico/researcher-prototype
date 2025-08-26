@@ -142,8 +142,10 @@ class TestMultiSourceAnalyzerNode:
     async def test_multi_source_analyzer_exception_handling(self, mock_openai, sample_chat_state):
         """Test exception handling in analyzer."""
         mock_llm = Mock()
+        mock_structured_analyzer = Mock()
         mock_openai.return_value = mock_llm
-        mock_llm.with_structured_output.side_effect = Exception("API Error")
+        mock_llm.with_structured_output.return_value = mock_structured_analyzer
+        mock_structured_analyzer.invoke.side_effect = Exception("API Error")
         
         result = await multi_source_analyzer_node(sample_chat_state)
         

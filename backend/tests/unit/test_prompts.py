@@ -24,10 +24,12 @@ def test_search_optimizer_system_prompt_formatting():
     formatted = SEARCH_OPTIMIZER_SYSTEM_PROMPT.format(
         current_time="2023-06-01 12:00:00", 
         user_profile_section="Test profile",
+        selected_sources=["search", "academic_search"],
         memory_context_section=""
     )
     assert "Current date and time: 2023-06-01 12:00:00" in formatted
     assert "Test profile" in formatted
+    assert "search" in formatted
     assert len(formatted) > 100
 
 

@@ -209,8 +209,9 @@ class TestSearchNode:
         assert headers["Authorization"] == "Bearer test-api-key"
         assert headers["Content-Type"] == "application/json"
         assert payload["model"] == "llama-3.1-sonar-small-128k-online"
-        assert "options" in payload
-        assert payload["options"]["stream"] is False
+        assert "search_mode" in payload
+        assert "web_search_options" in payload
+        assert payload["stream"] is False
         assert len(payload["messages"]) == 2
         assert payload["messages"][0]["role"] == "system"
         assert payload["messages"][1]["role"] == "user"
