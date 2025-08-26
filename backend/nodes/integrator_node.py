@@ -126,59 +126,44 @@ async def integrator_node(state: ChatState) -> ChatState:
             except Exception:
                 filtered_items_text = ""
 
-            # Skip adding raw content if we have evidence summaries to process
-            search_result_text = filtered_items_text or search_results_data.get("content", "")
-            if search_result_text and search_result_text != "EVIDENCE_SUMMARY_PLACEHOLDER":
-                # Build source-specific context
-                source_name = source_info["name"]
-                source_type = source_info["type"]
+            # Build unified citations from all sources (regardless of evidence summaries)
+            if source == "search":
+                # Perplexity: use existing citations
+                citations = search_results_data.get("citations", [])
+                search_sources_data = search_results_data.get("search_results", [])
+                all_citations.extend(citations)
+                all_search_sources.extend(search_sources_data)
                 
-                # Create context with source information
-                search_context = f"""INFORMATION FROM {source_name.upper()} (Type: {source_type}):
-{search_result_text}
-"""
-                context_sections.append(search_context)
-                successful_sources.append({"name": source_name, "type": source_type})
-                logger.info(f"🧠 Integrator: ✅ Added {source_name} results to context")
-                
-                # Build unified citations from all sources
-                if source == "search":
-                    # Perplexity: use existing citations
-                    citations = search_results_data.get("citations", [])
-                    search_sources_data = search_results_data.get("search_results", [])
-                    all_citations.extend(citations)
-                    all_search_sources.extend(search_sources_data)
-                    
-                    # Add to unified citations (use search_sources for proper titles)
-                    if search_sources_data:
-                        # Use search_sources which have titles and URLs
-                        for source_item in search_sources_data:
-                            url = source_item.get("url", "")
-                            title = source_item.get("title", "Web Search Result")
-                            if url and url not in [c.get("url") for c in unified_citations]:
-                                unified_citations.append({
-                                    "title": title,
-                                    "url": url,
-                                    "source": "Web Search",
-                                    "type": "web"
-                                })
-                    else:
-                        # Fallback to citations URLs only (no titles available)
-                        for citation_url in citations:
-                            if citation_url and citation_url not in [c.get("url") for c in unified_citations]:
-                                unified_citations.append({
-                                    "title": "Web Search Result",
-                                    "url": citation_url,
-                                    "source": "Web Search",
-                                    "type": "web"
-                                })
+                # Add to unified citations (use search_sources for proper titles)
+                if search_sources_data:
+                    # Use search_sources which have titles and URLs
+                    for source_item in search_sources_data:
+                        url = source_item.get("url", "")
+                        title = source_item.get("title", "Web Search Result")
+                        if url and url not in [c.get("url") for c in unified_citations]:
+                            unified_citations.append({
+                                "title": title,
+                                "url": url,
+                                "source": "Web Search",
+                                "type": "web"
+                            })
                 else:
-                    # Specialized APIs: build citations from filtered items
-                    raw = search_results_data.get("raw_results", {}) or {}
-                    filtered_items = raw.get("results", [])
-                    
-                    if filtered_items and search_results_data.get("filtered_by_reviewer"):
-                        for item in filtered_items:
+                    # Fallback to citations URLs only (no titles available)
+                    for citation_url in citations:
+                        if citation_url and citation_url not in [c.get("url") for c in unified_citations]:
+                            unified_citations.append({
+                                "title": "Web Search Result",
+                                "url": citation_url,
+                                "source": "Web Search",
+                                "type": "web"
+                            })
+            else:
+                # Specialized APIs: build citations from filtered items
+                raw = search_results_data.get("raw_results", {}) or {}
+                filtered_items = raw.get("results", [])
+                
+                if filtered_items and search_results_data.get("filtered_by_reviewer"):
+                    for item in filtered_items:
                             title = (
                                 item.get("title") 
                                 or item.get("story_title") 
@@ -233,6 +218,21 @@ async def integrator_node(state: ChatState) -> ChatState:
                                     logger.debug(f"🧠 Integrator: Skipped duplicate URL {url} from {source}")
                             else:
                                 logger.debug(f"🧠 Integrator: Skipped item without URL: {title} from {source}")
+            
+            # Add raw content to context only if we're not using evidence summaries
+            search_result_text = filtered_items_text or search_results_data.get("content", "")
+            if search_result_text and search_result_text != "EVIDENCE_SUMMARY_PLACEHOLDER":
+                # Build source-specific context
+                source_name = source_info["name"]
+                source_type = source_info["type"]
+                
+                # Create context with source information
+                search_context = f"""INFORMATION FROM {source_name.upper()} (Type: {source_type}):
+{search_result_text}
+"""
+                context_sections.append(search_context)
+                successful_sources.append({"name": source_name, "type": source_type})
+                logger.info(f"🧠 Integrator: ✅ Added {source_name} results to context")
         else:
             # Track failed sources for graceful degradation reporting
             if source in state.get("selected_sources", []):

@@ -196,7 +196,7 @@ async def response_renderer_node(state: ChatState) -> ChatState:
                         citation_counter += 1
                         
                         # Add source-specific metadata
-                        if citation_type == "academic":
+                        if citation_type == "academic" or citation_type == "scholarly":
                             authors = citation.get("authors", [])
                             year = citation.get("year")
                             venue = citation.get("venue")
@@ -246,6 +246,11 @@ async def response_renderer_node(state: ChatState) -> ChatState:
                             social_citations.append("".join(citation_parts))
                         
                         elif citation_type == "web":
+                            web_citations.append("".join(citation_parts))
+                        
+                        else:
+                            # Default handling for unrecognized citation types
+                            logger.warning(f"✨ Renderer: Unknown citation type '{citation_type}' for citation {citation_counter-1}, adding to web citations")
                             web_citations.append("".join(citation_parts))
 
                 # Build sources section with grouped headers
