@@ -71,6 +71,7 @@ cd frontend && npm start
 - **Types**: Type hints required for module boundaries, prefer Pydantic models
 - **Async**: Use `async def` for FastAPI endpoints unless blocking IO required
 - **Virtual Environment**: Always use `backend/venv/` (activated by `dev.sh`)
+- **No Backward Compatibility**: This is a prototype - do not maintain backward compatibility. Change interfaces, data formats, and APIs freely as needed. Focus on clean, correct implementation over preserving old behavior.
 
 ### React (Frontend)  
 - **Components**: Functional components with hooks only, no classes
