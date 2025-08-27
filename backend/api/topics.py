@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 from typing import Optional
 
 from dependencies import get_or_create_user_id, research_manager
-from logging_config import get_logger
+from services.logging_config import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)

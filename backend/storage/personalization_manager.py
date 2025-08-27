@@ -4,7 +4,7 @@ PersonalizationManager for advanced user behavior learning and preference adapta
 
 import time
 from typing import Dict, Any, List, Optional
-from logging_config import get_logger
+from services.logging_config import get_logger
 from .storage_manager import StorageManager
 from .profile_manager import ProfileManager
 

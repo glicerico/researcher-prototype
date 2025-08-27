@@ -11,7 +11,7 @@ from pathlib import Path
 from typing import Dict, Any, Optional, Union, List
 
 # Import the centralized logging configuration
-from logging_config import get_logger
+from services.logging_config import get_logger
 logger = get_logger(__name__)
 
 class StorageManager:

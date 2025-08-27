@@ -3,7 +3,7 @@ from typing import Optional
 from fastapi import Header
 
 from storage import StorageManager, ProfileManager, ResearchManager, ZepManager
-from logging_config import get_logger
+from services.logging_config import get_logger
 
 logger = get_logger(__name__)
 

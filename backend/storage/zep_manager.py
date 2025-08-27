@@ -8,7 +8,7 @@ from zep_cloud.client import AsyncZep
 from zep_cloud import Message
 
 # Import the centralized logging configuration
-from logging_config import get_logger
+from services.logging_config import get_logger
 logger = get_logger(__name__)
 
 import config

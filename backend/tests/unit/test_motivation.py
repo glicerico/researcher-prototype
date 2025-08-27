@@ -1,4 +1,4 @@
-from motivation import MotivationSystem, DriveConfig
+from services.motivation import MotivationSystem, DriveConfig
 
 
 def test_tick_increases_boredom():

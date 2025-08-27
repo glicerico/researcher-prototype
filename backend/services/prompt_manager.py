@@ -7,7 +7,7 @@ from pathlib import Path
 import importlib.util
 import sys
 
-from logging_config import get_logger
+from services.logging_config import get_logger
 
 logger = get_logger(__name__)
 

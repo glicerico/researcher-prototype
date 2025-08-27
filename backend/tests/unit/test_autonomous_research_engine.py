@@ -7,7 +7,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__)))))
 
-from autonomous_research_engine import AutonomousResearcher, initialize_autonomous_researcher, get_autonomous_researcher
+from services.autonomous_research_engine import AutonomousResearcher, initialize_autonomous_researcher, get_autonomous_researcher
 from storage.profile_manager import ProfileManager
 from storage.research_manager import ResearchManager
 

@@ -8,7 +8,7 @@ import random
 from typing import Dict, Any, List, Optional
 
 # Import the centralized logging configuration
-from logging_config import get_logger
+from services.logging_config import get_logger
 from .storage_manager import StorageManager
 
 logger = get_logger(__name__)

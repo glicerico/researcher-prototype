@@ -10,13 +10,13 @@ from langchain_core.messages import HumanMessage, AIMessage, SystemMessage, Base
 from langchain_openai import ChatOpenAI
 
 # Use the centralized logging configuration
-from logging_config import get_logger
+from services.logging_config import get_logger
 
 logger = get_logger(__name__)
 
 # Import from our utility module
 from utils import get_current_datetime_str
-from status_manager import queue_status  # noqa: F401
+from services.status_manager import queue_status  # noqa: F401
 
 # Import our storage components
 from storage.storage_manager import StorageManager
