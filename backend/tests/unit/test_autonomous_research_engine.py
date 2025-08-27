@@ -50,7 +50,7 @@ def mock_research_graph():
 @pytest.fixture
 def autonomous_researcher(mock_profile_manager, mock_research_manager):
     """Create an AutonomousResearcher with mocked dependencies."""
-    with patch('autonomous_research_engine.research_graph') as mock_graph:
+    with patch('services.autonomous_research_engine.research_graph') as mock_graph:
         mock_graph.ainvoke = AsyncMock(return_value={
             "module_results": {
                 "research_storage": {
@@ -104,7 +104,7 @@ class TestAutonomousResearcherInitialization:
 
     def test_init_default_config(self, mock_profile_manager, mock_research_manager):
         """Test initialization with default configuration."""
-        with patch('autonomous_research_engine.research_graph') as mock_graph:
+        with patch('services.autonomous_research_engine.research_graph') as mock_graph:
             researcher = AutonomousResearcher(mock_profile_manager, mock_research_manager)
             
             assert researcher.profile_manager == mock_profile_manager
@@ -117,7 +117,7 @@ class TestAutonomousResearcherInitialization:
 
     def test_init_with_motivation_override(self, mock_profile_manager, mock_research_manager, motivation_config_override):
         """Test initialization with motivation configuration override."""
-        with patch('autonomous_research_engine.research_graph'):
+        with patch('services.autonomous_research_engine.research_graph'):
             researcher = AutonomousResearcher(
                 mock_profile_manager, 
                 mock_research_manager, 
@@ -500,7 +500,7 @@ class TestGlobalFunctions:
 
     def test_initialize_autonomous_researcher(self, mock_profile_manager, mock_research_manager):
         """Test global initialization function."""
-        with patch('autonomous_research_engine.research_graph'):
+        with patch('services.autonomous_research_engine.research_graph'):
             researcher = initialize_autonomous_researcher(mock_profile_manager, mock_research_manager)
             
             assert isinstance(researcher, AutonomousResearcher)
@@ -509,7 +509,7 @@ class TestGlobalFunctions:
 
     def test_get_autonomous_researcher(self, mock_profile_manager, mock_research_manager):
         """Test global accessor function."""
-        with patch('autonomous_research_engine.research_graph'):
+        with patch('services.autonomous_research_engine.research_graph'):
             # Initialize first
             researcher = initialize_autonomous_researcher(mock_profile_manager, mock_research_manager)
             
@@ -519,7 +519,7 @@ class TestGlobalFunctions:
 
     def test_initialize_with_motivation_override(self, mock_profile_manager, mock_research_manager, motivation_config_override):
         """Test initialization with motivation configuration override."""
-        with patch('autonomous_research_engine.research_graph'):
+        with patch('services.autonomous_research_engine.research_graph'):
             researcher = initialize_autonomous_researcher(
                 mock_profile_manager, 
                 mock_research_manager, 
