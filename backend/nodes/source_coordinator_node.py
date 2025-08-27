@@ -10,17 +10,17 @@ from nodes.base import (
     queue_status,
 )
 
-# Import all search nodes
-from nodes.search_node import search_node
-from nodes.openalex_node import openalex_search_node  
-from nodes.hacker_news_search_node import hacker_news_search_node
-from nodes.pubmed_search_node import pubmed_search_node
-from nodes.analyzer_node import analyzer_node
-from nodes.analysis_refiner_node import analysis_task_refiner_node
+# Import search services
+from services.search_services import (
+    PerplexitySearchService,
+    OpenAlexSearchService,
+    HackerNewsSearchService,
+    PubMedSearchService
+)
 
 
 async def source_coordinator_node(state: ChatState) -> ChatState:
-    """Coordinates parallel execution of selected search sources."""
+    """Coordinates parallel execution of selected search sources using service classes."""
     logger.info("🎛️ Source Coordinator: Managing parallel search execution")
     queue_status(state.get("thread_id"), "Coordinating searches...")
     
@@ -31,19 +31,23 @@ async def source_coordinator_node(state: ChatState) -> ChatState:
         
     logger.info(f"🎛️ Source Coordinator: Executing {len(selected_sources)} sources: {selected_sources}")
     
-    # Map source names to their corresponding node functions
-    source_map = {
-        "search": search_node,
-        "academic_search": openalex_search_node,
-        "social_search": hacker_news_search_node,
-        "medical_search": pubmed_search_node,
+    # Map source names to their corresponding service instances
+    service_map = {
+        "search": PerplexitySearchService(),
+        "academic_search": OpenAlexSearchService(),
+        "social_search": HackerNewsSearchService(),
+        "medical_search": PubMedSearchService(),
     }
     
-    # Execute all selected sources in parallel
+    # Create tasks for parallel execution
     tasks = []
+    valid_sources = []
+    
     for source in selected_sources:
-        if source in source_map:
-            tasks.append(_execute_source(source_map[source], state.copy(), source))
+        if source in service_map:
+            service = service_map[source]
+            tasks.append(_execute_search_service(service, state, source))
+            valid_sources.append(source)
         else:
             logger.warning(f"🎛️ Source Coordinator: Unknown source '{source}', skipping")
     
@@ -51,44 +55,77 @@ async def source_coordinator_node(state: ChatState) -> ChatState:
         logger.warning("🎛️ Source Coordinator: No valid sources to execute")
         return state
     
+    # Initialize module_results if not present
+    state.setdefault("module_results", {})
+    
     # Run all sources in parallel
     try:
         results = await asyncio.gather(*tasks, return_exceptions=True)
         
-        # Merge results back into main state
+        # Process results and store in state
         for i, result in enumerate(results):
+            source_name = valid_sources[i]
+            result_key = _get_result_key(source_name)
+            
             if isinstance(result, Exception):
-                source_name = selected_sources[i]
                 logger.error(f"🎛️ Source Coordinator: Error in {source_name}: {str(result)}")
+                state["module_results"][result_key] = {
+                    "success": False,
+                    "error": f"Exception in {source_name}: {str(result)}",
+                    "source": source_name
+                }
             elif isinstance(result, dict):
-                # Merge the state from each source
-                if "module_results" in result:
-                    state.setdefault("module_results", {}).update(result["module_results"])
-                if "workflow_context" in result:
-                    state.setdefault("workflow_context", {}).update(result["workflow_context"])
+                # Store the search result directly
+                state["module_results"][result_key] = result
+            else:
+                logger.warning(f"🎛️ Source Coordinator: Unexpected result type from {source_name}: {type(result)}")
+                state["module_results"][result_key] = {
+                    "success": False,
+                    "error": f"Unexpected result type from {source_name}",
+                    "source": source_name
+                }
         
-        logger.info(f"🎛️ Source Coordinator: ✅ Completed parallel execution of {len(selected_sources)} sources")
+        logger.info(f"🎛️ Source Coordinator: ✅ Completed parallel execution of {len(valid_sources)} sources")
         
     except Exception as e:
         logger.error(f"🎛️ Source Coordinator: ❌ Error in parallel execution: {str(e)}")
+        # Ensure we have error results for all sources
+        for source in valid_sources:
+            result_key = _get_result_key(source)
+            if result_key not in state.get("module_results", {}):
+                state["module_results"][result_key] = {
+                    "success": False,
+                    "error": f"Parallel execution error: {str(e)}",
+                    "source": source
+                }
     
     return state
 
 
-async def _execute_source(source_func, state: Dict[str, Any], source_name: str) -> Dict[str, Any]:
-    """Execute a single source function and return the updated state."""
+async def _execute_search_service(service, state: Dict[str, Any], source_name: str) -> Dict[str, Any]:
+    """Execute a single search service and return the results."""
     try:
-        logger.debug(f"🔍 Executing {source_name}")
-        # Each search node stores results directly to its hardcoded key
-        result_state = await source_func(state)
-        logger.debug(f"✅ Completed {source_name}")
-        return result_state
+        logger.debug(f"🔍 Executing {source_name} service")
+        # Call the service's search method directly
+        result = await service.search(state)
+        logger.debug(f"✅ Completed {source_name} service")
+        return result
     except Exception as e:
-        logger.error(f"❌ Error in {source_name}: {str(e)}")
-        # If there's an exception at this level, the search node couldn't even run
-        # We can't store to the specific key since we don't know it here
-        logger.error(f"🎛️ Source Coordinator: Critical error in {source_name} execution")
-        return state
+        logger.error(f"❌ Error in {source_name} service: {str(e)}")
+        return {
+            "success": False,
+            "error": f"Service execution error: {str(e)}",
+            "source": source_name
+        }
 
 
-# Removed _analyzer_with_refiner since analyzer is now handled as separate intent path
+def _get_result_key(source_name: str) -> str:
+    """Get the result key for a source name."""
+    # Map source names to their result keys (same as used in original nodes)
+    key_map = {
+        "search": "search",
+        "academic_search": "academic_search", 
+        "social_search": "social_search",
+        "medical_search": "medical_search"
+    }
+    return key_map.get(source_name, source_name)

@@ -111,3 +111,4 @@ cd frontend && npm start
 - **Knowledge Graph**: Zep-powered memory and visualization
 - **Admin Console**: JWT-secured interface with prompt editor
 - **Search Integration**: Perplexity for internet search, Qwello for insights
+- to memorize There's not need for backwards compatibility, so don't explain in comments how you removed something that doesn't exist anymore

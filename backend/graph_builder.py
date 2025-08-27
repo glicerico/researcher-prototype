@@ -18,15 +18,11 @@ from nodes.initializer_node import initializer_node
 from nodes.multi_source_analyzer_node import multi_source_analyzer_node
 from nodes.search_optimizer_node import search_prompt_optimizer_node
 from nodes.analysis_refiner_node import analysis_task_refiner_node
-from nodes.search_node import search_node
 from nodes.analyzer_node import analyzer_node
 from nodes.integrator_node import integrator_node
 from nodes.response_renderer_node import response_renderer_node
 
-# Import specialized search nodes
-from nodes.openalex_node import openalex_search_node
-from nodes.hacker_news_search_node import hacker_news_search_node
-from nodes.pubmed_search_node import pubmed_search_node
+# Import specialized nodes
 from nodes.source_coordinator_node import source_coordinator_node
 from nodes.search_results_reviewer_node import search_results_reviewer_node
 from nodes.evidence_summarizer_node import evidence_summarizer_node
@@ -68,10 +64,6 @@ def create_chat_graph():
     
     # Add search-related nodes
     builder.add_node("search_prompt_optimizer", search_prompt_optimizer_node)
-    builder.add_node("search", search_node)
-    builder.add_node("academic_search", openalex_search_node)
-    builder.add_node("social_search", hacker_news_search_node)
-    builder.add_node("medical_search", pubmed_search_node)
     
     # Add analysis nodes  
     builder.add_node("analysis_task_refiner", analysis_task_refiner_node)
