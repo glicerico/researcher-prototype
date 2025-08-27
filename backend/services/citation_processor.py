@@ -36,7 +36,7 @@ class CitationProcessor:
     
     def replace_citation_markers(self, text: str, citation_url_map: Dict[int, str]) -> str:
         """
-        Replace citation markers [n] with markdown hyperlinks.
+        Replace citation markers [n] with markdown hyperlinks, avoiding double bracketing.
         
         Args:
             text: Text containing citation markers
@@ -49,11 +49,35 @@ class CitationProcessor:
             citation_num = int(match.group(1))
             url = citation_url_map.get(citation_num)
             if url:
-                # Wrap the citation number in another set of brackets to keep them in the link text
-                return f"[[{citation_num}]]({url})"
+                # Check if this citation is already wrapped in double brackets
+                # by looking at the preceding character
+                full_match = match.group(0)  # The full match like "[1]"
+                start_pos = match.start()
+                
+                # Check if there's a '[' immediately before this match
+                if start_pos > 0 and text[start_pos - 1] == '[':
+                    # Already has an opening bracket, so we just need the closing bracket and URL
+                    return f"{citation_num}]]({url})"
+                else:
+                    # Wrap the citation number in another set of brackets to keep them in the link text
+                    return f"[[{citation_num}]]({url})"
             return match.group(0)  # Return original if no URL found
 
-        return re.sub(r"\[(\d+)\]", replace_citation, text)
+        # First, handle any existing double-bracketed citations [[n]]
+        # These are already properly formatted, so we just add the URL
+        def replace_double_bracketed(match):
+            citation_num = int(match.group(1))
+            url = citation_url_map.get(citation_num)
+            if url:
+                return f"[[{citation_num}]]({url})"
+            return match.group(0)
+        
+        # Process double-bracketed citations first
+        text = re.sub(r"\[\[(\d+)\]\]", replace_double_bracketed, text)
+        
+        # Then process single-bracketed citations that aren't already processed
+        # Use negative lookbehind and lookahead to avoid matching citations that are part of [[n]]
+        return re.sub(r"(?<!\[)\[(\d+)\](?!\])", replace_citation, text)
     
     def _format_academic_citation(self, citation: Dict[str, Any], citation_counter: int) -> str:
         """Format an academic citation with metadata."""

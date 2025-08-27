@@ -68,6 +68,33 @@ class TestCitationProcessor:
         expected = "This is a finding [[1]](https://example.com/1) and another [[2]](https://example.com/2) with no match [3]."
         assert result == expected
     
+    def test_replace_citation_markers_double_bracket_prevention(self):
+        """Test that double brackets are not re-wrapped."""
+        text = "Already double [[1]] and single [2]."
+        url_map = {1: "https://example.com/1", 2: "https://example.com/2"}
+        
+        result = self.processor.replace_citation_markers(text, url_map)
+        expected = "Already double [[1]](https://example.com/1) and single [[2]](https://example.com/2)."
+        assert result == expected
+    
+    def test_replace_citation_markers_mixed_scenarios(self):
+        """Test mixed citation bracketing scenarios."""
+        text = "Mix [1] and [[2]] and [3]."
+        url_map = {1: "https://example.com/1", 2: "https://example.com/2", 3: "https://example.com/3"}
+        
+        result = self.processor.replace_citation_markers(text, url_map)
+        expected = "Mix [[1]](https://example.com/1) and [[2]](https://example.com/2) and [[3]](https://example.com/3)."
+        assert result == expected
+    
+    def test_replace_citation_markers_adjacent_citations(self):
+        """Test adjacent citations are handled correctly."""
+        text = "[1][2][[3]]"
+        url_map = {1: "https://example.com/1", 2: "https://example.com/2", 3: "https://example.com/3"}
+        
+        result = self.processor.replace_citation_markers(text, url_map)
+        expected = "[[1]](https://example.com/1)[[2]](https://example.com/2)[[3]](https://example.com/3)"
+        assert result == expected
+    
     def test_format_academic_citation(self):
         """Test academic citation formatting."""
         citation = self.sample_unified_citations[0]
