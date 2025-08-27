@@ -307,15 +307,16 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
 
               
 
-              <div className="checkbox-group">
-                <label>
-                  <input
-                    type="checkbox"
-                    checked={editedPreferences?.format_preferences?.use_bullet_points || false}
-                    onChange={(e) => handlePreferenceChange('format_preferences', 'use_bullet_points', e.target.checked)}
-                  />
-                  Use bullet points for lists
-                </label>
+              <div className="form-group">
+                <label>Formatting Style:</label>
+                <select 
+                  value={editedPreferences?.format_preferences?.formatting_style || 'structured'}
+                  onChange={(e) => handlePreferenceChange('format_preferences', 'formatting_style', e.target.value)}
+                >
+                  <option value="structured">Structured (organized sections)</option>
+                  <option value="bullet_points">Bullet Points</option>
+                  <option value="natural">Natural (flowing text)</option>
+                </select>
               </div>
 
               <div className="checkbox-group">

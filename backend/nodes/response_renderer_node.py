@@ -17,7 +17,6 @@ from nodes.base import (
     personalization_manager,
 )
 from llm_models import FormattedResponse
-from utils import get_last_user_message
 import re
 
 
@@ -87,14 +86,8 @@ async def response_renderer_node(state: ChatState) -> ChatState:
     format_prefs = personalization_context.get("format_preferences", {})
     response_length = format_prefs.get("response_length", "medium")
     detail_level = format_prefs.get("detail_level", "balanced")
-    use_bullet_points = format_prefs.get("use_bullet_points", True)
+    formatting_style = format_prefs.get("formatting_style", "structured")
     include_key_insights = format_prefs.get("include_key_insights", True)
-    
-    # Extract learned adaptations
-    learned_adaptations = personalization_context.get("learned_adaptations", {})
-    format_optimizations = learned_adaptations.get("format_optimizations", {})
-    prefers_structured = format_optimizations.get("prefers_structured_responses", True)
-    optimal_length = format_optimizations.get("optimal_response_length")
     
     # Create a system prompt for the renderer with personalization
     system_message = SystemMessage(
@@ -105,10 +98,8 @@ async def response_renderer_node(state: ChatState) -> ChatState:
             module_used=module_used,
             response_length=response_length,
             detail_level=detail_level,
-            use_bullet_points=use_bullet_points,
-            include_key_insights=include_key_insights,
-            prefers_structured=prefers_structured,
-            optimal_length=optimal_length or "not specified"
+            formatting_style=formatting_style,
+            include_key_insights=include_key_insights
         )
     )
 

@@ -27,7 +27,7 @@ class FormatPreferences(BaseModel):
     """User format preferences."""
     response_length: str = "medium"  # short, medium, long
     detail_level: str = "balanced"  # concise, balanced, comprehensive
-    use_bullet_points: bool = True
+    formatting_style: str = "structured"  # structured, natural, bullet_points
     include_key_insights: bool = True
 
 
@@ -57,16 +57,9 @@ class InteractionSignals(BaseModel):
     follow_up_question_frequency: float = 0.0
 
 
-class FormatOptimizations(BaseModel):
-    """Learned format optimizations."""
-    prefers_structured_responses: Optional[bool] = None
-    optimal_response_length: Optional[int] = None
-
-
 class LearnedAdaptations(BaseModel):
     """Learned user adaptations."""
     tone_adjustments: Dict[str, str] = {}
-    format_optimizations: FormatOptimizations = FormatOptimizations()
 
 
 class EngagementAnalytics(BaseModel):

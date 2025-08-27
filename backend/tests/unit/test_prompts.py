@@ -69,10 +69,8 @@ def test_response_renderer_system_prompt_formatting():
         current_time="2023-06-01 12:00:00",
         response_length="medium",
         detail_level="balanced",
-        use_bullet_points="True",
+        formatting_style="structured",
         include_key_insights="True",
-        prefers_structured="True",
-        optimal_length="500",
         style="helpful",
         tone="friendly",
         module_used="search"

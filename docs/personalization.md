@@ -210,10 +210,6 @@ Each user has personalization data stored in three categories:
       "academic_papers": 0.9,
       "news_articles": 0.4
     },
-    "format_optimizations": {
-      "optimal_response_length": 350,
-      "prefers_structured_responses": true
-    },
     "engagement_patterns": {
       "follow_up_frequency": 0.35,
       "preferred_sources": ["academic_papers", "expert_blogs"]
@@ -423,10 +419,6 @@ GET /api/users/personalization
       "expert_blogs": 0.8,
       "government_reports": 0.6,
       "industry_reports": 0.5
-    },
-    "format_optimizations": {
-      "optimal_response_length": 380,
-      "prefers_structured_responses": true
     },
     "engagement_patterns": {
       "follow_up_frequency": 0.35,
