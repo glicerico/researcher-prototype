@@ -12,6 +12,9 @@ from nodes.base import (
     queue_status,
     personalization_manager,
 )
+
+# Fixed result key for this search source
+RESULT_KEY = "search"
 from utils import get_last_user_message
 import requests
 
@@ -98,9 +101,11 @@ async def search_node(state: ChatState) -> ChatState:
     refined_query = state.get("workflow_context", {}).get("refined_search_query")
     original_user_query = get_last_user_message(state.get("messages", []))
     query_to_search = refined_query if refined_query else original_user_query
+    
+    # Store results directly to hardcoded key
 
     if not query_to_search:
-        state["module_results"]["search"] = {
+        state["module_results"][RESULT_KEY] = {
             "success": False,
             "error": "No query found for search (neither refined nor original).",
         }
@@ -114,7 +119,7 @@ async def search_node(state: ChatState) -> ChatState:
     if not config.PERPLEXITY_API_KEY:
         error_message = "Perplexity API key not configured. Please set the PERPLEXITY_API_KEY environment variable."
         logger.error(f"🔍 Search: ❌ {error_message}")
-        state["module_results"]["search"] = {"success": False, "error": error_message}
+        state["module_results"][RESULT_KEY] = {"success": False, "error": error_message}
         return state
 
     try:
@@ -180,7 +185,7 @@ async def search_node(state: ChatState) -> ChatState:
             if search_results:
                 logger.info(f"🔍 Search: ✅ Found {len(search_results)} search result sources")
 
-            state["module_results"]["search"] = {
+            state["module_results"][RESULT_KEY] = {
                 "success": True,
                 "result": search_result,
                 "query_used": query_to_search,
@@ -190,7 +195,7 @@ async def search_node(state: ChatState) -> ChatState:
         else:
             error_message = f"Perplexity API request failed with status code {response.status_code}: {response.text}"
             logger.error(f"🔍 Search: ❌ {error_message}")
-            state["module_results"]["search"] = {
+            state["module_results"][RESULT_KEY] = {
                 "success": False,
                 "error": error_message,
                 "status_code": response.status_code,
@@ -199,6 +204,6 @@ async def search_node(state: ChatState) -> ChatState:
     except Exception as e:
         error_message = f"Error in search_node: {str(e)}"
         logger.error(f"🔍 Search: ❌ {error_message}", exc_info=True)
-        state["module_results"]["search"] = {"success": False, "error": error_message}
+        state["module_results"][RESULT_KEY] = {"success": False, "error": error_message}
 
     return state

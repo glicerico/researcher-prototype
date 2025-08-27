@@ -17,8 +17,7 @@ from nodes.base import (
     personalization_manager,
 )
 from llm_models import FormattedResponse
-from utils import get_last_user_message
-import re
+from services.citation_processor import citation_processor
 
 
 async def response_renderer_node(state: ChatState) -> ChatState:
@@ -40,9 +39,15 @@ async def response_renderer_node(state: ChatState) -> ChatState:
         )
         return state
 
-    # Retrieve citation data from the workflow context
-    citations = state.get("workflow_context", {}).get("citations", [])
+    # Retrieve enhanced citation and source data from the workflow context
+    unified_citations = state.get("workflow_context", {}).get("unified_citations", [])
+    citations = state.get("workflow_context", {}).get("citations", [])  # Fallback for Perplexity
     search_sources = state.get("workflow_context", {}).get("search_sources", [])
+    successful_sources = state.get("workflow_context", {}).get("successful_sources", [])
+    source_failures = state.get("workflow_context", {}).get("source_failures", [])
+    failure_note = state.get("workflow_context", {}).get("failure_note", "")
+    
+
 
     # Log the raw response
     display_raw = raw_response[:75] + "..." if len(raw_response) > 75 else raw_response
@@ -81,14 +86,8 @@ async def response_renderer_node(state: ChatState) -> ChatState:
     format_prefs = personalization_context.get("format_preferences", {})
     response_length = format_prefs.get("response_length", "medium")
     detail_level = format_prefs.get("detail_level", "balanced")
-    use_bullet_points = format_prefs.get("use_bullet_points", True)
+    formatting_style = format_prefs.get("formatting_style", "structured")
     include_key_insights = format_prefs.get("include_key_insights", True)
-    
-    # Extract learned adaptations
-    learned_adaptations = personalization_context.get("learned_adaptations", {})
-    format_optimizations = learned_adaptations.get("format_optimizations", {})
-    prefers_structured = format_optimizations.get("prefers_structured_responses", True)
-    optimal_length = format_optimizations.get("optimal_response_length")
     
     # Create a system prompt for the renderer with personalization
     system_message = SystemMessage(
@@ -99,10 +98,8 @@ async def response_renderer_node(state: ChatState) -> ChatState:
             module_used=module_used,
             response_length=response_length,
             detail_level=detail_level,
-            use_bullet_points=use_bullet_points,
-            include_key_insights=include_key_insights,
-            prefers_structured=prefers_structured,
-            optimal_length=optimal_length or "not specified"
+            formatting_style=formatting_style,
+            include_key_insights=include_key_insights
         )
     )
 
@@ -140,41 +137,24 @@ async def response_renderer_node(state: ChatState) -> ChatState:
         stylized_response = llm_response.main_response
         follow_up_questions = llm_response.follow_up_questions
 
-        # Create the URL map from the raw citations list
-        citation_url_map = {i + 1: url for i, url in enumerate(citations)}
-
-        # Replace citation markers [n] with markdown hyperlinks
-        def replace_citation(match):
-            citation_num = int(match.group(1))
-            url = citation_url_map.get(citation_num)
-            if url:
-                # Wrap the citation number in another set of brackets to keep them in the link text
-                return f"[[{citation_num}]]({url})"
-            return match.group(0)  # Return original if no URL found
-
-        # Apply the replacement to the stylized response
-        final_response = re.sub(r"\[(\d+)\]", replace_citation, stylized_response)
-
-        # Format and append the sources section
-        if search_sources:
-            sources_list = []
-            for i, s in enumerate(search_sources, 1):  # Start numbering from 1
-                title = s.get("title", "Unknown Title")
-                url = s.get("url")
-                if url:
-                    sources_list.append(f"[{i}]. [{title}]({url})")
-
-            if sources_list:
-                sources_section = "\n\n**Sources:**\n" + "\n".join(sources_list)
-                final_response += sources_section
+        # Process citations using external citation processor
+        final_response = citation_processor.process_citations(
+            text=stylized_response,
+            unified_citations=unified_citations,
+            fallback_citations=citations,
+            search_sources=search_sources,
+            successful_sources=successful_sources,
+            failure_note=failure_note
+        )
 
         # Add follow-up questions to the workflow context to be used in the API response
         if follow_up_questions:
             state["workflow_context"]["follow_up_questions"] = follow_up_questions
 
-        # Log the formatted response
+        # Log the formatted response with source info
         display_formatted = final_response[:75] + "..." if len(final_response) > 75 else final_response
-        logger.info(f'✨ Renderer: Produced formatted response: "{display_formatted}"')
+        source_info = f" (from {len(successful_sources)} sources)" if successful_sources else ""
+        logger.info(f'✨ Renderer: Produced formatted response: "{display_formatted}"{source_info}')
 
         logger.debug(
             f"Renderer processed response. Original length: {len(raw_response)}, Formatted length: {len(final_response)}"

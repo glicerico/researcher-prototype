@@ -3,6 +3,7 @@ Integrator node that combines all available information to generate a coherent r
 """
 
 import asyncio
+import re
 from nodes.base import (
     ChatState,
     logger,
@@ -48,26 +49,301 @@ async def integrator_node(state: ChatState) -> ChatState:
     else:
         logger.debug("🧠 Integrator: ⚠️ No memory context available")
 
-    # Add search results to context if available
-    search_results_data = state.get("module_results", {}).get("search", {})
-    if search_results_data.get("success", False):
-        search_result_text = search_results_data.get("result", "")
-        if search_result_text:
-            citations = search_results_data.get("citations", [])  # List of URL strings
-            search_sources = search_results_data.get("search_results", [])  # List of objects
+    # Multi-source processing with cross-referencing
+    source_config = {
+        "search": {"name": "Web Search", "type": "current_info"},
+        "academic_search": {"name": "Academic Papers", "type": "scholarly"},
+        "social_search": {"name": "Social Media", "type": "sentiment"},
+        "medical_search": {"name": "Medical Research", "type": "clinical"},
+        "analyzer": {"name": "Analysis", "type": "analytical"}
+    }
+    
+    all_citations = []
+    all_search_sources = []
+    successful_sources = []
+    failed_sources = []
+    unified_citations = []  # New unified citations list with deduplication
+    evidence_summaries_to_renumber = []  # Store summaries that need citation renumbering
+    
+    # Process each potential source
+    for source, source_info in source_config.items():
+        search_results_data = state.get("module_results", {}).get(source, {})
+        
+        if search_results_data.get("success", False):
+            # Prefer reviewer-filtered raw results if available to avoid LLM regeneration drift
+            filtered_items_text = ""
+            try:
+                raw = search_results_data.get("raw_results", {}) or {}
+                all_items = raw.get("results")
+                
+                # Check if we have evidence summary (preferred) or fall back to raw items
+                evidence_summary = search_results_data.get("evidence_summary", "")
+                if evidence_summary and all_items:
+                    # Store evidence summary and items for later renumbering after unified citations are built
+                    evidence_summaries_to_renumber.append({
+                        "source": source,
+                        "source_info": source_info,
+                        "summary": evidence_summary,
+                        "items": all_items
+                    })
+                    filtered_items_text = "EVIDENCE_SUMMARY_PLACEHOLDER"  # Flag to skip raw content
+                    logger.info(f"🧠 Integrator: Stored evidence summary from {source} for citation renumbering")
+                elif all_items and search_results_data.get("filtered_by_reviewer"):
+                    # Fallback: Use the items that were already filtered by the reviewer
+                    if all_items:
+                        # Build evidence bullets with inline citation tokens
+                        lines = []
+                        for display_idx, item in enumerate(all_items, 1):
+                            title = (
+                                item.get("title")
+                                or item.get("story_title")
+                                or item.get("paperTitle")
+                                or "(no title)"
+                            )
+                            url = (
+                                item.get("url")
+                                or item.get("story_url")
+                                or (item.get("openAccessPdf", {}) or {}).get("url")
+                                or ""
+                            )
+                            snippet = item.get("text") or item.get("abstract") or ""
+                            if snippet and len(snippet) > 220:
+                                snippet = snippet[:220] + "..."
+                            
+                            # Build evidence bullet without citation tokens (will be added by summarizer)
+                            parts = [f"• {title}"]
+                            if snippet:
+                                parts.append(f": {snippet}")
+                            lines.append("".join(parts))
+                        filtered_items_text = "\n".join(lines)
+                        logger.info(f"🧠 Integrator: Using {len(all_items)} reviewer-filtered items from {source}")
+                    else:
+                        # No items after reviewer filtering
+                        filtered_items_text = ""
+                        logger.info(f"🧠 Integrator: No relevant items after reviewer filtering for {source}")
+                else:
+                    filtered_items_text = ""
+            except Exception:
+                filtered_items_text = ""
 
-            # --- Data for Renderer ---
-            # Pass the raw citation data directly to the renderer.
-            state["workflow_context"]["citations"] = citations
-            state["workflow_context"]["search_sources"] = search_sources
-            logger.info("🧠 Integrator: ✅ Passing raw citation data and sources to the renderer.")
+            # Build unified citations from all sources (regardless of evidence summaries)
+            if source == "search":
+                # Perplexity: use existing citations
+                citations = search_results_data.get("citations", [])
+                search_sources_data = search_results_data.get("search_results", [])
+                all_citations.extend(citations)
+                all_search_sources.extend(search_sources_data)
+                
+                # Add to unified citations (use search_sources for proper titles)
+                if search_sources_data:
+                    # Use search_sources which have titles and URLs
+                    for source_item in search_sources_data:
+                        url = source_item.get("url", "")
+                        title = source_item.get("title", "Web Search Result")
+                        if url and url not in [c.get("url") for c in unified_citations]:
+                            unified_citations.append({
+                                "title": title,
+                                "url": url,
+                                "source": "Web Search",
+                                "type": "web"
+                            })
+                else:
+                    # Fallback to citations URLs only (no titles available)
+                    for citation_url in citations:
+                        if citation_url and citation_url not in [c.get("url") for c in unified_citations]:
+                            unified_citations.append({
+                                "title": "Web Search Result",
+                                "url": citation_url,
+                                "source": "Web Search",
+                                "type": "web"
+                            })
+            else:
+                # Specialized APIs: build citations from filtered items
+                raw = search_results_data.get("raw_results", {}) or {}
+                filtered_items = raw.get("results", [])
+                
+                if filtered_items and search_results_data.get("filtered_by_reviewer"):
+                    for item in filtered_items:
+                            title = (
+                                item.get("title") 
+                                or item.get("story_title") 
+                                or item.get("paperTitle") 
+                                or "Untitled"
+                            )
+                            url = (
+                                item.get("url") 
+                                or item.get("story_url") 
+                                or (item.get("openAccessPdf", {}) or {}).get("url")
+                                or ""
+                            )
+                            
+                            # Handle OpenAlex DOI to URL conversion
+                            if not url and item.get("doi"):
+                                doi = item.get("doi")
+                                if not doi.startswith("http"):
+                                    url = f"https://doi.org/{doi.replace('https://doi.org/', '')}"
+                                else:
+                                    url = doi
+                            
+                            # Handle PubMed URLs
+                            if not url and item.get("pmid"):
+                                url = f"https://pubmed.ncbi.nlm.nih.gov/{item.get('pmid')}/"
+                            
+                            if url:
+                                if url not in [c.get("url") for c in unified_citations]:
+                                    # Build citation metadata based on source type
+                                    citation = {
+                                        "title": title,
+                                        "url": url,
+                                        "source": source_info["name"],
+                                        "type": source_info["type"]
+                                    }
+                                
+                                    # Add source-specific metadata
+                                    if source == "academic_search":
+                                        citation["authors"] = item.get("authors", [])
+                                        citation["year"] = item.get("year")
+                                        citation["venue"] = item.get("venue")
+                                    elif source == "medical_search":
+                                        citation["authors"] = item.get("authorList", [])
+                                        citation["journal"] = item.get("source")
+                                        citation["pubdate"] = item.get("pubdate")
+                                    elif source == "social_search":
+                                        citation["author"] = item.get("author")
+                                        citation["points"] = item.get("points")
+                                        citation["comments"] = item.get("num_comments")
+                                    
+                                    unified_citations.append(citation)
+                                else:
+                                    logger.debug(f"🧠 Integrator: Skipped duplicate URL {url} from {source}")
+                            else:
+                                logger.debug(f"🧠 Integrator: Skipped item without URL: {title} from {source}")
+            
+            # Add raw content to context only if we're not using evidence summaries
+            # For Perplexity, content is stored in "result" field, for others in "content"
+            fallback_content = search_results_data.get("result", "") or search_results_data.get("content", "")
+            search_result_text = filtered_items_text or fallback_content
+            if search_result_text and search_result_text != "EVIDENCE_SUMMARY_PLACEHOLDER":
+                # Build source-specific context
+                source_name = source_info["name"]
+                source_type = source_info["type"]
+                
+                # Create context with source information
+                search_context = f"""INFORMATION FROM {source_name.upper()} (Type: {source_type}):
+{search_result_text}
+"""
+                context_sections.append(search_context)
+                successful_sources.append({"name": source_name, "type": source_type})
+                logger.info(f"🧠 Integrator: ✅ Added {source_name} results to context")
+        else:
+            # Track failed sources for graceful degradation reporting
+            if source in state.get("selected_sources", []):
+                failed_sources.append(source_config[source]["name"])
+                logger.warning(f"🧠 Integrator: ⚠️ {source_config[source]['name']} failed or returned no results")
+    
+    # Add multi-source analysis summary to context
+    if len(successful_sources) > 1:
+        source_summary = f"""
+MULTI-SOURCE ANALYSIS SUMMARY:
+Successfully retrieved information from {len(successful_sources)} sources: {', '.join([s['name'] for s in successful_sources])}.
+When synthesizing, cross-reference information between sources and highlight areas where sources agree or provide complementary information.
+"""
+        context_sections.insert(0, source_summary)
+        logger.info(f"🧠 Integrator: 📊 Multi-source analysis with {len(successful_sources)} sources")
+    elif len(successful_sources) == 1:
+        logger.info(f"🧠 Integrator: Single source analysis: {successful_sources[0]['name']}")
+    
+    # Report any failures (graceful degradation)  
+    if failed_sources:
+        failure_note = f"\nNOTE: Some sources were unavailable: {', '.join(failed_sources)}. Response is based on available sources only."
+        state["workflow_context"]["source_failures"] = failed_sources
+        state["workflow_context"]["failure_note"] = failure_note
+        logger.info(f"🧠 Integrator: ⚠️ {len(failed_sources)} sources failed, graceful degradation in effect")
+    
+    # Pass unified citation data and source metadata to renderer
+    if unified_citations or all_citations or all_search_sources:
+        # Use unified citations for new pipeline, keep old ones for backward compatibility
+        state["workflow_context"]["unified_citations"] = unified_citations
+        state["workflow_context"]["citations"] = all_citations  # Keep for Perplexity compatibility
+        state["workflow_context"]["search_sources"] = all_search_sources
+        state["workflow_context"]["successful_sources"] = successful_sources
+        logger.info(f"🧠 Integrator: 📚 Passing {len(unified_citations)} unified citations from {len(successful_sources)} sources to renderer")
 
-            # --- Context for Integrator LLM ---
-            # Build a simple, clean context for the integrator's LLM prompt.
-            # The search_result_text already has [n] markers. We pass it as-is.
-            search_context = f"CURRENT INFORMATION FROM WEB SEARCH:\nThe following text was retrieved from a web search. It contains citation markers like [1], [2], etc.\n\n---\n\n{search_result_text}\n\n---\n\nUse this information to answer the user's query, making sure to preserve the citation markers as they are."
+    # Renumber evidence summaries to match unified citations
+    if evidence_summaries_to_renumber:
+        logger.info(f"🧠 Integrator: Renumbering citations for {len(evidence_summaries_to_renumber)} evidence summaries")
+        
+        for summary_data in evidence_summaries_to_renumber:
+            source = summary_data["source"]
+            source_info = summary_data["source_info"]
+            summary_text = summary_data["summary"]
+            items = summary_data["items"]
+            
+            # Build mapping from local indices to global citation numbers
+            local_to_global = {}
+            for local_idx, item in enumerate(items):
+                # Use same URL extraction logic as unified citations builder
+                url = (
+                    item.get("url") 
+                    or item.get("story_url") 
+                    or (item.get("openAccessPdf", {}) or {}).get("url")
+                    or ""
+                )
+                
+                # Handle OpenAlex DOI to URL conversion (match unified citations logic)
+                if not url and item.get("doi"):
+                    doi = item.get("doi")
+                    if not doi.startswith("http"):
+                        url = f"https://doi.org/{doi.replace('https://doi.org/', '')}"
+                    else:
+                        url = doi
+                
+                # Handle PubMed URLs
+                if not url and item.get("pmid"):
+                    url = f"https://pubmed.ncbi.nlm.nih.gov/{item.get('pmid')}/"
+                
+                if url:
+                    # Find this URL in unified citations to get global number
+                    for global_idx, citation in enumerate(unified_citations, 1):
+                        if citation.get("url") == url:
+                            local_to_global[local_idx] = global_idx
+                            break
+                    
+                    # Debug: log if URL not found in unified citations
+                    if local_idx not in local_to_global:
+                        logger.warning(f"🧠 Integrator: URL not found in unified citations for {source} item {local_idx}: {url[:50]}...")
+                else:
+                    logger.warning(f"🧠 Integrator: No URL found for {source} item {local_idx}")
+            
+            # Renumber citation markers in the summary text
+            renumbered_summary = summary_text
+            
+            logger.info(f"🧠 Integrator: Citation mapping for {source}: {local_to_global}")
+            
+            def replace_citation(match):
+                local_num = int(match.group(1))
+                global_num = local_to_global.get(local_num)
+                if global_num is not None:
+                    return f"[{global_num}]"
+                else:
+                    # Remove citation marker if no URL mapping found
+                    logger.warning(f"🧠 Integrator: No mapping found for citation [{local_num}] in {source}")
+                    return ""
+            
+            renumbered_summary = re.sub(r"\[(\d+)\]", replace_citation, renumbered_summary)
+            
+            logger.info(f"🧠 Integrator: Original summary length: {len(summary_text)}, Renumbered length: {len(renumbered_summary)}")
+            
+            # Add renumbered summary to context sections
+            source_name = source_info["name"]
+            source_type = source_info["type"]
+            
+            search_context = f"""INFORMATION FROM {source_name.upper()} (Type: {source_type}):
+{renumbered_summary}
+"""
             context_sections.append(search_context)
-            logger.info("🧠 Integrator: ✅ Added search results with original citation markers to system context")
+            successful_sources.append({"name": source_name, "type": source_type})
+            logger.info(f"🧠 Integrator: ✅ Added renumbered {source_name} summary to context")
 
     # Add analysis results to context if available
     analysis_results = state.get("module_results", {}).get("analyzer", {})

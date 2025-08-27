@@ -22,6 +22,13 @@ ROUTER_MODEL = os.getenv("ROUTER_MODEL", "gpt-4o-mini")
 PERPLEXITY_API_KEY = os.getenv("PERPLEXITY_API_KEY")
 PERPLEXITY_MODEL = os.getenv("PERPLEXITY_MODEL", "sonar")
 
+
+# PubMed API configuration (email recommended but not required)
+PUBMED_EMAIL = os.getenv("PUBMED_EMAIL", "researcher@example.com")
+
+# Semantic Scholar API key (optional, increases rate limits)
+# OpenAlex API doesn't require an API key
+
 # Zep configuration
 ZEP_API_KEY = os.getenv("ZEP_API_KEY")
 ZEP_ENABLED = os.getenv("ZEP_ENABLED", "false").lower() == "true"
@@ -84,6 +91,9 @@ RESEARCH_MODEL = os.getenv("RESEARCH_MODEL", "gpt-4o-mini")
 RESEARCH_QUALITY_THRESHOLD = float(os.getenv("RESEARCH_QUALITY_THRESHOLD", "0.6"))
 RESEARCH_MAX_TOPICS_PER_USER = int(os.getenv("RESEARCH_MAX_TOPICS_PER_USER", "3"))
 RESEARCH_FINDINGS_RETENTION_DAYS = int(os.getenv("RESEARCH_FINDINGS_RETENTION_DAYS", "30"))
+
+# Search Results Configuration
+SEARCH_RESULTS_LIMIT = 10  # Standard limit for all search API calls
 
 # Motivation system configuration
 MOTIVATION_CHECK_INTERVAL = int(os.getenv("MOTIVATION_CHECK_INTERVAL", "60"))

@@ -11,7 +11,7 @@ from contextlib import asynccontextmanager
 import config
 
 # Import and configure logging after environment variables are loaded
-from logging_config import configure_logging, get_logger
+from services.logging_config import configure_logging, get_logger
 
 # Configure application logging
 logger = configure_logging()
@@ -37,7 +37,7 @@ from dependencies import (
     get_or_create_user_id,
     _motivation_config_override,
 )
-from autonomous_research_engine import initialize_autonomous_researcher
+from services.autonomous_research_engine import initialize_autonomous_researcher
 
 # Global motivation config override (persists across reinitializations)
 

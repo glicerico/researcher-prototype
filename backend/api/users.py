@@ -12,7 +12,7 @@ from dependencies import (
     generate_display_name_from_user_id,
 )
 from storage.personalization_manager import PersonalizationManager
-from logging_config import get_logger
+from services.logging_config import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)

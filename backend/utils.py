@@ -41,10 +41,10 @@ def get_node_prompt_mapping() -> Dict[str, Dict[str, Any]]:
             "description": "Sets up user state and session",
             "color": "#E8F4FD"
         },
-        "router": {
-            "prompt": "ROUTER_SYSTEM_PROMPT",
-            "category": "Router",
-            "description": "Determines conversation flow path",
+        "multi_source_analyzer": {
+            "prompt": "MULTI_SOURCE_SYSTEM_PROMPT",
+            "category": "Analyzer",
+            "description": "Analyzes queries and selects information sources",
             "color": "#FFE6E6"
         },
         "search_prompt_optimizer": {
@@ -319,7 +319,7 @@ def get_graph_flow_data(graph_type: str = "main") -> Dict[str, Any]:
         # Main chat graph flow
         nodes = [
             {"id": "initializer", "type": "start"},
-            {"id": "router", "type": "decision"},
+            {"id": "multi_source_analyzer", "type": "decision"},
             {"id": "search_prompt_optimizer", "type": "process"},
             {"id": "analysis_task_refiner", "type": "process"},
             {"id": "search", "type": "process"},
@@ -329,10 +329,10 @@ def get_graph_flow_data(graph_type: str = "main") -> Dict[str, Any]:
         ]
         
         edges = [
-            {"from": "initializer", "to": "router"},
-            {"from": "router", "to": "search_prompt_optimizer", "condition": "search"},
-            {"from": "router", "to": "analysis_task_refiner", "condition": "analyzer"},
-            {"from": "router", "to": "integrator", "condition": "chat"},
+            {"from": "initializer", "to": "multi_source_analyzer"},
+            {"from": "multi_source_analyzer", "to": "search_prompt_optimizer", "condition": "search"},
+            {"from": "multi_source_analyzer", "to": "analysis_task_refiner", "condition": "analysis"},
+            {"from": "multi_source_analyzer", "to": "integrator", "condition": "chat"},
             {"from": "search_prompt_optimizer", "to": "search"},
             {"from": "search", "to": "integrator"},
             {"from": "analysis_task_refiner", "to": "analyzer"},
@@ -344,7 +344,8 @@ def get_graph_flow_data(graph_type: str = "main") -> Dict[str, Any]:
         nodes = [
             {"id": "research_initializer", "type": "start"},
             {"id": "research_query_generator", "type": "process"},
-            {"id": "search", "type": "process"},
+            {"id": "research_source_selector", "type": "process"},
+            {"id": "source_coordinator", "type": "process"},
             {"id": "integrator", "type": "process"},
             {"id": "response_renderer", "type": "process"},
             {"id": "research_quality_assessor", "type": "process"},
@@ -354,8 +355,9 @@ def get_graph_flow_data(graph_type: str = "main") -> Dict[str, Any]:
         
         edges = [
             {"from": "research_initializer", "to": "research_query_generator"},
-            {"from": "research_query_generator", "to": "search"},
-            {"from": "search", "to": "integrator"},
+            {"from": "research_query_generator", "to": "research_source_selector"},
+            {"from": "research_source_selector", "to": "source_coordinator"},
+            {"from": "source_coordinator", "to": "integrator"},
             {"from": "integrator", "to": "response_renderer"},
             {"from": "response_renderer", "to": "research_quality_assessor"},
             {"from": "research_quality_assessor", "to": "research_deduplication"},

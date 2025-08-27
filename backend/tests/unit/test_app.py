@@ -41,10 +41,10 @@ def test_models_endpoint():
     assert data["default_model"] in models
 
 
-@patch("nodes.router_node.ChatOpenAI")
+@patch("nodes.multi_source_analyzer_node.ChatOpenAI")
 @patch("nodes.integrator_node.ChatOpenAI")
 @patch("nodes.response_renderer_node.ChatOpenAI")
-def test_chat_endpoint(mock_renderer_openai, mock_integrator_openai, mock_router_openai, client, test_chat_state):
+def test_chat_endpoint(mock_renderer_openai, mock_integrator_openai, mock_analyzer_openai, client, test_chat_state):
     """Test the chat endpoint with a mocked LLM response."""
     # Mock the integrator LLM response
     mock_integrator_instance = MagicMock()
@@ -58,12 +58,12 @@ def test_chat_endpoint(mock_renderer_openai, mock_integrator_openai, mock_router
     mock_renderer_instance.invoke.return_value.follow_up_questions = None
     mock_renderer_openai.return_value = mock_renderer_instance
 
-    # Mock the router LLM to avoid API key requirement
-    mock_router_instance = MagicMock()
-    mock_router_instance.with_structured_output.return_value.invoke.return_value.decision = "chat"
-    mock_router_instance.with_structured_output.return_value.invoke.return_value.reason = "test"
-    mock_router_instance.with_structured_output.return_value.invoke.return_value.complexity = "low"
-    mock_router_openai.return_value = mock_router_instance
+    # Mock the analyzer LLM to avoid API key requirement  
+    mock_analyzer_instance = MagicMock()
+    mock_analyzer_instance.with_structured_output.return_value.invoke.return_value.intent = "chat"
+    mock_analyzer_instance.with_structured_output.return_value.invoke.return_value.reason = "test"
+    mock_analyzer_instance.with_structured_output.return_value.invoke.return_value.sources = []
+    mock_analyzer_openai.return_value = mock_analyzer_instance
 
     # Convert the test state to the format expected by the API
     api_request = {
@@ -93,13 +93,13 @@ def test_invalid_request(client):
     assert response.status_code == 422  # Validation error
 
 
-@patch("nodes.router_node.ChatOpenAI")
+@patch("nodes.multi_source_analyzer_node.ChatOpenAI")
 @patch("nodes.integrator_node.ChatOpenAI")
 @patch("nodes.response_renderer_node.ChatOpenAI")
 @pytest.mark.anyio
 @pytest.mark.parametrize("anyio_backend", ["asyncio"])
 async def test_chat_graph(
-    mock_renderer_openai, mock_integrator_openai, mock_router_openai, chat_graph, test_chat_state
+    mock_renderer_openai, mock_integrator_openai, mock_analyzer_openai, chat_graph, test_chat_state
 ):
     """Test the chat node in the graph."""
     # Mock the integrator LLM response
@@ -114,12 +114,12 @@ async def test_chat_graph(
     mock_renderer_instance.invoke.return_value.follow_up_questions = None
     mock_renderer_openai.return_value = mock_renderer_instance
 
-    # Mock router LLM
-    mock_router_instance = MagicMock()
-    mock_router_instance.with_structured_output.return_value.invoke.return_value.decision = "chat"
-    mock_router_instance.with_structured_output.return_value.invoke.return_value.reason = "test"
-    mock_router_instance.with_structured_output.return_value.invoke.return_value.complexity = "low"
-    mock_router_openai.return_value = mock_router_instance
+    # Mock analyzer LLM
+    mock_analyzer_instance = MagicMock() 
+    mock_analyzer_instance.with_structured_output.return_value.invoke.return_value.intent = "chat"
+    mock_analyzer_instance.with_structured_output.return_value.invoke.return_value.reason = "test"
+    mock_analyzer_instance.with_structured_output.return_value.invoke.return_value.sources = []
+    mock_analyzer_openai.return_value = mock_analyzer_instance
 
     # Run the graph using async invoke
     result = await chat_graph.ainvoke(test_chat_state)

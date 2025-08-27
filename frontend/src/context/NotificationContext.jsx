@@ -228,11 +228,6 @@ export const NotificationProvider = ({ children }) => {
           ? { ...notif, read: true }
           : notif
       );
-      
-      // Recalculate unread count based on the updated notifications
-      const unreadResearchCount = updatedNotifications.filter(n => 
-        (n.type === 'new_research' || n.type === 'research_complete') && !n.read
-      ).length;
       setNewResearchCount(0); // Since we're marking all as read
       
       return updatedNotifications;

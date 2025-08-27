@@ -5,11 +5,12 @@ from pydantic import BaseModel, Field, field_validator
 from typing import List, Optional, Dict
 
 
-class RoutingAnalysis(BaseModel):
-    """Analysis of user input to route to appropriate module."""
-    decision: str = Field(description="The routing decision: 'chat', 'search', or 'analyzer'")
-    reason: str = Field(description="Brief explanation of why this routing decision was made")
-    complexity: int = Field(description="Estimated complexity level as integer from 1 (simple) to 10 (complex)", ge=1, le=10)
+
+class MultiSourceAnalysis(BaseModel):
+    """Structured output for multi-source search analysis."""
+    intent: str = Field(description="The intent classification: chat, search, or analysis")
+    reason: str = Field(description="Brief explanation of why this intent was selected")
+    sources: List[str] = Field(default=[], description="List of sources to execute for search intent: search, academic_search, social_search, medical_search")
 
 
 class AnalysisTask(BaseModel):
@@ -89,6 +90,14 @@ class ResearchQualityAssessment(BaseModel):
 class SearchOptimization(BaseModel):
     """Optimized search query with parameters and confidences."""
     query: str = Field(description="The optimized search query")
+    social_query: Optional[str] = Field(
+        description="Hacker News optimized query (only when social_search is selected)",
+        default=None
+    )
+    academic_query: Optional[str] = Field(
+        description="OpenAlex optimized query (only when academic_search is selected)",
+        default=None
+    )
     recency_filter: Optional[str] = Field(
         description="Recency filter preference: 'week' | 'month' | 'year' | null",
         default=None
@@ -155,3 +164,21 @@ class ResearchDeduplicationResult(BaseModel):
         if len(v) > 5:
             return v[:5]  # Limit to maximum 5 aspects
         return v 
+
+
+class RelevanceFilterDecision(BaseModel):
+    """Structured model for relevance filtering decisions per source."""
+    filtered_content: str = Field(description="The filtered, still-formatted content to use for this source.")
+    kept_count: int = Field(description="Approximate number of items retained after filtering", ge=0)
+    reason: Optional[str] = Field(description="Optional short note on filtering rationale", default=None)
+
+
+class RelevanceSelection(BaseModel):
+    """Indices-based relevance selection to avoid text regeneration risk."""
+    selected_indices: List[int] = Field(description="Zero-based indices of relevant items from the provided list")
+    reason: Optional[str] = Field(description="Optional short rationale for the selection", default=None)
+
+
+class EvidenceSummary(BaseModel):
+    """Model for evidence summarizer output."""
+    summary_text: str = Field(description="Concise summary with citation markers")

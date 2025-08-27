@@ -8,7 +8,7 @@ from typing import Dict, List, Any, Optional
 from datetime import datetime
 
 # Import logging
-from logging_config import get_logger
+from services.logging_config import get_logger
 
 logger = get_logger(__name__)
 
@@ -17,7 +17,7 @@ import config
 from storage.profile_manager import ProfileManager
 from storage.research_manager import ResearchManager
 from research_graph_builder import research_graph
-from motivation import MotivationSystem
+from services.motivation import MotivationSystem
 
 
 class AutonomousResearcher:
@@ -35,7 +35,7 @@ class AutonomousResearcher:
         
         # Create motivation system with config overrides if provided
         if motivation_config_override:
-            from motivation import DriveConfig
+            from services.motivation import DriveConfig
             drives_config = DriveConfig()
             for key, value in motivation_config_override.items():
                 if hasattr(drives_config, key):

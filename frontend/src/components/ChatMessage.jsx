@@ -149,12 +149,7 @@ const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUp
                 </div>
               )}
               
-              {routingInfo.complexity && (
-                <div className="routing-info-item">
-                  <span className="routing-label">Complexity:</span> 
-                  <span className="routing-value">{routingInfo.complexity}/10</span>
-                </div>
-              )}
+
               
               {routingInfo.model_used && (
                 <div className="routing-info-item">

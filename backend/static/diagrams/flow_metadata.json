@@ -11,11 +11,11 @@
         "color": "#E8F4FD"
       },
       {
-        "id": "router",
+        "id": "multi_source_analyzer",
         "type": "decision",
-        "prompt": "ROUTER_SYSTEM_PROMPT",
-        "category": "Router",
-        "description": "Determines conversation flow path",
+        "prompt": "MULTI_SOURCE_SYSTEM_PROMPT",
+        "category": "Analyzer",
+        "description": "Analyzes queries and selects information sources",
         "color": "#FFE6E6"
       },
       {
@@ -70,20 +70,20 @@
     "edges": [
       {
         "from": "initializer",
-        "to": "router"
+        "to": "multi_source_analyzer"
       },
       {
-        "from": "router",
+        "from": "multi_source_analyzer",
         "to": "search_prompt_optimizer",
         "condition": "search"
       },
       {
-        "from": "router",
+        "from": "multi_source_analyzer",
         "to": "analysis_task_refiner",
-        "condition": "analyzer"
+        "condition": "analysis"
       },
       {
-        "from": "router",
+        "from": "multi_source_analyzer",
         "to": "integrator",
         "condition": "chat"
       },
@@ -226,8 +226,8 @@
       }
     },
     "prompt_usage": {
-      "ROUTER_SYSTEM_PROMPT": [
-        "router"
+      "MULTI_SOURCE_SYSTEM_PROMPT": [
+        "multi_source_analyzer"
       ],
       "SEARCH_OPTIMIZER_SYSTEM_PROMPT": [
         "search_prompt_optimizer"
@@ -256,7 +256,7 @@
     },
     "category_distribution": {
       "System": 1,
-      "Router": 1,
+      "Analyzer": 1,
       "Search": 3,
       "Analysis": 2,
       "Integrator": 2,
@@ -273,10 +273,10 @@
       "description": "Sets up user state and session",
       "color": "#E8F4FD"
     },
-    "router": {
-      "prompt": "ROUTER_SYSTEM_PROMPT",
-      "category": "Router",
-      "description": "Determines conversation flow path",
+    "multi_source_analyzer": {
+      "prompt": "MULTI_SOURCE_SYSTEM_PROMPT",
+      "category": "Analyzer",
+      "description": "Analyzes queries and selects information sources",
       "color": "#FFE6E6"
     },
     "search_prompt_optimizer": {

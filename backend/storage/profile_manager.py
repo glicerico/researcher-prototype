@@ -8,7 +8,7 @@ import random
 from typing import Dict, Any, List, Optional
 
 # Import the centralized logging configuration
-from logging_config import get_logger
+from services.logging_config import get_logger
 from .storage_manager import StorageManager
 
 logger = get_logger(__name__)
@@ -319,7 +319,7 @@ class ProfileManager:
             "format_preferences": {
                 "response_length": "medium",
                 "detail_level": "balanced",
-                "use_bullet_points": True,
+                "formatting_style": "structured",
                 "include_key_insights": True
             },
             "interaction_preferences": {
@@ -337,11 +337,7 @@ class ProfileManager:
                 "follow_up_question_frequency": 0.0
             },
             "learned_adaptations": {
-                "tone_adjustments": {},
-                "format_optimizations": {
-                    "prefers_structured_responses": None,
-                    "optimal_response_length": None
-                }
+                "tone_adjustments": {}
             }
         }
 

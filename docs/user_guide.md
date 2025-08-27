@@ -42,17 +42,22 @@ Changes apply instantly and are stored in your profile.
 1. Type your message and hit **Enter**.  
 2. A typing indicator shows the assistant is thinking.  
 3. Messages are saved automatically; scroll to review.  
-4. Click **Show RoutingInfo** next to any assistant reply to see which module (chat / search / analyzer) handled the request, the router's reason, complexity score and the lightweight model it used.  
+4. Click **Show RoutingInfo** next to any assistant reply to see which intent (chat / search / analysis) was detected, which sources were selected for search queries, and the lightweight model used.  
 
 ---
 
-### Web search behavior
+### Multi-Source Search Behavior
 
-When your question needs web search, the assistant automatically optimizes the query and selects search settings:
+When your question needs information gathering, the assistant automatically:
 
-- Decides whether recency is important (e.g., “latest”, “today”, “updates”).
-- Chooses search mode: academic (for scholarly results) or web.
-- Sets context size (low/medium/high). If uncertain, it falls back to your research depth preference.
+- **Classifies Intent**: Determines if you need chat, search, or analysis
+- **Selects Sources**: For search queries, intelligently chooses up to 3 relevant sources:
+  - **Web Search**: Current information, news, general topics
+  - **Academic Search**: Scholarly articles and research papers  
+  - **Social Search**: Community discussions from Hacker News
+  - **Medical Search**: Medical literature and health information
+- **Parallel Execution**: Queries multiple sources simultaneously for comprehensive results
+- **Smart Integration**: Synthesizes information from successful sources while handling any failures gracefully
 
 ## 5. Research Topics & Findings
 

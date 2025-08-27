@@ -69,6 +69,11 @@ cd backend && source venv/bin/activate
 ./run_tests.sh            # unit tests
 ./run_tests.sh --all      # + integration (requires valid OPENAI_API_KEY)
 ./run_tests.sh --coverage # coverage report
+
+# Test external search APIs directly
+python tests/integration/test_search_apis.py --all --query "machine learning"
+python tests/integration/test_search_apis.py --semantic-scholar --query "transformers" --limit 5
+python tests/integration/test_search_apis.py --hn --query "python" --limit 3
 ```
 
 ### Frontend

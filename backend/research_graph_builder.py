@@ -19,10 +19,16 @@ from nodes.research_quality_assessor_node import research_quality_assessor_node
 from nodes.research_deduplication_node import research_deduplication_node
 from nodes.research_storage_node import research_storage_node
 
-# Import reused nodes from existing graph
-from nodes.search_node import search_node
+# Import reused nodes from existing graph  
 from nodes.integrator_node import integrator_node
 from nodes.response_renderer_node import response_renderer_node
+
+# Import multi-source search coordination
+from nodes.research_source_selector_node import research_source_selector_node
+from nodes.source_coordinator_node import source_coordinator_node
+from nodes.search_optimizer_node import search_prompt_optimizer_node
+from nodes.search_results_reviewer_node import search_results_reviewer_node
+from nodes.evidence_summarizer_node import evidence_summarizer_node
 
 
 def setup_research_tracing():
@@ -48,7 +54,18 @@ def create_research_graph():
     # Add research-specific nodes
     builder.add_node("research_initializer", research_initializer_node)
     builder.add_node("research_query_generator", research_query_generator_node)
-    builder.add_node("search", search_node)  # Reuse existing search node
+    builder.add_node("research_source_selector", research_source_selector_node)
+    
+    # Add source coordinator node (handles all search sources internally)
+    builder.add_node("source_coordinator", source_coordinator_node)
+    # Add shared search optimizer to refine queries before multi-source search
+    builder.add_node("search_prompt_optimizer", search_prompt_optimizer_node)
+    # Add results reviewer to filter irrelevant items before integration
+    builder.add_node("results_reviewer", search_results_reviewer_node)
+    # Add evidence summarizer to create concise summaries with citations
+    builder.add_node("evidence_summarizer", evidence_summarizer_node)
+    
+    # Add processing nodes
     builder.add_node("integrator", integrator_node)
     builder.add_node("response_renderer", response_renderer_node)
     builder.add_node("research_quality_assessor", research_quality_assessor_node)
@@ -58,11 +75,16 @@ def create_research_graph():
     # Define the research workflow
     builder.set_entry_point("research_initializer")
     
-    # Linear workflow for research:
-    # Initialize -> Generate Query -> Search -> Assess Quality -> Check Duplicates -> Store
+    # Multi-source research workflow:
+    # Initialize -> Generate Query -> Select Sources -> Coordinate Multi-Source Search -> Integrate -> Process
     builder.add_edge("research_initializer", "research_query_generator")
-    builder.add_edge("research_query_generator", "search")
-    builder.add_edge("search", "integrator")
+    builder.add_edge("research_query_generator", "research_source_selector")
+    # Run optimizer after selecting sources so it can generate source-aware queries (e.g., HN social_query)
+    builder.add_edge("research_source_selector", "search_prompt_optimizer")
+    builder.add_edge("search_prompt_optimizer", "source_coordinator")
+    builder.add_edge("source_coordinator", "results_reviewer")
+    builder.add_edge("results_reviewer", "evidence_summarizer")
+    builder.add_edge("evidence_summarizer", "integrator")
     builder.add_edge("integrator", "response_renderer")
     builder.add_edge("response_renderer", "research_quality_assessor")
     builder.add_edge("research_quality_assessor", "research_deduplication")

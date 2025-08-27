@@ -4,8 +4,8 @@ from typing import Optional
 import time
 
 from dependencies import get_or_create_user_id, profile_manager, research_manager, _motivation_config_override
-from autonomous_research_engine import initialize_autonomous_researcher
-from logging_config import get_logger
+from services.autonomous_research_engine import initialize_autonomous_researcher
+from services.logging_config import get_logger
 
 router = APIRouter()
 logger = get_logger(__name__)

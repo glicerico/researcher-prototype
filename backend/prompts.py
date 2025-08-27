@@ -3,16 +3,53 @@ Contains all prompts used by LLMs throughout the system.
 Each prompt is defined as a string template that can be formatted with dynamic values.
 """
 
-# Router prompts
-ROUTER_SYSTEM_PROMPT = """
-Current date and time: {current_time}
-You are a message router that determines the best module to handle a user's request. 
-Analyze the conversation history to classify the request into one of these categories:
 
-1. chat - General conversation, questions, or anything not fitting other categories.
-2. search - Requests to find current information from the web, search for recent facts, or retrieve up-to-date information.
-   Examples: "What happened in the news today?", "Search for recent AI developments", "Find information about current technology trends"
-3. analyzer - Requests to analyze, process, summarize data or complex problem-solving.
+# Multi-source analyzer prompts
+MULTI_SOURCE_SYSTEM_PROMPT = """
+Current date and time: {current_time}
+You are an intelligent query analyzer that determines the best approach to handle a user's request.
+
+Analyze the conversation to determine the user's intent:
+
+1. **CHAT** - Use for:
+   - Greetings, casual conversation, personal questions
+   - Simple questions that don't need external information
+   - Requests for explanations of basic concepts
+   - Follow-up clarifications on previous responses
+
+2. **SEARCH** - Use for:
+   - Requests needing external information, current events, or research
+   - Questions about recent developments, news, or trends
+   - Factual queries requiring up-to-date information
+   - Any topic that would benefit from multiple information sources
+
+3. **ANALYSIS** - Use for:
+   - Complex problem-solving requiring analytical thinking
+   - Data analysis, calculations, or processing tasks
+   - Breaking down complex concepts or workflows
+   - Comparative analysis or decision-making support
+   - Strategic planning or optimization problems
+
+For SEARCH intent, determine which sources would be most valuable (select 1-3):
+
+**Available Sources:**
+- **search**: General web search (Perplexity) - for current information, news, trends
+- **academic_search**: Academic papers (OpenAlex) - for research, scientific information
+- **social_search**: Community discussions (Hacker News) - for opinions, experiences, sentiment
+- **medical_search**: Medical research (PubMed) - for health, biomedical, clinical information
+
+**Source Selection Guidelines:**
+- Academic topics → academic_search + search
+- Medical/health topics → medical_search + academic_search  
+- Product/opinion questions → search + social_search
+- Technical topics → academic_search + search
+- Current events → search only
+- General research → search + academic_search
+
+Always include "search" as one source unless the query is purely academic/medical.
+Limit to maximum 3 sources to control costs and latency.
+
+For ANALYSIS intent, no sources are needed as this uses pure analytical reasoning.
 
 {memory_context_section}
 """
@@ -25,6 +62,8 @@ You are an expert at transforming user questions into highly effective web searc
 USER PROFILE PRIOR (use as soft guidance, not hard rules):
 {user_profile_section}
 
+SELECTED SOURCES: {selected_sources}
+
 OPTIMIZATION GUIDELINES:
 1. Add 2-3 contextual words to make queries more specific and focused
 2. Use domain-specific terminology that would appear on authoritative web pages
@@ -32,6 +71,42 @@ OPTIMIZATION GUIDELINES:
 4. Include relevant timeframes when recent information is needed (e.g., "2025", "recent", "latest")
 5. Think like a web search user - use terms experts in the field would use online
 6. Avoid overly generic terms - be specific about what type of information is needed
+
+SOCIAL SEARCH OPTIMIZATION (when social_search is selected):
+If "social_search" is in the selected sources, generate an additional query optimized for Hacker News discussions:
+- Use conversational, natural language that appears in HN titles and comments
+- Avoid years, dates, or overly formal terminology that might make queries too specific
+- Focus on core concepts that spark tech community discussion
+- Keep it simple - HN search is sensitive to extra words
+- Think about how a developer would naturally discuss this topic
+- Remove common stop words that don't add search value
+
+Examples:
+- Original: "how useful is vibe coding for programmers?"
+- Web query: "vibe coding usefulness for programmers 2025"
+- HN query: "vibe coding programmers"
+
+- Original: "what are the best practices for API design in 2025?"
+- Web query: "API design best practices 2025 guidelines"
+- HN query: "API design practices"
+
+ACADEMIC SEARCH OPTIMIZATION (when academic_search is selected):
+If "academic_search" is in the selected sources, generate an additional query optimized for OpenAlex academic search:
+- Extract core scientific concepts and terminology from the original query
+- Focus on 2-4 key terms that would appear in paper titles or abstracts
+- Remove casual language, questions words (what/how/why), and temporal references
+- Use precise scientific vocabulary that researchers would use in publications
+- Combine related concepts with domain-specific terms
+- Avoid overly long phrases - OpenAlex works best with focused keyword combinations
+
+Examples:
+- Original: "what evidence causes supernova explosions astrophysics 2025"
+- Web query: "supernova explosion mechanisms astrophysics evidence 2025" 
+- Academic query: "supernova explosions astrophysics mechanisms"
+
+- Original: "how does machine learning improve medical diagnosis accuracy"
+- Web query: "machine learning medical diagnosis accuracy improvement 2025"
+- Academic query: "machine learning medical diagnosis accuracy"
 
 RECENCY ANALYSIS (intent-first):
 Determine if the query benefits from a recency filter based on the question intent:
@@ -53,6 +128,7 @@ OUTPUT REQUIREMENTS:
 REQUIRED JSON FORMAT:
 {{
   "query": "...",
+  "social_query": "..." (only include if social_search is selected, otherwise null),
   "recency_filter": "week|month|year|null",
   "search_mode": "web|academic|null",
   "context_size": "low|medium|high|null",
@@ -67,6 +143,8 @@ GOOD OUTPUT EXAMPLES:
 {{"query": "artificial intelligence breakthroughs commercial applications", "recency_filter": "week", "search_mode": "web", "context_size": "medium", "confidence": {{"recency_filter": 0.9, "search_mode": 0.6, "context_size": 0.7}}}}
 {{"query": "climate change impact studies peer reviewed", "recency_filter": "year", "search_mode": "academic", "context_size": "high", "confidence": {{"recency_filter": 0.7, "search_mode": 0.85, "context_size": 0.8}}}}
 {{"query": "democratic government systems historical development", "recency_filter": null, "search_mode": "web", "context_size": "medium", "confidence": {{"recency_filter": 0.95, "search_mode": 0.6, "context_size": 0.6}}}}
+{{"query": "vibe coding usefulness for programmers 2025", "social_query": "vibe coding programmers", "recency_filter": "month", "search_mode": "web", "context_size": "medium", "confidence": {{"recency_filter": 0.8, "search_mode": 0.7, "context_size": 0.6}}}}
+{{"query": "React performance optimization best practices 2025", "social_query": "React performance optimization", "recency_filter": "year", "search_mode": "web", "context_size": "high", "confidence": {{"recency_filter": 0.7, "search_mode": 0.6, "context_size": 0.8}}}}
 
 BAD OUTPUT EXAMPLES:
 - Any text before or after the JSON
@@ -103,28 +181,91 @@ Provide clear, factual answers while acknowledging any limitations in the availa
 
 # Integrator prompts
 INTEGRATOR_SYSTEM_PROMPT = """Current date and time: {current_time}.
-You are the central reasoning component of an AI assistant system. Your task is to integrate all available information and generate a coherent, thoughtful response to the user's query.
+You are the central reasoning component of an AI assistant system. Your task is to integrate information from multiple sources and generate a coherent, thoughtful response to the user's query.
 
 {memory_context_section}
 
 {context_section}
 
-Your most important instruction is to preserve the exact citation markers from the context.
-When you use information from the "CURRENT INFORMATION FROM WEB SEARCH" section, you MUST preserve the original citation markers like `[1]`, `[2]`, etc., exactly as they appear in the source text.
+**MULTI-SOURCE INTEGRATION INSTRUCTIONS:**
+When working with information from multiple sources:
+1. **Cross-reference**: Look for information that appears across multiple sources - this indicates higher reliability
+2. **Source awareness**: Consider the nature of each source type when synthesizing information (academic vs current vs social)
+3. **Complementary insights**: Combine unique perspectives from different source types (academic, current, social, etc.)
+4. **Conflicting information**: If sources contradict, acknowledge this and explain the different perspectives
+5. **Comprehensive synthesis**: Create a response that leverages the strengths of each source type
 
-**CRITICAL RULE:** Do NOT convert citation markers into markdown links. Your output must contain only the plain text markers.
+**CITATION PRESERVATION - MANDATORY:**
+YOU MUST PRESERVE ALL citation markers like `[1]`, `[2]`, `[3]`, etc. EXACTLY as they appear in the source material.
+- When you reference information that has citation markers, COPY the markers into your response
+- **CRITICAL RULE:** Do NOT convert citation markers into markdown links. Keep them as plain text: `[1]`, `[2]`
+- **CRITICAL RULE:** Do NOT remove or omit citation markers when synthesizing information
 
-For example, if the source text says:
-"The sky is blue[1]."
+CORRECT citation preservation:
+Input: "The temperature averages 18°C[1][2] with moderate rainfall[3]."
+Output: "Temperatures average around 18°C[1][2] with some rainfall expected[3]."
 
-Your response could be:
-"According to the research, the sky is blue[1]."
+INCORRECT citation handling:
+- Removing markers: "Temperatures average around 18°C with some rainfall expected."
+- Converting to links: "Temperatures average around 18°C[[1]](url) with rainfall[[3]](url)."
 
-**INCORRECT output would be:**
-"According to the research, the sky is blue[[1]](some-url)." or "The sky is blue[1](some-url)."
+Your response should be a clear synthesis with ALL original citation markers preserved exactly where they support the information. Do NOT include a separate "Sources" section at the end.
+"""
 
-Do not add new markers or alter the existing ones.
-Your final response should be a clear synthesis of the available data, with the original citation markers intact. Do NOT include a "Sources" or "Citations" section at the end.
+# Evidence summarizer prompt
+EVIDENCE_SUMMARIZER_PROMPT = """Current date and time: {current_time}
+
+You are an evidence summarizer. Your task is to create a concise summary of the most important claims from {source_name} results, with proper citations.
+
+USER QUERY: {query}
+
+FILTERED RESULTS FROM {source_name_upper}:
+{enumerated_items}
+
+INSTRUCTIONS:
+1. Analyze the full abstracts and content provided (academic papers, research summaries, discussion content) to extract the most important and relevant claims
+2. Write each claim as a clear, concise sentence
+3. Add citation markers [0], [1], [2], etc. at the end of each claim, using the index numbers from the enumerated results above
+4. Focus on claims that are directly relevant to the user's query
+5. Preserve factual accuracy - do not paraphrase in ways that change meaning
+6. If results contain contradictory information, mention both perspectives with their respective citations
+7. Synthesize information across multiple papers when they support the same claim (e.g., "Multiple studies show... [0][1][3]")
+
+REQUIRED JSON FORMAT:
+{{
+    "summary_text": "Concise summary with citation markers like [0], [1], [2]"
+}}
+
+EXAMPLE OUTPUT:
+{{
+    "summary_text": "Recent studies show promising results for new treatment approaches[0]. However, some researchers note potential side effects that require further investigation[1][2]. The methodology used in these studies has been validated across multiple institutions[0]."
+}}"""
+
+# Search results reviewer prompt
+SEARCH_RESULTS_REVIEWER_PROMPT = """
+Current date and time: {current_time}
+You are a precise relevance reviewer. Given a user query and a list of items from a specific source, select the indices of items that are directly relevant to the query. Use strict relevance criteria.
+
+GUIDELINES:
+- Judge relevance strictly against the query intent.
+- Prefer items that directly answer, provide strong evidence, or add substantial context.
+- Discard tangents, low-signal commentary, and items that only mention a keyword without substance.
+- Select at most {max_items} of the strongest items.
+
+SOURCE: {source_name}
+QUERY: {query}
+
+ITEMS (zero-based indexed):
+{enumerated_items}
+
+REQUIRED JSON FORMAT:
+{{
+  "selected_indices": [0, 3, 5],
+  "reason": "short rationale (optional)"
+}}
+
+If nothing is relevant, return:
+{{"selected_indices": [], "reason": "no highly relevant items"}}
 """
 
 # Context templates for system prompt integration
@@ -137,11 +278,9 @@ A raw response has been generated by another part of the system. Your task is to
 
 USER PREFERENCES (adapt formatting to match these learned preferences):
 - Response Length: {response_length} (short/medium/long)
-- Detail Level: {detail_level} (concise/balanced/comprehensive)
-- Use Bullet Points: {use_bullet_points}
+- Detail Level: {detail_level} (concise/balanced/comprehensive)  
+- Formatting Style: {formatting_style} (structured/natural/bullet_points)
 - Include Key Insights: {include_key_insights}
-- Prefers Structured Responses: {prefers_structured}
-- Optimal Response Length: {optimal_length} characters
 
 FORMATTING INSTRUCTIONS:
 - Adapt the response to a {style} style with a {tone} tone.
@@ -175,6 +314,37 @@ INSTRUCTIONS:
 
 Generate a single, well-crafted research query that will effectively find new and relevant information about this topic.
 """
+
+RESEARCH_SOURCE_SELECTION_PROMPT = """
+You are an expert research coordinator selecting the best information sources for autonomous research.
+
+RESEARCH TOPIC:
+Name: {topic_name}
+Description: {topic_description}
+Query: {research_query}
+
+Your task is to select the most appropriate sources for comprehensive research on this topic.
+
+AVAILABLE SOURCES:
+- search: Web search for current information, news, recent developments
+- academic_search: Scholarly articles, research papers, academic publications  
+- social_search: Community discussions, trends, public opinion (Hacker News)
+- medical_search: Medical literature, health information, clinical studies
+
+RESEARCH SOURCE SELECTION GUIDELINES:
+- For scientific/technical topics: prioritize academic_search + search
+- For medical/health topics: prioritize medical_search + academic_search  
+- For technology/startup topics: prioritize search + social_search
+- For current events: prioritize search + social_search
+- For established academic fields: prioritize academic_search + medical_search (if health-related)
+- Always include 'search' for recent developments unless purely academic
+- Select 2-3 sources maximum for research efficiency
+
+Respond with:
+- intent: Always "search" for research
+- sources: Array of 2-3 most relevant source names from the available options
+
+Focus on sources that will provide the most comprehensive and up-to-date information for autonomous research."""
 
 RESEARCH_FINDINGS_QUALITY_ASSESSMENT_PROMPT = """Current date and time: {current_time}.
 You are an expert research quality assessor. Evaluate the quality of research findings based on multiple criteria.

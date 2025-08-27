@@ -1,6 +1,6 @@
 import json
 import asyncio
-from logging_config import get_logger
+from services.logging_config import get_logger
 from nodes.topic_extractor_node import topic_extractor_node
 from dependencies import research_manager
 from config import DEFAULT_MODEL

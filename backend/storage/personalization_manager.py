@@ -4,7 +4,7 @@ PersonalizationManager for advanced user behavior learning and preference adapta
 
 import time
 from typing import Dict, Any, List, Optional
-from logging_config import get_logger
+from services.logging_config import get_logger
 from .storage_manager import StorageManager
 from .profile_manager import ProfileManager
 
@@ -191,34 +191,24 @@ class PersonalizationManager:
     def _adjust_format_preferences(self, user_id: str, content_length: int, engagement_score: float) -> None:
         """Adjust format preferences based on content engagement."""
         try:
-            analytics = self.profile_manager.get_engagement_analytics(user_id)
-            
-            # Update optimal response length based on high engagement
-            current_optimal = analytics["learned_adaptations"]["format_optimizations"].get("optimal_response_length")
-            
             if engagement_score > 0.8:  # High engagement from explicit feedback
-                if current_optimal is None:
-                    analytics["learned_adaptations"]["format_optimizations"]["optimal_response_length"] = content_length
-                else:
-                    # Weighted average toward this length
-                    new_optimal = int((current_optimal * 0.7) + (content_length * 0.3))
-                    analytics["learned_adaptations"]["format_optimizations"]["optimal_response_length"] = new_optimal
-                
-                # Update structured response preference
+                # Update formatting style preference based on content structure  
                 has_structure = self._analyze_content_structure(content_length)
-                analytics["learned_adaptations"]["format_optimizations"]["prefers_structured_responses"] = has_structure
-                
-                self.profile_manager.storage.write(
-                    self.profile_manager._get_engagement_analytics_path(user_id), 
-                    analytics
-                )
-                
-                self._log_learning_adaptation(
-                    user_id, 
-                    "format_optimization", 
-                    {"optimal_length": content_length, "structured": has_structure},
-                    True
-                )
+                if has_structure:
+                    # Update user's formatting style preference to structured
+                    current_prefs = self.profile_manager.get_user_preferences(user_id) or {}
+                    format_prefs = current_prefs.get("format_preferences", {})
+                    if format_prefs.get("formatting_style") != "structured":
+                        format_prefs["formatting_style"] = "structured"
+                        current_prefs["format_preferences"] = format_prefs
+                        self.profile_manager.update_preferences(user_id, current_prefs)
+                        
+                        self._log_learning_adaptation(
+                            user_id, 
+                            "format_optimization", 
+                            {"formatting_style": "structured"},
+                            True
+                        )
                 
         except Exception as e:
             logger.error(f"Error adjusting format preferences for user {user_id}: {str(e)}")
@@ -417,7 +407,6 @@ class PersonalizationManager:
                 "explicit_preferences": preferences,
                 "learned_behaviors": {
                     "source_preferences": preferences["content_preferences"]["source_types"],
-                    "format_optimizations": analytics["learned_adaptations"]["format_optimizations"],
                     "engagement_patterns": analytics["reading_patterns"],
                     "interaction_signals": analytics["interaction_signals"]
                 },

@@ -6,7 +6,7 @@ import uuid
 import time
 import threading
 from typing import Dict, Any, List, Optional
-from logging_config import get_logger
+from services.logging_config import get_logger
 from .storage_manager import StorageManager
 from .profile_manager import ProfileManager
 

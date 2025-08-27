@@ -8,7 +8,7 @@ from pydantic import BaseModel
 
 from dependencies import get_or_create_user_id
 from storage.zep_manager import ZepManager
-from logging_config import get_logger
+from services.logging_config import get_logger
 
 logger = get_logger(__name__)
 

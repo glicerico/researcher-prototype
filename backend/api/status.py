@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 from fastapi.responses import StreamingResponse
 
-from status_manager import status_events
+from services.status_manager import status_events
 
 router = APIRouter()
 

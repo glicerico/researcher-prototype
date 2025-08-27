@@ -66,8 +66,8 @@ The assistant learns your preferences and adapts its responses while keeping all
 
 👤 **User Experience**: Three-tab interface (Personality, Preferences, What I've Learned) gives you complete control over how the AI adapts to your needs.
 
-### 🔬 Autonomous Research Engine  
-Motivation-driven background research that continuously learns about topics you're interested in.
+### 🔬 Multi-Source Research Engine  
+Motivation-driven background research that continuously learns about topics you're interested in. Features intelligent multi-source search that combines web, academic, social (Hacker News), and medical sources for comprehensive responses.
 
 ### 📊 Knowledge Graph Visualization
 Visual representation of research findings and topic relationships powered by Zep memory.
@@ -77,6 +77,7 @@ Visual representation of research findings and topic relationships powered by Ze
 * docs/setup.md – prerequisites, env variables, testing  
 * docs/research_engine.md – how autonomous research & motivation work
 * **docs/personalization.md – AI personalization system (complete guide + API reference)**
+* docs/ARCHITECTURE.md – multi-source search system architecture
 * docs/admin_debugging.md – admin UI, debug APIs, logging & tracing
 * docs/user_guide.md – everyday usage including Knowledge Graph
 * docs/zep_graph_visualization.md – Knowledge Graph implementation details

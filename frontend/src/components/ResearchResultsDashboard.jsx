@@ -23,7 +23,7 @@ const ResearchResultsDashboard = () => {
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [expandedTopics, setExpandedTopics] = useState(new Set());
   const [bookmarkedFindings, setBookmarkedFindings] = useState(new Set());
-  const [readingTimers, setReadingTimers] = useState(new Map());
+  const [showSourcesForFinding, setShowSourcesForFinding] = useState(new Set());
   const [filters, setFilters] = useState({
     searchTerm: '',
     dateRange: 'all',
@@ -33,7 +33,6 @@ const ResearchResultsDashboard = () => {
   });
   const scrollContainerRef = useRef(null);
   const scrollPositionRef = useRef(null);
-  const observersRef = useRef(new Map());
 
   // Custom link renderer to open external links in new tab
   const LinkRenderer = ({ href, children, ...props }) => {
@@ -123,7 +122,7 @@ const ResearchResultsDashboard = () => {
   // Mark research notifications as read when user visits this page (only once)
   useEffect(() => {
     markResearchNotificationsRead();
-  }, []); // Run only once when component mounts
+  }, [markResearchNotificationsRead]);
 
 
 
@@ -241,6 +240,25 @@ const ResearchResultsDashboard = () => {
       action: isBookmarking ? 'add' : 'remove',
       findingId
     });
+  };
+
+  // Handle sources toggle for findings
+  const handleSourcesToggle = async (findingId) => {
+    const newShowSources = new Set(showSourcesForFinding);
+    if (newShowSources.has(findingId)) {
+      newShowSources.delete(findingId);
+    } else {
+      newShowSources.add(findingId);
+    }
+    setShowSourcesForFinding(newShowSources);
+    
+    if (!showSourcesForFinding.has(findingId)) {
+      // Track source exploration
+      trackInteraction(`finding_${findingId}`, 'source_exploration', {
+        action: 'view_sources',
+        findingId
+      });
+    }
   };
 
   // Handle mark as read
@@ -631,9 +649,34 @@ const ResearchResultsDashboard = () => {
                           <div className="finding-content">
                             {/* Display formatted content with citations if available, otherwise fallback to summary */}
                             {finding.formatted_content ? (
-                              <div className="finding-formatted-content">
-                                <ReactMarkdown components={markdownComponents}>{finding.formatted_content}</ReactMarkdown>
-                              </div>
+                              (() => {
+                                // Split content into main response and sources (same logic as ChatMessage)
+                                const parts = finding.formatted_content.split('\n\n**Sources:**');
+                                const mainContent = parts[0];
+                                const sourcesContent = parts.length > 1 ? parts[1] : null;
+                                
+                                return (
+                                  <div className="finding-formatted-content">
+                                    <ReactMarkdown components={markdownComponents}>{mainContent}</ReactMarkdown>
+                                    {sourcesContent && (
+                                      <div className="sources-container">
+                                        <button 
+                                          className="sources-toggle"
+                                          onClick={(e) => {
+                                            e.stopPropagation();
+                                            handleSourcesToggle(finding.finding_id);
+                                          }}
+                                        >
+                                          {showSourcesForFinding.has(finding.finding_id) ? 'Hide Sources' : 'Show Sources'}
+                                        </button>
+                                        {showSourcesForFinding.has(finding.finding_id) && (
+                                          <ReactMarkdown components={markdownComponents}>{`**Sources:**${sourcesContent}`}</ReactMarkdown>
+                                        )}
+                                      </div>
+                                    )}
+                                  </div>
+                                );
+                              })()
                             ) : finding.findings_summary && (
                               <div className="finding-summary">
                                 <p>{finding.findings_summary}</p>
@@ -648,37 +691,6 @@ const ResearchResultsDashboard = () => {
                                     <li key={i}>{insight}</li>
                                   ))}
                                 </ul>
-                              </div>
-                            )}
-
-                            {/* Display structured search sources if available, otherwise fallback to source URLs */}
-                            {finding.search_sources && finding.search_sources.length > 0 ? (
-                              <div className="search-sources">
-                                <h4>Sources</h4>
-                                <div className="sources-list">
-                                  {finding.search_sources.map((source, i) => (
-                                    <a 
-                                      key={i} 
-                                      href={source.url} 
-                                      target="_blank" 
-                                      rel="noopener noreferrer"
-                                      className="source-link"
-                                    >
-                                      [{i + 1}]. {source.title || `Source ${i + 1}`}
-                                    </a>
-                                  ))}
-                                </div>
-                              </div>
-                            ) : finding.source_urls && finding.source_urls.length > 0 && (
-                              <div className="source-urls">
-                                <h4>Sources</h4>
-                                <div className="urls-list">
-                                  {finding.source_urls.map((url, i) => (
-                                    <a key={i} href={url} target="_blank" rel="noopener noreferrer">
-                                      Source {i + 1}
-                                    </a>
-                                  ))}
-                                </div>
                               </div>
                             )}
                           </div>

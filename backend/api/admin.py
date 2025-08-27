@@ -7,7 +7,7 @@ from services.auth_manager import auth_manager, verify_admin_token
 from services.prompt_manager import prompt_manager
 from services.flow_analyzer import flow_analyzer
 from dependencies import profile_manager
-from logging_config import get_logger
+from services.logging_config import get_logger
 
 logger = get_logger(__name__)
 
