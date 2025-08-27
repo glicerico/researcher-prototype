@@ -873,4 +873,24 @@
   .urls-list {
     flex-direction: column;
   }
+}
+
+/* Sources toggle styling (same as ChatMessage) */
+.sources-container {
+  margin-top: 10px;
+}
+
+.sources-toggle {
+  background-color: #007bff;
+  color: white;
+  border: none;
+  padding: 5px 10px;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.8rem;
+  margin-bottom: 5px;
+}
+
+.sources-toggle:hover {
+  background-color: #0056b3;
 } 
