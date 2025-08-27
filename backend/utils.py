@@ -319,7 +319,7 @@ def get_graph_flow_data(graph_type: str = "main") -> Dict[str, Any]:
         # Main chat graph flow
         nodes = [
             {"id": "initializer", "type": "start"},
-            {"id": "router", "type": "decision"},
+            {"id": "multi_source_analyzer", "type": "decision"},
             {"id": "search_prompt_optimizer", "type": "process"},
             {"id": "analysis_task_refiner", "type": "process"},
             {"id": "search", "type": "process"},
@@ -329,10 +329,10 @@ def get_graph_flow_data(graph_type: str = "main") -> Dict[str, Any]:
         ]
         
         edges = [
-            {"from": "initializer", "to": "router"},
-            {"from": "router", "to": "search_prompt_optimizer", "condition": "search"},
-            {"from": "router", "to": "analysis_task_refiner", "condition": "analyzer"},
-            {"from": "router", "to": "integrator", "condition": "chat"},
+            {"from": "initializer", "to": "multi_source_analyzer"},
+            {"from": "multi_source_analyzer", "to": "search_prompt_optimizer", "condition": "search"},
+            {"from": "multi_source_analyzer", "to": "analysis_task_refiner", "condition": "analysis"},
+            {"from": "multi_source_analyzer", "to": "integrator", "condition": "chat"},
             {"from": "search_prompt_optimizer", "to": "search"},
             {"from": "search", "to": "integrator"},
             {"from": "analysis_task_refiner", "to": "analyzer"},
