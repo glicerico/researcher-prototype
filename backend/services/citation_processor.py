@@ -211,25 +211,29 @@ class CitationProcessor:
         
         if web_citations:
             sources_content_parts.append("**Web Search:**")
-            sources_content_parts.extend(web_citations)
+            for citation in web_citations:
+                sources_content_parts.append(f"- {citation}")
         
         if academic_citations:
             if sources_content_parts:
                 sources_content_parts.append("")  # Empty line between sections
             sources_content_parts.append("**Academic Papers:**")
-            sources_content_parts.extend(academic_citations)
+            for citation in academic_citations:
+                sources_content_parts.append(f"- {citation}")
         
         if social_citations:
             if sources_content_parts:
                 sources_content_parts.append("")
             sources_content_parts.append("**Social Media:**")
-            sources_content_parts.extend(social_citations)
+            for citation in social_citations:
+                sources_content_parts.append(f"- {citation}")
         
         if medical_citations:
             if sources_content_parts:
                 sources_content_parts.append("")
             sources_content_parts.append("**Medical Research:**")
-            sources_content_parts.extend(medical_citations)
+            for citation in medical_citations:
+                sources_content_parts.append(f"- {citation}")
         
         return sources_content_parts
     
@@ -240,7 +244,7 @@ class CitationProcessor:
             title = source.get("title", "Unknown Title")
             url = source.get("url")
             if url:
-                sources_list.append(f"[{i}]. [{title}]({url})")
+                sources_list.append(f"- [{i}]. [{title}]({url})")
         return sources_list
     
     def generate_sources_section(self, unified_citations: List[Dict[str, Any]], 
