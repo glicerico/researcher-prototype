@@ -155,13 +155,77 @@ class PersonalizationManager:
                 # Mark as read shows content consumption
                 content_data = metadata.get("data", {})
                 finding_id = content_data.get("findingId")
+                trigger = content_data.get("trigger", "unknown")
+                action = content_data.get("action", "unknown")
+                topic_name = content_data.get("topicName")
+                
                 if finding_id:
-                    logger.debug(f"👤 PersonalizationManager: Learning from mark-read action for user {user_id}")
-                    # Indicates content was consumed
+                    logger.debug(f"👤 PersonalizationManager: Learning from mark-read action for user {user_id} (trigger: {trigger}, action: {action})")
+                    
+                    # Different learning based on how the article was marked as read
+                    if trigger == "topic_expansion" and action == "expansion_read":
+                        # User expanded topic card, showing strong interest in the topic
+                        # This is implicit positive engagement - treat as moderate positive signal
+                        self._learn_from_expansion_read(user_id, topic_name, finding_id, content_data)
+                        logger.debug(f"👤 PersonalizationManager: ✅ Processed expansion-based read for user {user_id}")
+                    elif trigger == "manual_click" and action == "manual_read":
+                        # User explicitly clicked read button - stronger positive signal
+                        self._learn_from_manual_read(user_id, finding_id, content_data)
+                        logger.debug(f"👤 PersonalizationManager: ✅ Processed manual read for user {user_id}")
+                    else:
+                        logger.debug(f"👤 PersonalizationManager: Processed generic read action for user {user_id}")
+                        # Generic read action
                     
         elif event_type in ["research_activation", "feedback", "source_exploration"]:
             # These are explicit feedback - handle with higher weight
             logger.debug(f"👤 PersonalizationManager: Processing explicit engagement event for user {user_id}: {event_type}")
+
+    def _learn_from_expansion_read(self, user_id: str, topic_name: str, finding_id: str, content_data: Dict[str, Any]) -> None:
+        """Learn preferences from expansion-based read actions (moderate positive signal)."""
+        try:
+            logger.debug(f"👤 PersonalizationManager: Processing expansion-based read for user {user_id} on topic: {topic_name}")
+            
+            # Expansion-based reading indicates interest in the topic but less deliberate than manual clicking
+            # Use moderate positive engagement score (0.6)
+            engagement_score = 0.6
+            
+            # Extract any source types or content characteristics
+            # Note: In a real implementation, you'd fetch the finding details to get source types
+            # For now, we'll focus on topic-level learning
+            
+            # Log this as a moderate positive interaction
+            self._log_learning_adaptation(
+                user_id,
+                "expansion_based_read",
+                {"topic": topic_name, "finding_id": finding_id, "engagement_score": engagement_score},
+                True
+            )
+            
+        except Exception as e:
+            logger.error(f"👤 PersonalizationManager: ❌ Error learning from expansion read for user {user_id}: {str(e)}", exc_info=True)
+
+    def _learn_from_manual_read(self, user_id: str, finding_id: str, content_data: Dict[str, Any]) -> None:
+        """Learn preferences from manual read button clicks (strong positive signal)."""
+        try:
+            logger.debug(f"👤 PersonalizationManager: Processing manual read for user {user_id}, finding: {finding_id}")
+            
+            # Manual read button clicking indicates deliberate positive engagement
+            # Use strong positive engagement score (0.8)
+            engagement_score = 0.8
+            
+            # This is a deliberate action showing content was valuable
+            # In a real implementation, you'd fetch finding details to learn source preferences
+            
+            # Log this as a strong positive interaction
+            self._log_learning_adaptation(
+                user_id,
+                "manual_read_action",
+                {"finding_id": finding_id, "engagement_score": engagement_score},
+                True
+            )
+            
+        except Exception as e:
+            logger.error(f"👤 PersonalizationManager: ❌ Error learning from manual read for user {user_id}: {str(e)}", exc_info=True)
 
     def _adjust_source_preferences(self, user_id: str, source_types: List[str], adjustment: float) -> None:
         """Adjust source type preferences based on engagement."""

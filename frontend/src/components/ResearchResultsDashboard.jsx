@@ -205,8 +205,10 @@ const ResearchResultsDashboard = () => {
   }, [researchData, filters]);
 
   // Handle topic expand/collapse
-  const toggleTopic = (topicName) => {
+  const toggleTopic = async (topicName) => {
     const newExpanded = new Set(expandedTopics);
+    const isExpanding = !newExpanded.has(topicName);
+    
     if (newExpanded.has(topicName)) {
       newExpanded.delete(topicName);
     } else {
@@ -214,10 +216,39 @@ const ResearchResultsDashboard = () => {
     }
     setExpandedTopics(newExpanded);
     
+    // If expanding, mark all findings in this topic as read
+    if (isExpanding) {
+      const findings = researchData[topicName] || [];
+      const unreadFindings = findings.filter(f => !f.read);
+      
+      // Mark each unread finding as read
+      for (const finding of unreadFindings) {
+        try {
+          await markFindingAsRead(finding.finding_id);
+          
+          // Track this as a read interaction for preferences learning
+          trackInteraction(`finding_${finding.finding_id}`, 'mark_read', {
+            action: 'expansion_read',
+            findingId: finding.finding_id,
+            topicName: topicName,
+            trigger: 'topic_expansion'
+          });
+        } catch (err) {
+          console.error('Error marking finding as read during expansion:', err);
+        }
+      }
+      
+      // Refresh data to update read status
+      if (unreadFindings.length > 0) {
+        await loadResearchData(true);
+      }
+    }
+    
     // Track topic expansion interaction - useful for personalization
-    trackInteraction(`topic_${topicName}`, newExpanded.has(topicName) ? 'expand' : 'collapse', {
+    trackInteraction(`topic_${topicName}`, isExpanding ? 'expand' : 'collapse', {
       findings_count: (researchData[topicName] || []).length,
-      topicName
+      topicName,
+      marked_as_read_count: isExpanding ? (researchData[topicName] || []).filter(f => !f.read).length : 0
     });
   };
 
@@ -267,10 +298,11 @@ const ResearchResultsDashboard = () => {
       await markFindingAsRead(findingId);
       await loadResearchData();
       
-      // Track mark as read interaction - shows content consumption
+      // Track mark as read interaction - shows content consumption (manual click)
       trackInteraction(`finding_${findingId}`, 'mark_read', {
-        action: 'mark_as_read',
-        findingId
+        action: 'manual_read',
+        findingId,
+        trigger: 'manual_click'
       });
     } catch (err) {
       console.error('Error marking finding as read:', err);
