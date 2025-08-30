@@ -410,6 +410,16 @@ export const markFindingAsRead = async (findingId) => {
   }
 };
 
+export const integrateResearchFinding = async (findingId) => {
+  try {
+    const response = await api.post(`/research/findings/${findingId}/integrate`);
+    return response.data;
+  } catch (error) {
+    console.error('Error integrating research finding:', error);
+    throw error;
+  }
+};
+
 // Delete research findings functions
 export const deleteResearchFinding = async (findingId) => {
   try {

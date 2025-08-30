@@ -7,7 +7,8 @@ import {
   getResearchFindings,
   markFindingAsRead,
   deleteResearchFinding,
-  deleteAllTopicFindings
+  deleteAllTopicFindings,
+  integrateResearchFinding
 } from '../services/api';
 import { useEngagementTracking } from '../utils/engagementTracker';
 import '../styles/ResearchResultsDashboard.css';
@@ -24,6 +25,7 @@ const ResearchResultsDashboard = () => {
   const [expandedTopics, setExpandedTopics] = useState(new Set());
   const [bookmarkedFindings, setBookmarkedFindings] = useState(new Set());
   const [showSourcesForFinding, setShowSourcesForFinding] = useState(new Set());
+  const [integratingFindings, setIntegratingFindings] = useState(new Set());
   const [filters, setFilters] = useState({
     searchTerm: '',
     dateRange: 'all',
@@ -337,6 +339,43 @@ const ResearchResultsDashboard = () => {
     } catch (err) {
       console.error('Error deleting all topic findings:', err);
       setError('Failed to delete topic findings. Please try again.');
+    }
+  };
+
+  // Handle integrate finding to knowledge graph
+  const handleIntegrateFinding = async (findingId) => {
+    if (integratingFindings.has(findingId)) {
+      return; // Already integrating
+    }
+
+    try {
+      setIntegratingFindings(prev => new Set(prev).add(findingId));
+      
+      const result = await integrateResearchFinding(findingId);
+      
+      if (result.success) {
+        // Refresh data to show updated integrated status
+        await loadResearchData(true);
+        
+        // Track integration interaction
+        trackInteraction(`finding_${findingId}`, 'integrate_to_knowledge_graph', {
+          findingId,
+          keyInsightsSubmitted: result.key_insights_submitted || 0,
+          topicName: result.topic_name,
+          zepIntegrationSuccess: result.zep_integration_success,
+          wasAlreadyIntegrated: result.was_already_integrated
+        });
+      }
+      
+    } catch (err) {
+      console.error('Error integrating finding:', err);
+      setError('Failed to integrate finding to knowledge graph. Please try again.');
+    } finally {
+      setIntegratingFindings(prev => {
+        const newSet = new Set(prev);
+        newSet.delete(findingId);
+        return newSet;
+      });
     }
   };
 
@@ -663,6 +702,26 @@ const ResearchResultsDashboard = () => {
                                 >
                                   ✓
                                 </button>
+                              )}
+                              
+                              {!finding.integrated && (
+                                <button
+                                  className={`integrate-btn ${integratingFindings.has(finding.finding_id) ? 'integrating' : ''}`}
+                                  onClick={(e) => {
+                                    e.stopPropagation();
+                                    handleIntegrateFinding(finding.finding_id);
+                                  }}
+                                  title="Add to Knowledge Graph"
+                                  disabled={integratingFindings.has(finding.finding_id)}
+                                >
+                                  {integratingFindings.has(finding.finding_id) ? '⏳' : '🧠'}
+                                </button>
+                              )}
+                              
+                              {finding.integrated && (
+                                <span className="integrated-indicator" title="Already integrated to Knowledge Graph">
+                                  ✅
+                                </span>
                               )}
                               
                               <button

@@ -667,4 +667,64 @@ class ZepManager:
         all_triplets = edge_triplets + isolated_triplets
         
         logger.debug(f"Created {len(all_triplets)} triplets ({len(edge_triplets)} from edges, {len(isolated_triplets)} from isolated nodes)")
-        return all_triplets 
+        return all_triplets
+
+    async def store_research_finding(
+        self, 
+        user_id: str, 
+        topic_name: str,
+        key_insights: List[str],
+        finding_id: str,
+        thread_id: str = None
+    ) -> bool:
+        """
+        Store research finding insights as content for Zep to extract entities/relationships.
+        
+        Args:
+            user_id: The ID of the user
+            topic_name: The research topic name
+            key_insights: List of key insights from the research
+            finding_id: The unique finding ID for reference
+            thread_id: Optional thread ID, will create a research-specific thread if not provided
+            
+        Returns:
+            True if successful, False otherwise
+        """
+        if not self.is_enabled():
+            logger.debug("Zep is not enabled, skipping research finding storage")
+            return False
+        
+        if not key_insights:
+            logger.debug("No key insights to store")
+            return False
+            
+        try:
+            # Create a research-specific thread ID if not provided
+            if not thread_id:
+                thread_id = f"research-{user_id}-{topic_name.replace(' ', '-').lower()}"
+            
+            # Ensure the thread exists
+            await self.create_thread(thread_id, user_id)
+            
+            # Format the research content for Zep
+            research_content = f"Research findings on topic: {topic_name}\n\n"
+            research_content += "Key insights:\n"
+            
+            for i, insight in enumerate(key_insights, 1):
+                research_content += f"{i}. {insight}\n"
+            
+            research_content += f"\n[Research Finding ID: {finding_id}]"
+            
+            # Submit as a system message to indicate it's research content
+            success = await self.add_message(thread_id, research_content, "system")
+            
+            if success:
+                logger.info(f"💡 Stored research finding for topic '{topic_name}' in Zep (thread: {thread_id})")
+            else:
+                logger.error(f"Failed to store research finding for topic '{topic_name}'")
+                
+            return success
+            
+        except Exception as e:
+            logger.error(f"Failed to store research finding in Zep: {str(e)}")
+            return False 

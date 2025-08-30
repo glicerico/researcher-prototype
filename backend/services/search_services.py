@@ -91,7 +91,17 @@ class PerplexitySearchService(BaseSearchService):
             content_preferences = self._get_content_preferences(user_id)
             
             # Configure search parameters based on preferences
-            search_mode = source_preferences.get("web_search_mode", "comprehensive")
+            web_search_mode = source_preferences.get("web_search_mode", "comprehensive")
+            
+            # Map internal preference values to valid Perplexity API search_mode values
+            search_mode_mapping = {
+                "comprehensive": "web",
+                "focused": "web", 
+                "academic": "academic",
+                "web": "web"
+            }
+            search_mode = search_mode_mapping.get(web_search_mode, "web")
+            
             search_recency_filter = source_preferences.get("recency_preference")
             
             # Build request
@@ -244,20 +254,20 @@ class OpenAlexSearchService(BaseSearchService):
                     logger.info(f"🔍 {self.source_name}: ✅ Found {result_count} results")
                     return {
                         "success": True,
-                        "result": formatted_content,
+                        "content": formatted_content,  # Changed from "result" to "content"
+                        "raw_results": search_results,  # Add raw_results with original structure
                         "query_used": query,
                         "source": self.source_name,
-                        "result_count": result_count,
-                        "results": results
+                        "result_count": result_count
                     }
                 else:
                     return {
                         "success": True,
-                        "result": f"No relevant academic papers found on {self.source_name}.",
+                        "content": f"No relevant academic papers found on {self.source_name}.",
+                        "raw_results": {"results": [], "total_count": 0},  # Empty results in expected structure
                         "query_used": query,
                         "source": self.source_name,
-                        "result_count": 0,
-                        "results": []
+                        "result_count": 0
                     }
             else:
                 error_msg = search_results.get("error", "Unknown error")
@@ -472,20 +482,20 @@ class HackerNewsSearchService(BaseSearchService):
                     logger.info(f"🔍 {self.source_name}: ✅ Found {len(hits)} discussions")
                     return {
                         "success": True,
-                        "result": formatted_content,
+                        "content": formatted_content,  # Changed from "result" to "content"
+                        "raw_results": {"results": hits, "total_count": len(hits)},  # Add raw_results structure
                         "query_used": query,
                         "source": self.source_name,
-                        "result_count": len(hits),
-                        "results": hits
+                        "result_count": len(hits)
                     }
                 else:
                     return {
                         "success": True,
-                        "result": f"No relevant discussions found on {self.source_name}.",
+                        "content": f"No relevant discussions found on {self.source_name}.",
+                        "raw_results": {"results": [], "total_count": 0},  # Empty results in expected structure
                         "query_used": query,
                         "source": self.source_name,
-                        "result_count": 0,
-                        "results": []
+                        "result_count": 0
                     }
             else:
                 error_message = f"Hacker News API request failed with status {response.status_code}: {response.text}"
@@ -618,11 +628,11 @@ class PubMedSearchService(BaseSearchService):
             if not id_list:
                 return {
                     "success": True,
-                    "result": f"No relevant medical literature found on {self.source_name}.",
+                    "content": f"No relevant medical literature found on {self.source_name}.",
+                    "raw_results": {"results": [], "total_count": 0},  # Empty results in expected structure
                     "query_used": query,
                     "source": self.source_name,
-                    "result_count": 0,
-                    "results": []
+                    "result_count": 0
                 }
             
             # Step 2: Fetch article details
@@ -652,11 +662,11 @@ class PubMedSearchService(BaseSearchService):
             logger.info(f"🔍 {self.source_name}: ✅ Found {len(articles)} articles")
             return {
                 "success": True,
-                "result": formatted_content,
+                "content": formatted_content,  # Changed from "result" to "content"
+                "raw_results": {"results": articles, "total_count": len(articles)},  # Add raw_results structure
                 "query_used": query,
                 "source": self.source_name,
-                "result_count": len(articles),
-                "results": articles
+                "result_count": len(articles)
             }
             
         except requests.exceptions.Timeout:

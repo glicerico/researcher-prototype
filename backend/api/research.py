@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Request
 from typing import Optional
 import time
 
-from dependencies import get_or_create_user_id, profile_manager, research_manager, _motivation_config_override
+from dependencies import get_or_create_user_id, profile_manager, research_manager, zep_manager, _motivation_config_override
 from services.autonomous_research_engine import initialize_autonomous_researcher
 from services.logging_config import get_logger
 
@@ -59,6 +59,76 @@ async def mark_research_finding_read(finding_id: str, user_id: str = Depends(get
     except Exception as e:
         logger.error(f"Error marking finding as read for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error marking finding as read: {str(e)}")
+
+
+@router.post("/research/findings/{finding_id}/integrate")
+async def integrate_research_finding(finding_id: str, user_id: str = Depends(get_or_create_user_id)):
+    """Integrate a research finding into the knowledge graph."""
+    try:
+        # First get the finding to make sure it exists and get its content
+        findings = research_manager.get_research_findings_for_api(user_id, None, False)
+        finding = None
+        
+        for f in findings:
+            if f.get("finding_id") == finding_id:
+                finding = f
+                break
+        
+        if not finding:
+            raise HTTPException(status_code=404, detail="Finding not found")
+            
+        if finding.get("integrated"):
+            return {
+                "success": True, 
+                "message": "Finding is already integrated",
+                "finding_id": finding_id,
+                "was_already_integrated": True
+            }
+
+        # Submit key insights to Zep for automatic entity/relationship extraction
+        key_insights = finding.get("key_insights", [])
+        if not key_insights:
+            # If no key insights, use the findings summary as content
+            key_insights = [finding.get("findings_summary", "No summary available")]
+        
+        try:
+            # Use Zep's content submission for entity extraction
+            zep_success = await zep_manager.store_research_finding(
+                user_id=user_id,
+                topic_name=finding.get("topic_name", "Unknown Topic"),
+                key_insights=key_insights,
+                finding_id=finding_id
+            )
+            
+            if not zep_success:
+                logger.warning(f"Failed to store research finding in Zep for finding {finding_id}")
+        
+        except Exception as e:
+            logger.error(f"Error submitting content to Zep: {str(e)}")
+            raise HTTPException(status_code=500, detail=f"Error integrating with knowledge graph: {str(e)}")
+
+        # Mark the finding as integrated
+        integration_success = research_manager.mark_finding_as_integrated(user_id, finding_id)
+        
+        if not integration_success:
+            logger.warning(f"Added to knowledge graph but failed to mark finding {finding_id} as integrated")
+        
+        return {
+            "success": True,
+            "message": f"Successfully submitted finding to knowledge graph for entity extraction",
+            "finding_id": finding_id,
+            "topic_name": finding.get("topic_name"),
+            "key_insights_submitted": len(key_insights),
+            "zep_integration_success": zep_success,
+            "integration_marked": integration_success,
+            "was_already_integrated": False
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error integrating finding {finding_id} for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error integrating finding: {str(e)}")
 
 
 @router.delete("/research/findings/{finding_id}")

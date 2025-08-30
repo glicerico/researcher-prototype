@@ -381,11 +381,12 @@ class ResearchManager:
                 findings_data[topic_name] = []
                 findings_data["metadata"]["topics_count"] = findings_data["metadata"].get("topics_count", 0) + 1
 
-            # Add unique ID and read status
+            # Add unique ID, read status, and integration status
             finding["finding_id"] = (
                 f"{user_id}_{topic_name.replace(' ', '_')}_{int(finding.get('research_time', time.time()))}"
             )
             finding["read"] = False
+            finding["integrated"] = False
 
             # Store the finding
             findings_data[topic_name].append(finding)
@@ -434,6 +435,43 @@ class ResearchManager:
 
         except Exception as e:
             logger.error(f"Error marking finding as read for user {user_id}: {str(e)}")
+            return False
+
+    def mark_finding_as_integrated(self, user_id: str, finding_id: str) -> bool:
+        """
+        Mark a research finding as integrated to knowledge graph.
+
+        Args:
+            user_id: The ID of the user
+            finding_id: The ID of the finding
+
+        Returns:
+            True if successful, False otherwise
+        """
+        try:
+            findings_data = self.storage.read(self._get_research_findings_path(user_id))
+            if not findings_data:
+                logger.warning(f"No findings data found for user {user_id}")
+                return False
+
+            # Find and update the finding
+            for topic_name, findings in findings_data.items():
+                if topic_name == "metadata":
+                    continue
+                    
+                for finding in findings:
+                    if finding.get("finding_id") == finding_id:
+                        finding["integrated"] = True
+                        success = self.storage.write(self._get_research_findings_path(user_id), findings_data)
+                        if success:
+                            logger.info(f"Marked finding {finding_id} as integrated for user {user_id}")
+                        return success
+
+            logger.warning(f"Finding {finding_id} not found for user {user_id}")
+            return False
+
+        except Exception as e:
+            logger.error(f"Error marking finding as integrated for user {user_id}: {str(e)}")
             return False
 
     def cleanup_old_research_findings(self, user_id: str, retention_days: int) -> bool:
