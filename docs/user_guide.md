@@ -79,6 +79,26 @@ Click **Research Topics** in the **Dashboard** dropdown to open a full dashboard
 
 * View all topics (active + inactive) per user.
 * **Toggle switch** – start/stop research for a topic.
+* **➕ Add Topic** – Create custom research topics manually.
+
+### Creating Custom Topics
+
+In addition to system-suggested topics, you can create your own custom research topics:
+
+1. **Open Topics Dashboard** – Click **Research Topics** in the Dashboard dropdown
+2. **Click ➕ Add Topic** – Opens the custom topic creation form  
+3. **Fill in Details**:
+   - **Topic Name** (1-100 characters) – Clear, descriptive name for your research topic
+   - **Description** (10-500 characters) – Detailed explanation of what you want researched
+   - **Confidence Score** (0.0-1.0, default 0.8) – How confident you are this topic is worth researching
+   - **Enable Research Immediately** (optional) – Start autonomous research right away
+
+4. **Create Topic** – Your custom topic will appear in the topics list and can be managed like any system-suggested topic
+
+**Examples of good custom topics:**
+- "Sustainable urban farming techniques for small spaces"
+- "Recent advances in quantum error correction algorithms" 
+- "Impact of remote work on team collaboration tools"
 
 ### Reviewing Findings
 

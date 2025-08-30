@@ -67,7 +67,7 @@ The assistant learns your preferences and adapts its responses while keeping all
 👤 **User Experience**: Three-tab interface (Personality, Preferences, What I've Learned) gives you complete control over how the AI adapts to your needs.
 
 ### 🔬 Multi-Source Research Engine  
-Motivation-driven background research that continuously learns about topics you're interested in. Features intelligent multi-source search that combines web, academic, social (Hacker News), and medical sources for comprehensive responses.
+Motivation-driven background research that continuously learns about topics you're interested in. Features intelligent multi-source search that combines web, academic, social (Hacker News), and medical sources for comprehensive responses. Create custom research topics or let the system suggest them based on your conversations.
 
 ### 📊 Knowledge Graph Visualization
 Visual representation of research findings and topic relationships powered by Zep memory.
