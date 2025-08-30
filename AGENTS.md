@@ -150,4 +150,3 @@ The React app reads `frontend/.env.*` – `REACT_APP_API_URL` should point to th
 • Never commit secrets, large binaries, or OS-specific code (Windows/MacOS). The CI/linter will fail.
 • If you are uncertain (≤ 95 % confidence), ask clarifying questions rather than guessing.
 
----
