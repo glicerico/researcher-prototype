@@ -266,7 +266,7 @@ class CitationProcessor:
         if not (unified_citations or search_sources or successful_sources):
             # Still show failure note if present, even with no sources
             if failure_note:
-                return f"\n\n*{failure_note.strip()}*"
+                return f"\n*{failure_note.strip()}*"
             return ""
         
         sources_section_parts = []

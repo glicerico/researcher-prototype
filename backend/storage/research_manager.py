@@ -1074,3 +1074,29 @@ class ResearchManager:
             except Exception as e:
                 logger.error(f"Error adding custom topic for user {user_id}: {str(e)}")
                 return {"success": False, "error": str(e), "topic": None}
+
+    def get_topic_info_by_name(self, user_id: str, topic_name: str) -> Optional[Dict[str, Any]]:
+        """
+        Get topic information by name.
+        
+        Args:
+            user_id: The ID of the user
+            topic_name: Name of the topic to find
+            
+        Returns:
+            Topic dictionary if found, None otherwise
+        """
+        try:
+            topics_data = self.get_user_topics(user_id)
+            
+            # Search through all sessions for the topic
+            for session_topics in topics_data.get("sessions", {}).values():
+                for topic in session_topics:
+                    if topic.get("topic_name") == topic_name:
+                        return topic
+                        
+            return None
+            
+        except Exception as e:
+            logger.error(f"Error getting topic info for user {user_id}, topic '{topic_name}': {str(e)}")
+            return None

@@ -92,12 +92,24 @@ async def integrate_research_finding(finding_id: str, user_id: str = Depends(get
             key_insights = [finding.get("findings_summary", "No summary available")]
         
         try:
+            # Get topic metadata for enhanced context
+            topic_name = finding.get("topic_name", "Unknown Topic")
+            topic_info = research_manager.get_topic_info_by_name(user_id, topic_name)
+            
+            topic_description = None
+            topic_context = None
+            if topic_info:
+                topic_description = topic_info.get("description")
+                topic_context = topic_info.get("conversation_context")
+            
             # Use Zep's content submission for entity extraction
             zep_success = await zep_manager.store_research_finding(
                 user_id=user_id,
-                topic_name=finding.get("topic_name", "Unknown Topic"),
+                topic_name=topic_name,
                 key_insights=key_insights,
-                finding_id=finding_id
+                finding_id=finding_id,
+                topic_description=topic_description,
+                topic_context=topic_context
             )
             
             if not zep_success:

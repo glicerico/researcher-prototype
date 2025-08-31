@@ -675,6 +675,8 @@ class ZepManager:
         topic_name: str,
         key_insights: List[str],
         finding_id: str,
+        topic_description: str = None,
+        topic_context: str = None,
         thread_id: str = None
     ) -> bool:
         """
@@ -685,6 +687,8 @@ class ZepManager:
             topic_name: The research topic name
             key_insights: List of key insights from the research
             finding_id: The unique finding ID for reference
+            topic_description: Optional description of what the topic covers
+            topic_context: Optional conversation context that led to this topic
             thread_id: Optional thread ID, will create a research-specific thread if not provided
             
         Returns:
@@ -706,10 +710,18 @@ class ZepManager:
             # Ensure the thread exists
             await self.create_thread(thread_id, user_id)
             
-            # Format the research content for Zep
+            # Format the research content for Zep with topic context
             research_content = f"Research findings on topic: {topic_name}\n\n"
-            research_content += "Key insights:\n"
             
+            # Add topic description if available
+            if topic_description:
+                research_content += f"Topic focus: {topic_description}\n\n"
+            
+            # Add conversation context if available
+            if topic_context and topic_context != "Custom topic added by user":
+                research_content += f"Research context: {topic_context}\n\n"
+            
+            research_content += "Key research insights:\n"
             for i, insight in enumerate(key_insights, 1):
                 research_content += f"{i}. {insight}\n"
             
