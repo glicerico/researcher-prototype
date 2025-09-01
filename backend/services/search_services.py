@@ -261,6 +261,7 @@ class OpenAlexSearchService(BaseSearchService):
                         "result_count": result_count
                     }
                 else:
+                    logger.info(f"🔍 {self.source_name}: ⚠️ Found 0 results")
                     return {
                         "success": True,
                         "content": f"No relevant academic papers found on {self.source_name}.",
@@ -290,66 +291,94 @@ class OpenAlexSearchService(BaseSearchService):
     async def _search_openalex(self, query: str, limit: int = 10) -> Dict[str, Any]:
         """Execute OpenAlex search with smart query strategy."""
         try:
-            # Smart search strategy: try title/abstract search first, then general search
+            # Improved search strategy matching the working node version
+            # 1. Try title search for high precision
             title_params = {
                 "filter": f"title.search:{query},type:article,is_retracted:false",
+                "per-page": min(limit, 200),
                 "sort": "relevance_score:desc",
-                "per_page": min(limit, 25),
-                "select": "id,title,publication_year,authorships,primary_location,open_access,cited_by_count,abstract_inverted_index,concepts,type"
+                "select": "id,title,display_name,publication_year,publication_date,doi,cited_by_count,abstract_inverted_index,authorships,primary_location,open_access,type"
             }
             
             title_response = requests.get(f"{self.base_url}/works", 
                                         params=title_params, 
                                         headers=self.headers, 
-                                        timeout=20)
+                                        timeout=30)
             
             if title_response.status_code == 200:
                 title_data = title_response.json()
                 title_results = title_data.get("results", [])
                 
-                if len(title_results) >= 3:  # Good results from title search
-                    return {
-                        "success": True,
-                        "results": title_results[:limit],
-                        "search_strategy": "title_search"
+                # If title search yields insufficient results, supplement with abstract search
+                if len(title_results) < limit // 2 and len(title_results) < 10:
+                    abstract_params = {
+                        "filter": f"abstract.search:{query},type:article,is_retracted:false",
+                        "per-page": min(limit - len(title_results), 200),
+                        "sort": "relevance_score:desc",
+                        "select": "id,title,display_name,publication_year,publication_date,doi,cited_by_count,abstract_inverted_index,authorships,primary_location,open_access,type"
                     }
-            
-            # If title search didn't yield enough, try abstract search
-            abstract_params = {
-                "filter": f"abstract.search:{query},type:article,is_retracted:false",
-                "sort": "cited_by_count:desc",  # Sort by citations for quality
-                "per_page": min(limit, 25),
-                "select": "id,title,publication_year,authorships,primary_location,open_access,cited_by_count,abstract_inverted_index,concepts,type"
-            }
-            
-            abstract_response = requests.get(f"{self.base_url}/works", 
-                                           params=abstract_params, 
-                                           headers=self.headers, 
-                                           timeout=20)
-            
-            if abstract_response.status_code == 200:
-                abstract_data = abstract_response.json()
-                abstract_results = abstract_data.get("results", [])
+                    
+                    try:
+                        abstract_response = requests.get(f"{self.base_url}/works", 
+                                                       params=abstract_params, 
+                                                       headers=self.headers, 
+                                                       timeout=30)
+                        
+                        if abstract_response.status_code == 200:
+                            abstract_data = abstract_response.json()
+                            abstract_results = abstract_data.get("results", [])
+                            
+                            # Deduplicate by ID and combine results
+                            title_ids = {work.get("id") for work in title_results if work is not None and work.get("id")}
+                            unique_abstract_works = [work for work in abstract_results if work is not None and work.get("id") not in title_ids]
+                            
+                            title_results = title_results + unique_abstract_works
+                    except Exception:
+                        # Keep title results only on any error
+                        pass
                 
-                # Combine and deduplicate results
-                all_results = list(title_results) if 'title_results' in locals() else []
-                seen_ids = {r.get("id") for r in all_results}
+                # If still insufficient results, try general search as final fallback
+                if len(title_results) < limit // 3 and len(title_results) < 5:
+                    general_params = {
+                        "search": query,
+                        "filter": "type:article,is_retracted:false",
+                        "per-page": min(limit - len(title_results), 200),
+                        "sort": "relevance_score:desc",
+                        "select": "id,title,display_name,publication_year,publication_date,doi,cited_by_count,abstract_inverted_index,authorships,primary_location,open_access,type"
+                    }
+                    
+                    try:
+                        general_response = requests.get(f"{self.base_url}/works", 
+                                                      params=general_params, 
+                                                      headers=self.headers, 
+                                                      timeout=30)
+                        
+                        if general_response.status_code == 200:
+                            general_data = general_response.json()
+                            general_results = general_data.get("results", [])
+                            
+                            # Deduplicate and combine with existing results
+                            existing_ids = {work.get("id") for work in title_results if work is not None and work.get("id")}
+                            unique_general_works = [work for work in general_results if work is not None and work.get("id") not in existing_ids]
+                            
+                            title_results = title_results + unique_general_works
+                    except Exception:
+                        # Keep existing results on any error
+                        pass
                 
-                for result in abstract_results:
-                    if result.get("id") not in seen_ids:
-                        all_results.append(result)
-                        if len(all_results) >= limit:
-                            break
+                # Reconstruct and store abstracts in results for downstream use
+                for work in title_results:
+                    if work is not None:
+                        abstract_inverted = work.get("abstract_inverted_index", {})
+                        if abstract_inverted:
+                            reconstructed_abstract = self._reconstruct_abstract(abstract_inverted)
+                            if reconstructed_abstract:
+                                work["abstract"] = reconstructed_abstract
                 
                 return {
                     "success": True,
-                    "results": all_results[:limit],
-                    "search_strategy": "combined"
-                }
-            else:
-                return {
-                    "success": False,
-                    "error": f"OpenAlex API error: {abstract_response.status_code} - {abstract_response.text}"
+                    "results": title_results[:limit],
+                    "search_strategy": "enhanced_multi_stage"
                 }
                 
         except requests.exceptions.Timeout:
@@ -363,6 +392,28 @@ class OpenAlexSearchService(BaseSearchService):
                 "error": f"Error searching OpenAlex: {str(e)}"
             }
     
+    def _reconstruct_abstract(self, abstract_inverted_index: Dict[str, Any]) -> str:
+        """Reconstruct abstract text from OpenAlex inverted index format."""
+        if not abstract_inverted_index:
+            return ""
+        
+        try:
+            # Create list of (position, word) pairs
+            word_positions = []
+            for word, positions in abstract_inverted_index.items():
+                if positions:  # Make sure positions is not None/empty
+                    for pos in positions:
+                        if pos is not None:
+                            word_positions.append((pos, word))
+            
+            # Sort by position and reconstruct text
+            word_positions.sort()
+            reconstructed_text = " ".join([word for _, word in word_positions])
+            return reconstructed_text
+            
+        except Exception:
+            return ""
+    
     def _format_results(self, search_results: Dict[str, Any]) -> str:
         """Format OpenAlex results for LLM context."""
         results = search_results.get("results", [])
@@ -372,6 +423,8 @@ class OpenAlexSearchService(BaseSearchService):
         lines = [f"OPENALEX ACADEMIC PAPERS ({min(len(results), 10)} items shown):\n"]
         
         for i, item in enumerate(results[:10], 1):
+            if item is None:
+                continue
             title = item.get("title", "No title")
             year = item.get("publication_year", "Unknown year")
             
@@ -401,8 +454,10 @@ class OpenAlexSearchService(BaseSearchService):
                 # Reconstruct first part of abstract
                 word_positions = []
                 for word, positions in abstract_index.items():
-                    for pos in positions[:1]:  # Just first occurrence
-                        word_positions.append((pos, word))
+                    if positions:  # Make sure positions is not None/empty
+                        for pos in positions[:1]:  # Just first occurrence
+                            if pos is not None:
+                                word_positions.append((pos, word))
                 
                 # Sort by position and take first 50 words
                 word_positions.sort()

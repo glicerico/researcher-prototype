@@ -101,8 +101,8 @@ async def search_results_reviewer_node(state: ChatState) -> ChatState:
                 title = item.get("title") or item.get("story_title") or item.get("paperTitle") or "(no title)"
                 url = item.get("url") or item.get("story_url") or item.get("openAccessPdf", {}).get("url") or ""
                 snippet = item.get("text") or item.get("abstract") or ""
-                if snippet and len(snippet) > 160:
-                    snippet = snippet[:160] + "..."
+                if snippet and len(snippet) > 500:
+                    snippet = snippet[:500] + "..."
                 parts = [f"[{idx}] {title}"]
                 if snippet:
                     parts.append(f" - {snippet}")

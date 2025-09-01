@@ -15,7 +15,7 @@ This folder contains all the automated tests for the backend, separated into `un
   python tests/integration/test_search_apis.py --all --query "your query"
   
   # Test specific API
-  python tests/integration/test_search_apis.py --semantic-scholar --query "machine learning" --limit 5
+  python tests/integration/test_search_apis.py --openalex --query "machine learning" --limit 5
   ```
 
 - **`test_openai_integration.py`** - OpenAI API integration tests 

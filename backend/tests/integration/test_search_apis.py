@@ -46,36 +46,11 @@ async def run_openalex(query: str, limit: int) -> None:
     print("\n=== OpenAlex ===")
     print(f"Query: {query} | Limit: {limit}")
     
-    try:
-        print("Calling service._search_openalex()...")
-        result = await service._search_openalex(query=query, limit=limit)
-        print(f"Search completed. Success: {result.get('success')}")
-        
-        if result.get('success'):
-            results = result.get('results', [])
-            print(f"Number of results: {len(results)}")
-            
-            # Check for None items in results
-            none_count = sum(1 for item in results if item is None)
-            if none_count > 0:
-                print(f"WARNING: Found {none_count} None items in results!")
-            
-            print("\nRaw JSON:")
-            print(json.dumps(result, indent=2)[:20000])  # truncate extremely long outputs
-            
-            print("\nTesting _format_results()...")
-            formatted = service._format_results(result)
-            print("Format completed successfully")
-            print("\nFormatted:")
-            print(formatted)
-        else:
-            print(f"Search failed: {result.get('error')}")
-            
-    except Exception as e:
-        import traceback
-        print(f"Exception occurred: {str(e)}")
-        print("Full traceback:")
-        print(traceback.format_exc())
+    result = await service._search_openalex(query=query, limit=limit)
+    print("\nRaw JSON:")
+    print(json.dumps(result, indent=2)[:20000])  # truncate extremely long outputs
+    print("\nFormatted:")
+    print(service._format_results(result))
 
 
 async def run_pubmed(query: str, limit: int) -> None:
@@ -104,40 +79,20 @@ async def run_hn(query: str, limit: int) -> None:
     print(result.get("content", "No content"))
 
 
-async def test_problematic_queries() -> None:
-    """Test queries that have been failing in the app."""
-    print("\n=== Testing Problematic Queries ===")
-    
-    problematic_queries = [
-        "hurricane forecasting techniques",
-        "open problems number theory", 
-        "Sendov's Conjecture advances",
-        "Sendov's Conjecture polynomial dynamics",
-        "sphere packing problem advances five dimensions"
-    ]
-    
-    for query in problematic_queries:
-        print(f"\n--- Testing: {query} ---")
-        await run_openalex(query, 5)
-
-
 async def main() -> None:
-    parser = argparse.ArgumentParser(description="Test external search APIs via node search methods")
+    parser = argparse.ArgumentParser(description="Test external search APIs via service search methods")
     group = parser.add_mutually_exclusive_group(required=True)
     group.add_argument("--all", action="store_true", help="Run all search APIs")
     group.add_argument("--openalex", action="store_true", help="Run OpenAlex only")
     group.add_argument("--pubmed", action="store_true", help="Run PubMed only")
     group.add_argument("--hn", action="store_true", help="Run Hacker News only")
-    group.add_argument("--test-problems", action="store_true", help="Test problematic queries that fail in app")
 
     parser.add_argument("--query", type=str, default="artificial intelligence research trends", help="Search query")
     parser.add_argument("--limit", type=int, default=5, help="Max results to request")
 
     args = parser.parse_args()
 
-    if args.test_problems:
-        await test_problematic_queries()
-    elif args.all or args.openalex:
+    if args.all or args.openalex:
         await run_openalex(args.query, args.limit)
     if args.all or args.pubmed:
         await run_pubmed(args.query, args.limit)
