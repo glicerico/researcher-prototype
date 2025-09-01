@@ -38,44 +38,87 @@ def _ensure_backend_on_path() -> None:
 
 _ensure_backend_on_path()
 
-from nodes.openalex_node import OpenAlexSearchNode  # noqa: E402
-from nodes.pubmed_search_node import PubMedSearchNode  # noqa: E402
-from nodes.hacker_news_search_node import HackerNewsSearchNode  # noqa: E402
+from services.search_services import OpenAlexSearchService, PubMedSearchService, HackerNewsSearchService  # noqa: E402
 
 
 async def run_openalex(query: str, limit: int) -> None:
-    node = OpenAlexSearchNode()
+    service = OpenAlexSearchService()
     print("\n=== OpenAlex ===")
     print(f"Query: {query} | Limit: {limit}")
-    result = await node.search(query=query, limit=limit)
-    print("\nRaw JSON:")
-    print(json.dumps(result, indent=2)[:20000])  # truncate extremely long outputs
-    print("\nFormatted:")
-    print(node.format_results(result))
+    
+    try:
+        print("Calling service._search_openalex()...")
+        result = await service._search_openalex(query=query, limit=limit)
+        print(f"Search completed. Success: {result.get('success')}")
+        
+        if result.get('success'):
+            results = result.get('results', [])
+            print(f"Number of results: {len(results)}")
+            
+            # Check for None items in results
+            none_count = sum(1 for item in results if item is None)
+            if none_count > 0:
+                print(f"WARNING: Found {none_count} None items in results!")
+            
+            print("\nRaw JSON:")
+            print(json.dumps(result, indent=2)[:20000])  # truncate extremely long outputs
+            
+            print("\nTesting _format_results()...")
+            formatted = service._format_results(result)
+            print("Format completed successfully")
+            print("\nFormatted:")
+            print(formatted)
+        else:
+            print(f"Search failed: {result.get('error')}")
+            
+    except Exception as e:
+        import traceback
+        print(f"Exception occurred: {str(e)}")
+        print("Full traceback:")
+        print(traceback.format_exc())
 
 
 async def run_pubmed(query: str, limit: int) -> None:
-    node = PubMedSearchNode()
+    service = PubMedSearchService()
     print("\n=== PubMed ===")
     print(f"Query: {query} | Limit: {limit}")
-    if not node.validate_config():
-        print("Config validation failed for PubMed (this API generally works without keys). Proceeding anyway...")
-    result = await node.search(query=query, limit=limit)
+    # PubMed service uses a different interface, create a mock state
+    mock_state = {"messages": [{"content": query, "role": "user"}]}
+    result = await service.search(mock_state)
     print("\nRaw JSON:")
     print(json.dumps(result, indent=2)[:20000])
     print("\nFormatted:")
-    print(node.format_results(result))
+    print(result.get("content", "No content"))
 
 
 async def run_hn(query: str, limit: int) -> None:
-    node = HackerNewsSearchNode()
+    service = HackerNewsSearchService()
     print("\n=== Hacker News ===")
     print(f"Query: {query} | Limit: {limit}")
-    result = await node.search(query=query, limit=limit)
+    # Hacker News service uses a different interface, create a mock state  
+    mock_state = {"messages": [{"content": query, "role": "user"}]}
+    result = await service.search(mock_state)
     print("\nRaw JSON:")
     print(json.dumps(result, indent=2)[:20000])
     print("\nFormatted:")
-    print(node.format_results(result))
+    print(result.get("content", "No content"))
+
+
+async def test_problematic_queries() -> None:
+    """Test queries that have been failing in the app."""
+    print("\n=== Testing Problematic Queries ===")
+    
+    problematic_queries = [
+        "hurricane forecasting techniques",
+        "open problems number theory", 
+        "Sendov's Conjecture advances",
+        "Sendov's Conjecture polynomial dynamics",
+        "sphere packing problem advances five dimensions"
+    ]
+    
+    for query in problematic_queries:
+        print(f"\n--- Testing: {query} ---")
+        await run_openalex(query, 5)
 
 
 async def main() -> None:
@@ -85,13 +128,16 @@ async def main() -> None:
     group.add_argument("--openalex", action="store_true", help="Run OpenAlex only")
     group.add_argument("--pubmed", action="store_true", help="Run PubMed only")
     group.add_argument("--hn", action="store_true", help="Run Hacker News only")
+    group.add_argument("--test-problems", action="store_true", help="Test problematic queries that fail in app")
 
     parser.add_argument("--query", type=str, default="artificial intelligence research trends", help="Search query")
     parser.add_argument("--limit", type=int, default=5, help="Max results to request")
 
     args = parser.parse_args()
 
-    if args.all or args.openalex:
+    if args.test_problems:
+        await test_problematic_queries()
+    elif args.all or args.openalex:
         await run_openalex(args.query, args.limit)
     if args.all or args.pubmed:
         await run_pubmed(args.query, args.limit)
