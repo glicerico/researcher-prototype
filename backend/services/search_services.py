@@ -57,7 +57,7 @@ class PerplexitySearchService(BaseSearchService):
     """Service for Perplexity web search."""
     
     def __init__(self):
-        super().__init__("Perplexity")
+        super().__init__("Search")
     
     def validate_config(self) -> bool:
         """Validate Perplexity API configuration."""
@@ -212,7 +212,7 @@ class OpenAlexSearchService(BaseSearchService):
     """Service for OpenAlex academic search."""
     
     def __init__(self):
-        super().__init__("OpenAlex")
+        super().__init__("Academic Search")
         self.base_url = "https://api.openalex.org"
         self.headers = {
             "User-Agent": "ResearcherPrototype/1.0 (mailto:researcher@example.com)"
@@ -492,7 +492,7 @@ class HackerNewsSearchService(BaseSearchService):
     """Service for Hacker News social search."""
     
     def __init__(self):
-        super().__init__("Hacker News")
+        super().__init__("Social Search")
         self.search_url = "https://hn.algolia.com/api/v1/search"
     
     def validate_config(self) -> bool:
@@ -628,7 +628,7 @@ class PubMedSearchService(BaseSearchService):
     """Service for PubMed medical search."""
     
     def __init__(self):
-        super().__init__("PubMed")
+        super().__init__("Medical Search")
         self.base_url = "https://eutils.ncbi.nlm.nih.gov/entrez/eutils"
         self.email = config.PUBMED_EMAIL
     
