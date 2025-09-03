@@ -53,8 +53,8 @@ from llm_models import (
     ResearchDeduplicationResult,
 )
 
-# Initialize storage components
-storage_dir = os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "storage_data")
+# Initialize storage components - use backend directory storage
+storage_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "storage_data")
 storage_manager = StorageManager(storage_dir)
 profile_manager = ProfileManager(storage_manager)
 research_manager = ResearchManager(storage_manager, profile_manager)

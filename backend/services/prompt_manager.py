@@ -19,7 +19,7 @@ class PromptManager:
         # Get the path to prompts.py relative to this file's directory
         current_dir = Path(__file__).parent.parent  # Go up from services/ to backend/
         self.prompts_file = str(current_dir / "prompts.py")
-        self.backup_dir = Path("storage_data/prompt_backups")
+        self.backup_dir = current_dir / "storage_data" / "prompt_backups"
         self.backup_dir.mkdir(parents=True, exist_ok=True)
         
         # Load current prompts
