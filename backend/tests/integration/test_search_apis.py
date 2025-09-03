@@ -54,11 +54,13 @@ async def run_openalex(query: str, limit: int) -> None:
 
 
 async def run_pubmed(query: str, limit: int) -> None:
+    from langchain_core.messages import HumanMessage
+    
     service = PubMedSearchService()
     print("\n=== PubMed ===")
     print(f"Query: {query} | Limit: {limit}")
-    # PubMed service uses a different interface, create a mock state
-    mock_state = {"messages": [{"content": query, "role": "user"}]}
+    # PubMed service uses a different interface, create a mock state with proper message format
+    mock_state = {"messages": [HumanMessage(content=query)]}
     result = await service.search(mock_state)
     print("\nRaw JSON:")
     print(json.dumps(result, indent=2)[:20000])
@@ -67,11 +69,13 @@ async def run_pubmed(query: str, limit: int) -> None:
 
 
 async def run_hn(query: str, limit: int) -> None:
+    from langchain_core.messages import HumanMessage
+    
     service = HackerNewsSearchService()
     print("\n=== Hacker News ===")
     print(f"Query: {query} | Limit: {limit}")
-    # Hacker News service uses a different interface, create a mock state  
-    mock_state = {"messages": [{"content": query, "role": "user"}]}
+    # Hacker News service uses a different interface, create a mock state with proper message format  
+    mock_state = {"messages": [HumanMessage(content=query)]}
     result = await service.search(mock_state)
     print("\nRaw JSON:")
     print(json.dumps(result, indent=2)[:20000])

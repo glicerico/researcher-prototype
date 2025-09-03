@@ -432,7 +432,7 @@ class OpenAlexSearchService(BaseSearchService):
             authorships = item.get("authorships", [])
             authors = []
             for auth in authorships[:3]:  # Limit to first 3 authors
-                if auth.get("author", {}).get("display_name"):
+                if auth and auth.get("author") and auth.get("author", {}).get("display_name"):
                     authors.append(auth["author"]["display_name"])
             
             if len(authorships) > 3:
@@ -441,8 +441,11 @@ class OpenAlexSearchService(BaseSearchService):
             author_str = ", ".join(authors) if authors else "Unknown authors"
             
             # Get journal/venue
-            primary_location = item.get("primary_location", {})
-            venue = primary_location.get("source", {}).get("display_name", "Unknown venue")
+            primary_location = item.get("primary_location")
+            if primary_location and isinstance(primary_location, dict):
+                venue = primary_location.get("source", {}).get("display_name", "Unknown venue") if primary_location.get("source") else "Unknown venue"
+            else:
+                venue = "Unknown venue"
             
             # Get citation count
             cited_by_count = item.get("cited_by_count", 0)
@@ -681,6 +684,7 @@ class PubMedSearchService(BaseSearchService):
             id_list = search_data.get("esearchresult", {}).get("idlist", [])
             
             if not id_list:
+                logger.info(f"🔍 {self.source_name}: ✅ Found 0 articles")
                 return {
                     "success": True,
                     "content": f"No relevant medical literature found on {self.source_name}.",
