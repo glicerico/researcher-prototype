@@ -15,11 +15,14 @@ Directory quick-look:
   • `graph_builder.py` LangGraph builder for the chat pipeline.
   • `research_graph_builder.py` LangGraph builder for the background research flow.
   • `nodes/`          Composable LangGraph nodes (router, search, analysis, research, …).
+  • `api/`            Modular FastAPI routers (chat, research, graph, topics, users, admin, status, notifications).
+  • `services/`       Core services (logging_config, prompt/search/auth/status managers, research engine, etc.).
+  • `storage/`        Managers for profiles, personalization, research data, Zep integration.
   • `storage_data/`   JSON persistence for users, conversations, and research findings (git-ignored).
   • `tests/`          Pytest test-suite (`unit/` & `integration/`).
   • `run_tests.sh`    Helper script to run tests / coverage.
 
-• `frontend/` → React 18 SPA consuming the backend API.
+• `frontend/` → React 19 SPA consuming the backend API.
   • `src/components/` UI components (functional, hooks-based, `.jsx`).
   • `src/services/`   `axios` wrappers talking to FastAPI.
   • `src/styles/`     CSS modules / plain CSS.
@@ -32,9 +35,9 @@ If you add files, keep the structure coherent (e.g. new LangGraph nodes into `ba
 
 ## 2. Key Technologies
 
-Backend  : FastAPI · LangGraph · LangChain · Pydantic v2 · AsyncIO · PyGraphviz (visualisation)
-Frontend : React 18 · Axios · Context API · Jest/React-Testing-Library
-Tooling  : Pytest · Coverage.py · ESLint (airbnb, react-hooks) · Prettier · Husky git hooks (optional)
+Backend  : FastAPI · LangGraph · LangChain · Pydantic v2 · AsyncIO · Graphviz (dot) via LangGraph built-ins (visualisation)
+Frontend : React 19 · Axios · Context API · Jest/React-Testing-Library
+Tooling  : Pytest · Coverage.py · ESLint (react-app) · Prettier · Husky git hooks (optional)
 
 ---
 
@@ -112,6 +115,10 @@ All commands must exit 0.
 # 🎉 One-time setup
 ./setup.sh  # installs Python & npm deps
 
+# ▶️ Run everything (one terminal)
+npm install             # at repo root (once; installs 'concurrently')
+npm run dev             # starts backend + frontend together
+
 # ▶️ Run everything (two terminals)
 python backend/app.py      # http://localhost:8000
 cd frontend && npm start  # http://localhost:3000
@@ -119,9 +126,11 @@ cd frontend && npm start  # http://localhost:3000
 # ✅ Run unit tests only
 cd backend && ./run_tests.sh
 
-# 🔍 Regenerate LangGraph diagram
+# 🔍 Regenerate LangGraph diagrams
 cd backend
-python graph_builder.py  # produces graph.png
+python graph_builder.py                    # produces graph.png (main chat)
+python research_graph_builder.py           # produces research_graph.png (research flow)
+python research_graph_builder.py --all     # produces chat_graph.png + research_graph.png
 
 # 🐛 Enable verbose tracing
 export LANGCHAIN_TRACING_V2=true
@@ -149,4 +158,3 @@ The React app reads `frontend/.env.*` – `REACT_APP_API_URL` should point to th
 • Prefer **minimal diffs**; preserve surrounding context markers when editing.
 • Never commit secrets, large binaries, or OS-specific code (Windows/MacOS). The CI/linter will fail.
 • If you are uncertain (≤ 95 % confidence), ask clarifying questions rather than guessing.
-

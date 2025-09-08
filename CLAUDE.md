@@ -34,6 +34,8 @@ npm install  # only needed once
 npm run dev  # starts backend + frontend with concurrently
 ```
 
+Note: Graph visualization requires Graphviz installed (the `dot` CLI). On Debian/Ubuntu: `sudo apt-get install graphviz`.
+
 ### Backend Testing
 ```bash
 cd backend
@@ -51,6 +53,8 @@ npm run test:unit             # Unit tests only
 npm run test:integration      # Integration tests only  
 npm run test:all              # All tests
 npm run lint                  # ESLint
+# Optional coverage report
+npm test -- --coverage
 ```
 
 ### Single Service Development
@@ -110,4 +114,5 @@ cd frontend && npm start
 - **Motivation System**: Native scoring determines when to research (`motivation.py`)
 - **Knowledge Graph**: Zep-powered memory and visualization
 - **Admin Console**: JWT-secured interface with prompt editor
-- **Search Integration**: Perplexity for internet search, Qwello for insights
+- **Search Integration**: Perplexity for internet search, OpenAlex for academic search
+- Respond in a concise but complete way. Like Einstein said: make it as simple as possible, but not simpler.
