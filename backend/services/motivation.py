@@ -124,10 +124,84 @@ class MotivationSystem:
         return should_do_research
 
     def _get_topic_engagement_score(self, user_id: str, topic_name: str) -> float:
-        """Extract engagement score from existing tracking data."""
+        """
+        Extract engagement score focusing heavily on research result interactions.
+        
+        Primary signal: How many research findings for this topic the user has actually read.
+        Secondary signals: General engagement analytics if available.
+        """
         if not self.personalization_manager:
             return 0.0
             
+        try:
+            engagement_score = 0.0
+            
+            # PRIMARY SIGNAL: Research findings interaction (HEAVILY WEIGHTED)
+            research_findings_score = self._get_research_findings_engagement(user_id, topic_name)
+            engagement_score += research_findings_score * 2.0  # Heavy weight for actual research interaction
+            
+            # SECONDARY SIGNAL: General engagement analytics (if available)
+            analytics_score = self._get_analytics_engagement(user_id, topic_name)  
+            engagement_score += analytics_score * 0.5  # Lower weight for general analytics
+            
+            # Normalize to 0-1 range but allow research findings to dominate
+            return min(engagement_score / 3.0, 1.0)
+            
+        except Exception as e:
+            logger.debug(f"Error getting topic engagement score for {topic_name}: {str(e)}")
+            return 0.0
+    
+    def _get_research_findings_engagement(self, user_id: str, topic_name: str) -> float:
+        """
+        Calculate engagement based on research findings interactions.
+        This is the primary signal for per-topic motivation.
+        """
+        try:
+            # Import here to avoid circular dependencies
+            from storage.research_manager import ResearchManager
+            research_manager = ResearchManager(
+                self.personalization_manager.storage, 
+                self.personalization_manager.profile_manager
+            )
+            
+            # Get all findings for this user and topic
+            all_findings = research_manager.get_research_findings_for_api(user_id, topic_name, unread_only=False)
+            if not all_findings:
+                return 0.0
+            
+            total_findings = len(all_findings)
+            read_findings = sum(1 for f in all_findings if f.get('read', False))
+            
+            # Base engagement: percentage of findings read
+            read_percentage = read_findings / total_findings if total_findings > 0 else 0.0
+            
+            # Bonus for recent reads (findings read in last 7 days get extra weight)
+            import time
+            recent_threshold = time.time() - (7 * 24 * 3600)  # 7 days ago
+            recent_reads = sum(1 for f in all_findings 
+                             if f.get('read', False) and 
+                             f.get('created_at', 0) > recent_threshold)
+            
+            recent_bonus = min(recent_reads * 0.2, 0.5)  # Up to 0.5 bonus for recent engagement
+            
+            # Total findings bonus (more findings = more research value demonstrated)
+            volume_bonus = min(total_findings * 0.1, 0.3)  # Up to 0.3 bonus for research volume
+            
+            total_score = read_percentage + recent_bonus + volume_bonus
+            
+            logger.debug(f"Research findings engagement for {topic_name}: "
+                        f"{read_findings}/{total_findings} read ({read_percentage:.2f}), "
+                        f"recent_bonus: {recent_bonus:.2f}, volume_bonus: {volume_bonus:.2f}, "
+                        f"total: {total_score:.2f}")
+            
+            return min(total_score, 2.0)  # Cap at 2.0 to allow for heavy weighting
+            
+        except Exception as e:
+            logger.debug(f"Error calculating research findings engagement for {topic_name}: {str(e)}")
+            return 0.0
+    
+    def _get_analytics_engagement(self, user_id: str, topic_name: str) -> float:
+        """Get engagement from general analytics (secondary signal)."""
         try:
             # Get user profile data which contains engagement analytics
             profile = self.personalization_manager.profile_manager.get_user_profile(user_id)
@@ -138,29 +212,29 @@ class MotivationSystem:
             analytics = profile.get('analytics', {})
             research_data = analytics.get('research_engagement', {})
             
-            # Calculate engagement score based on various signals
+            if not research_data:
+                return 0.0
+            
+            # Calculate score from various analytics signals
             engagement_score = 0.0
             
             # Manual reads are stronger signals than expansion reads
             manual_reads = research_data.get('manual_reads', {}).get(topic_name, 0)
             expansion_reads = research_data.get('expansion_reads', {}).get(topic_name, 0)
+            engagement_score += manual_reads * 0.3 + expansion_reads * 0.1
             
-            # Weight manual reads higher (0.8) than expansion reads (0.3)
-            engagement_score += manual_reads * 0.8 + expansion_reads * 0.3
-            
-            # Add source exploration bonus
+            # Source exploration
             source_clicks = research_data.get('source_clicks', {}).get(topic_name, 0)
-            engagement_score += source_clicks * 0.4
+            engagement_score += source_clicks * 0.2
             
-            # Add research activation bonus (user actively enabled research)
+            # Research activation 
             activations = research_data.get('activations', {}).get(topic_name, 0)
-            engagement_score += activations * 1.0
+            engagement_score += activations * 0.4
             
-            # Normalize to 0-1 range (cap at reasonable maximum)
-            return min(engagement_score / 5.0, 1.0)
+            return min(engagement_score / 3.0, 1.0)
             
         except Exception as e:
-            logger.debug(f"Error getting topic engagement score for {topic_name}: {str(e)}")
+            logger.debug(f"Error getting analytics engagement for {topic_name}: {str(e)}")
             return 0.0
 
     def _get_topic_success_rate(self, user_id: str, topic_name: str) -> float:
@@ -227,14 +301,34 @@ class MotivationSystem:
         return topic_motivation
 
     def evaluate_topics(self, user_id: str, topics: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
-        """Return engagement-prioritized topics ready for research."""
+        """
+        Return engagement-prioritized topics ready for research.
+        
+        Implements TWO-TIER FILTERING approach:
+        1. Tier 1: Global motivation gates whether ANY research occurs
+        2. Tier 2: Among topics marked for active research, prioritize by:
+           - Research findings interaction (heavily weighted)
+           - Staleness pressure (time × LLM-assessed urgency coefficient)
+           - Research success rate
+        
+        Note: Only evaluates topics already marked as 'is_active_research=True' 
+        by user, respecting explicit user intent as a strong signal.
+        """
         if not self.should_research():  # Global motivation gate
             logger.debug(f"Global motivation check failed - no topics will be researched")
             return []
         
-        # Score topics using comprehensive motivation calculation
+        # Filter: Only evaluate topics user has explicitly activated for research
+        active_topics = [t for t in topics if t.get('is_active_research', False)]
+        if not active_topics:
+            logger.debug(f"No active research topics found for user {user_id}")
+            return []
+        
+        logger.debug(f"Evaluating {len(active_topics)}/{len(topics)} topics marked for active research")
+        
+        # Score active topics using comprehensive motivation calculation
         scored_topics = []
-        for topic in topics:
+        for topic in active_topics:
             if self.should_research_topic(user_id, topic):
                 score = self._calculate_topic_motivation(user_id, topic)
                 scored_topics.append((topic, score))

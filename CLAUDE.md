@@ -137,11 +137,12 @@ TOPIC_STALENESS_SCALE=0.0001       # Scale factor converting time to staleness p
 
 - **Chat Pipeline**: LangGraph orchestration in `graph_builder.py`
 - **Research Engine**: Autonomous background research via `research_graph_builder.py`
-- **Intelligent Motivation System**: Hierarchical motivation with per-topic prioritization (`motivation.py`)
-  - Global motivation drives (boredom, curiosity, tiredness, satisfaction) gate overall research activity
-  - Per-topic motivation evaluates individual topics using staleness coefficients, user engagement, and success rates
+- **Intelligent Motivation System**: Two-tier hierarchical motivation with research findings engagement (`motivation.py`)
+  - **Tier 1**: Global motivation drives (boredom, curiosity, tiredness, satisfaction) gate overall research activity
+  - **Tier 2**: Among user-activated topics, prioritize by research findings interaction (heavily weighted)
+  - Research engagement scoring: % of findings read + recent reads bonus + volume bonus
   - LLM-assessed staleness coefficients (2.0=breaking news, 1.0=normal, 0.1=reference material)
-  - Integration with user engagement tracking for personalized research scheduling
+  - Respects user intent: only researches topics explicitly marked for active research
 - **Knowledge Graph**: Zep-powered memory and visualization
 - **Admin Console**: JWT-secured interface with prompt editor
 - **Search Integration**: Perplexity for internet search, OpenAlex for academic search

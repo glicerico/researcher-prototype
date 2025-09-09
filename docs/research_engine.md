@@ -74,13 +74,24 @@ global_motivation = (boredom + curiosity) - (tiredness + satisfaction)
 **Research cycle triggers when**: `global_motivation ≥ MOTIVATION_THRESHOLD`
 
 ### Tier 2: Per-Topic Prioritization  
-When globally motivated, the system evaluates each topic individually:
+When globally motivated, the system evaluates **only topics marked for active research** by the user:
 
 ```
 topic_score = staleness_pressure + (engagement_score × weight) + (quality_score × weight)
 ```
 
 **Topics researched when**: `topic_score ≥ TOPIC_MOTIVATION_THRESHOLD`
+
+#### Research Findings Engagement (Primary Signal)
+The engagement score heavily weights actual user interaction with research results:
+
+```
+engagement_score = (read_findings / total_findings) + recent_reads_bonus + volume_bonus
+```
+
+- **read_percentage**: Core metric - what % of research findings the user actually reads
+- **recent_reads_bonus**: Extra weight for findings read in the last 7 days (up to +0.5)  
+- **volume_bonus**: Bonus for users who accumulate many research findings (up to +0.3)
 
 #### Staleness Pressure Calculation
 ```
