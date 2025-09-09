@@ -115,6 +115,14 @@ def research_storage_node(state: ChatState) -> ChatState:
         "key_insights": quality_assessment.get("key_insights", []),
         "findings_summary": quality_assessment.get("findings_summary", "")
     }
+
+    # Attach search rationale for explainability if available
+    try:
+        expansion_decision = state.get("workflow_context", {}).get("expansion_decision")
+        if expansion_decision:
+            finding["search_rationale"] = expansion_decision
+    except Exception:
+        pass
     
     try:
         # Store the research finding

@@ -259,6 +259,15 @@ class AutonomousResearcher:
             logger.info(f"🔬 Starting LangGraph research workflow for topic: {topic_name}")
 
             # Create initial state for the research graph
+            # Attach a motivation snapshot for policy decisions (explore vs. exploit)
+            motivation_snapshot = {
+                "boredom": self.motivation.boredom,
+                "curiosity": self.motivation.curiosity,
+                "tiredness": self.motivation.tiredness,
+                "satisfaction": self.motivation.satisfaction,
+                "impetus": self.motivation.impetus(),
+            }
+
             research_state = {
                 "messages": [],  # Will be populated by research_initializer_node
                 "model": config.RESEARCH_MODEL,
@@ -274,6 +283,12 @@ class AutonomousResearcher:
                         "user_id": user_id,
                         "last_researched": last_researched,
                         "model": config.RESEARCH_MODEL,
+                        "motivation_snapshot": motivation_snapshot,
+                    },
+                    "research_metadata": {
+                        "topic_name": topic_name,
+                        "user_id": user_id,
+                        "motivation_system": self.motivation  # Pass motivation system instance
                     }
                 },
                 "user_id": user_id,
@@ -288,6 +303,18 @@ class AutonomousResearcher:
 
             # Extract results from the workflow
             storage_results = research_result.get("module_results", {}).get("research_storage", {})
+            dedup_results = research_result.get("module_results", {}).get("research_deduplication", {})
+            
+            # Record deduplication results for saturation analysis
+            if dedup_results.get("success", False):
+                is_duplicate = dedup_results.get("is_duplicate", False)
+                similarity_score = dedup_results.get("similarity_score", 0.0)
+                self.motivation.record_research_result(topic_name, is_duplicate, similarity_score)
+                
+                # Check if topic expansion should be triggered
+                if self.motivation.should_expand_topic(topic_name):
+                    logger.info(f"🔗 Topic '{topic_name}' is saturated - expansion would be beneficial")
+                    # Note: Actual expansion logic would be implemented in query generation
 
             if storage_results.get("success", False):
                 stored = storage_results.get("stored", False)

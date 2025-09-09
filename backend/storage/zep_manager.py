@@ -669,6 +669,114 @@ class ZepManager:
         logger.debug(f"Created {len(all_triplets)} triplets ({len(edge_triplets)} from edges, {len(isolated_triplets)} from isolated nodes)")
         return all_triplets
 
+    # =================== KG-ASSISTED TOPIC EXPANSION (PHASE 1) ===================
+    async def get_related_topics(self, user_id: str, topic_name: str, limit: int = 5) -> List[Dict[str, Any]]:
+        """
+        Retrieve related topics using Zep's semantic graph search.
+        Uses hybrid search (semantic similarity + BM25) to find semantically related entities.
+        
+        Args:
+            user_id: The user whose graph to search
+            topic_name: The seed topic to find related topics for
+            limit: Max number of related topics to return
+        Returns:
+            List of dicts: { label, relation, score, evidence_count }
+        """
+        if not self.is_enabled():
+            return []
+        
+        try:
+            # Use Zep's semantic search to find related entities (nodes)
+            search_results = await self.client.graph.search(
+                user_id=user_id,
+                query=topic_name,
+                scope="nodes",
+                limit=limit * 2  # Get more results to filter/process
+            )
+            
+            if not search_results or not hasattr(search_results, 'nodes'):
+                logger.debug(f"No semantic search results found for topic '{topic_name}'")
+                return []
+            
+            related_topics = []
+            
+            # Process search results to extract related topic information
+            for node in search_results.nodes[:limit]:
+                try:
+                    # Extract node summary/label
+                    node_summary = getattr(node, 'summary', '') or ''
+                    node_label = node_summary.strip()
+                    
+                    # Skip if this is the same as our search topic
+                    if not node_label or topic_name.lower() in node_label.lower():
+                        continue
+                    
+                    related_topics.append({
+                        "label": node_label,
+                        "relation": "semantically_related",
+                        "score": getattr(node, 'score', 0.0) or 0.0,
+                        "evidence_count": 1  # From semantic search
+                    })
+                
+                except Exception as e:
+                    logger.warning(f"Error processing search result node: {e}")
+                    continue
+            
+            # If we didn't get enough results from nodes, try searching edges too
+            if len(related_topics) < limit:
+                try:
+                    edge_results = await self.client.graph.search(
+                        user_id=user_id,
+                        query=topic_name,
+                        scope="edges",
+                        limit=limit
+                    )
+                    
+                    if edge_results and hasattr(edge_results, 'edges'):
+                        for edge in edge_results.edges:
+                            try:
+                                source_summary = getattr(edge.source, 'summary', '') or ''
+                                target_summary = getattr(edge.target, 'summary', '') or ''
+                                edge_fact = getattr(edge, 'fact', '') or ''
+                                
+                                # Choose the node that's different from our search topic
+                                if topic_name.lower() not in source_summary.lower():
+                                    related_label = source_summary.strip()
+                                elif topic_name.lower() not in target_summary.lower():
+                                    related_label = target_summary.strip()
+                                else:
+                                    continue
+                                
+                                if related_label:
+                                    related_topics.append({
+                                        "label": related_label,
+                                        "relation": edge_fact or "related_to",
+                                        "score": getattr(edge, 'score', 0.0) or 0.0,
+                                        "evidence_count": 1
+                                    })
+                            
+                            except Exception as e:
+                                logger.warning(f"Error processing edge result: {e}")
+                                continue
+                
+                except Exception as e:
+                    logger.warning(f"Error in edge search: {e}")
+            
+            # Remove duplicates and sort by score
+            seen_labels = set()
+            unique_topics = []
+            for topic in sorted(related_topics, key=lambda x: x["score"], reverse=True):
+                if topic["label"] not in seen_labels:
+                    seen_labels.add(topic["label"])
+                    unique_topics.append(topic)
+            
+            logger.info(f"Found {len(unique_topics)} related topics for '{topic_name}' using semantic search")
+            return unique_topics[:limit]
+
+        except Exception as e:
+            logger.error(f"Failed to get related topics from Zep semantic search: {str(e)}")
+            return []
+
     async def store_research_finding(
         self, 
         user_id: str, 

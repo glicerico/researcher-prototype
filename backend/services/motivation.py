@@ -5,6 +5,8 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
+from typing import Dict, List
+from collections import deque
 
 import config
 
@@ -18,6 +20,10 @@ class DriveConfig:
     tiredness_decay: float = config.MOTIVATION_TIREDNESS_DECAY
     satisfaction_decay: float = config.MOTIVATION_SATISFACTION_DECAY
     threshold: float = config.MOTIVATION_THRESHOLD
+    # Expansion configuration
+    expansion_similarity_threshold: float = 0.8  # High similarity triggers expansion consideration
+    expansion_consecutive_threshold: int = 3     # Consecutive high similarity results needed
+    expansion_max_history: int = 10             # Max history items to track per topic
 
 
 class MotivationSystem:
@@ -30,7 +36,10 @@ class MotivationSystem:
         self.tiredness = 0.0
         self.satisfaction = 0.0
         self.last_tick = time.time()
-        logger.info(f"Motivation system initialized with threshold: {self.drives.threshold}")
+        # Topic saturation tracking: topic_name -> deque of (is_duplicate, similarity_score, timestamp)
+        self.topic_saturation_history: Dict[str, deque] = {}
+        logger.info(f"Motivation system initialized with threshold: {self.drives.threshold}, "
+                   f"expansion similarity threshold: {self.drives.expansion_similarity_threshold}")
 
     def tick(self) -> None:
         """Update drive levels based on time since last tick."""
@@ -100,6 +109,46 @@ class MotivationSystem:
                    f"Curiosity: {old_curiosity:.2f} → {self.curiosity:.2f} ({self.curiosity-old_curiosity:+.2f}), "
                    f"Boredom: {old_boredom:.2f} → {self.boredom:.2f} ({self.boredom-old_boredom:+.2f}), "
                    f"New impetus: {self.impetus():.2f}")
+
+    def record_research_result(self, topic_name: str, is_duplicate: bool, similarity_score: float) -> None:
+        """Record deduplication results for saturation analysis."""
+        if topic_name not in self.topic_saturation_history:
+            self.topic_saturation_history[topic_name] = deque(maxlen=self.drives.expansion_max_history)
+        
+        current_time = time.time()
+        self.topic_saturation_history[topic_name].append((is_duplicate, similarity_score, current_time))
+        
+        logger.debug(f"Recorded research result for '{topic_name}': duplicate={is_duplicate}, "
+                    f"similarity={similarity_score:.2f}, history_size={len(self.topic_saturation_history[topic_name])}")
+
+    def should_expand_topic(self, topic_name: str) -> bool:
+        """Determine if topic should be expanded based on saturation signals."""
+        if topic_name not in self.topic_saturation_history:
+            return False
+        
+        history = self.topic_saturation_history[topic_name]
+        
+        # Need minimum history to make expansion decisions
+        if len(history) < self.drives.expansion_consecutive_threshold:
+            return False
+        
+        # Check last N results for high similarity
+        recent_results = list(history)[-self.drives.expansion_consecutive_threshold:]
+        high_similarity_count = sum(
+            1 for _, similarity_score, _ in recent_results 
+            if similarity_score >= self.drives.expansion_similarity_threshold
+        )
+        
+        should_expand = high_similarity_count >= self.drives.expansion_consecutive_threshold
+        
+        if should_expand:
+            recent_similarities = [sim for _, sim, _ in recent_results]
+            logger.info(f"Topic expansion triggered for '{topic_name}': "
+                       f"{high_similarity_count}/{self.drives.expansion_consecutive_threshold} recent results "
+                       f"above {self.drives.expansion_similarity_threshold:.2f} threshold "
+                       f"(similarities: {recent_similarities})")
+        
+        return should_expand
 
     def impetus(self) -> float:
         """Compute the overall desire to research."""
