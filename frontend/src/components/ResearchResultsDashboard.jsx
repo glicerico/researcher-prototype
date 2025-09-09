@@ -294,22 +294,6 @@ const ResearchResultsDashboard = () => {
     }
   };
 
-  // Handle mark as read
-  const handleMarkAsRead = async (findingId) => {
-    try {
-      await markFindingAsRead(findingId);
-      await loadResearchData();
-      
-      // Track mark as read interaction - shows content consumption (manual click)
-      trackInteraction(`finding_${findingId}`, 'mark_read', {
-        action: 'manual_read',
-        findingId,
-        trigger: 'manual_click'
-      });
-    } catch (err) {
-      console.error('Error marking finding as read:', err);
-    }
-  };
 
   // Handle delete individual finding
   const handleDeleteFinding = async (findingId, findingSummary) => {
@@ -691,18 +675,6 @@ const ResearchResultsDashboard = () => {
                                 {bookmarkedFindings.has(finding.finding_id) ? '⭐' : '☆'}
                               </button>
                               
-                              {!finding.read && (
-                                <button
-                                  className="mark-read-btn"
-                                  onClick={(e) => {
-                                    e.stopPropagation();
-                                    handleMarkAsRead(finding.finding_id);
-                                  }}
-                                  title="Mark as read"
-                                >
-                                  ✓
-                                </button>
-                              )}
                               
                               {!finding.integrated && (
                                 <button

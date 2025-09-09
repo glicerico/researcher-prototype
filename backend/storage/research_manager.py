@@ -405,16 +405,7 @@ class ResearchManager:
             return False
 
     def mark_finding_as_read(self, user_id: str, finding_id: str) -> bool:
-        """
-        Mark a research finding as read.
-
-        Args:
-            user_id: The ID of the user
-            finding_id: The ID of the finding
-
-        Returns:
-            True if successful, False otherwise
-        """
+        """Mark a research finding as read and persist it."""
         try:
             findings_data = self.storage.read(self._get_research_findings_path(user_id))
             if not findings_data:
@@ -436,6 +427,7 @@ class ResearchManager:
         except Exception as e:
             logger.error(f"Error marking finding as read for user {user_id}: {str(e)}")
             return False
+
 
     def mark_finding_as_integrated(self, user_id: str, finding_id: str) -> bool:
         """

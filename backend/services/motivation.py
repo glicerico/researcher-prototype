@@ -201,7 +201,12 @@ class MotivationSystem:
             return 0.0
     
     def _get_analytics_engagement(self, user_id: str, topic_name: str) -> float:
-        """Get engagement from general analytics (secondary signal)."""
+        """
+        Get engagement from PersonalizationManager tracking (secondary signal).
+        
+        This method looks for indirect signals of topic engagement through
+        the PersonalizationManager's tracking of user interactions.
+        """
         try:
             # Get user profile data which contains engagement analytics
             profile = self.personalization_manager.profile_manager.get_user_profile(user_id)
@@ -210,28 +215,33 @@ class MotivationSystem:
                 
             # Extract engagement data from analytics
             analytics = profile.get('analytics', {})
-            research_data = analytics.get('research_engagement', {})
+            interaction_signals = analytics.get('interaction_signals', {})
             
-            if not research_data:
+            if not interaction_signals:
                 return 0.0
             
-            # Calculate score from various analytics signals
+            # Calculate score from tracked engagement signals
             engagement_score = 0.0
             
-            # Manual reads are stronger signals than expansion reads
-            manual_reads = research_data.get('manual_reads', {}).get(topic_name, 0)
-            expansion_reads = research_data.get('expansion_reads', {}).get(topic_name, 0)
-            engagement_score += manual_reads * 0.3 + expansion_reads * 0.1
+            # Source type engagement (if user positively engages with research sources)
+            most_engaged_sources = interaction_signals.get('most_engaged_source_types', [])
+            if most_engaged_sources:
+                # Users with source preferences show research engagement
+                engagement_score += min(len(most_engaged_sources) * 0.15, 0.4)
             
-            # Source exploration
-            source_clicks = research_data.get('source_clicks', {}).get(topic_name, 0)
-            engagement_score += source_clicks * 0.2
+            # Follow-up question frequency (shows continued engagement)
+            follow_up_freq = interaction_signals.get('follow_up_question_frequency', 0.0)
+            engagement_score += follow_up_freq * 0.3
             
-            # Research activation 
-            activations = research_data.get('activations', {}).get(topic_name, 0)
-            engagement_score += activations * 0.4
+            # NOTE: The PersonalizationManager tracks topic expansions, bookmarks, and mark_read 
+            # actions via engagement_events, but these are not currently stored in a queryable
+            # way by topic. The primary signal remains research findings read status.
             
-            return min(engagement_score / 3.0, 1.0)
+            # Small baseline for users who have any tracked preferences
+            if most_engaged_sources or follow_up_freq > 0:
+                engagement_score += 0.2
+            
+            return min(engagement_score, 1.0)
             
         except Exception as e:
             logger.debug(f"Error getting analytics engagement for {topic_name}: {str(e)}")
