@@ -158,6 +158,25 @@ class PersonalizationManager:
                         analytics
                     )
                     logger.debug(f"👤 PersonalizationManager: ✅ Updated bookmark analytics for user {user_id}")
+            elif interaction_type == "integrate_to_knowledge_graph":
+                # Integration indicates very strong utility; record analytics
+                content_data = metadata.get("data", {})
+                finding_id = content_data.get("findingId")
+                topic_name = content_data.get("topicName")
+                if finding_id:
+                    analytics = self.profile_manager.get_engagement_analytics(user_id)
+                    if topic_name:
+                        by_topic = analytics.get("integrations_by_topic", {})
+                        by_topic[topic_name] = by_topic.get(topic_name, 0) + 1
+                        analytics["integrations_by_topic"] = by_topic
+                    recent = analytics.get("integrated_findings", [])
+                    recent.append(finding_id)
+                    analytics["integrated_findings"] = recent[-50:]
+                    self.profile_manager.storage.write(
+                        self.profile_manager._get_engagement_analytics_path(user_id),
+                        analytics
+                    )
+                    logger.debug(f"👤 PersonalizationManager: ✅ Updated integration analytics for user {user_id}")
                     
             elif interaction_type == "expand":
                 # Topic expansion shows interest in that topic area

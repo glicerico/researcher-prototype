@@ -338,6 +338,8 @@ class ProfileManager:
             },
             "bookmarks_by_topic": {},
             "bookmarked_findings": [],
+            "integrations_by_topic": {},
+            "integrated_findings": [],
             "learned_adaptations": {
                 "tone_adjustments": {}
             }
