@@ -400,6 +400,16 @@ export const getResearchFindings = async (userId, topicName = null, unreadOnly =
   }
 };
 
+export const setFindingBookmarked = async (findingId, bookmarked) => {
+  try {
+    const response = await api.post(`/research/findings/${findingId}/bookmark`, { bookmarked });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating finding bookmark:', error);
+    throw error;
+  }
+};
+
 export const markFindingAsRead = async (findingId) => {
   try {
     const response = await api.post(`/research/findings/${findingId}/mark_read`);

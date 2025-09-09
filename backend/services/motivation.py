@@ -171,6 +171,7 @@ class MotivationSystem:
             
             total_findings = len(all_findings)
             read_findings = sum(1 for f in all_findings if f.get('read', False))
+            bookmarked_findings = sum(1 for f in all_findings if f.get('bookmarked', False))
             
             # Base engagement: percentage of findings read
             read_percentage = read_findings / total_findings if total_findings > 0 else 0.0
@@ -187,11 +188,14 @@ class MotivationSystem:
             # Total findings bonus (more findings = more research value demonstrated)
             volume_bonus = min(total_findings * 0.1, 0.3)  # Up to 0.3 bonus for research volume
             
-            total_score = read_percentage + recent_bonus + volume_bonus
+            # Bookmarks indicate strong interest in a topic
+            bookmark_bonus = min(bookmarked_findings * 0.15, 0.45)  # up to 0.45
+
+            total_score = read_percentage + recent_bonus + volume_bonus + bookmark_bonus
             
             logger.debug(f"Research findings engagement for {topic_name}: "
                         f"{read_findings}/{total_findings} read ({read_percentage:.2f}), "
-                        f"recent_bonus: {recent_bonus:.2f}, volume_bonus: {volume_bonus:.2f}, "
+                        f"recent_bonus: {recent_bonus:.2f}, volume_bonus: {volume_bonus:.2f}, bookmark_bonus: {bookmark_bonus:.2f}, "
                         f"total: {total_score:.2f}")
             
             return min(total_score, 2.0)  # Cap at 2.0 to allow for heavy weighting

@@ -8,7 +8,8 @@ import {
   markFindingAsRead,
   deleteResearchFinding,
   deleteAllTopicFindings,
-  integrateResearchFinding
+  integrateResearchFinding,
+  setFindingBookmarked
 } from '../services/api';
 import { useEngagementTracking } from '../utils/engagementTracker';
 import '../styles/ResearchResultsDashboard.css';
@@ -255,7 +256,7 @@ const ResearchResultsDashboard = () => {
   };
 
   // Handle bookmark toggle
-  const toggleBookmark = (findingId) => {
+  const toggleBookmark = async (findingId, topicName) => {
     const newBookmarked = new Set(bookmarkedFindings);
     const isBookmarking = !newBookmarked.has(findingId);
     
@@ -265,13 +266,25 @@ const ResearchResultsDashboard = () => {
       newBookmarked.add(findingId);
     }
     setBookmarkedFindings(newBookmarked);
-    
     localStorage.setItem('bookmarkedFindings', JSON.stringify([...newBookmarked]));
-    
-    // Track bookmark interaction - shows user interest
+
+    // Persist bookmark server-side
+    try {
+      await setFindingBookmarked(findingId, isBookmarking);
+    } catch (e) {
+      console.error('Error persisting bookmark state:', e);
+      // roll back UI state in case of failure
+      const rollback = new Set(newBookmarked);
+      if (isBookmarking) rollback.delete(findingId); else rollback.add(findingId);
+      setBookmarkedFindings(rollback);
+      localStorage.setItem('bookmarkedFindings', JSON.stringify([...rollback]));
+    }
+
+    // Track bookmark interaction - include topic for analytics
     trackInteraction(`finding_${findingId}`, isBookmarking ? 'bookmark' : 'unbookmark', {
       action: isBookmarking ? 'add' : 'remove',
-      findingId
+      findingId,
+      topicName
     });
   };
 
@@ -668,7 +681,7 @@ const ResearchResultsDashboard = () => {
                                 className={`bookmark-btn ${bookmarkedFindings.has(finding.finding_id) ? 'bookmarked' : ''}`}
                                 onClick={(e) => {
                                   e.stopPropagation();
-                                  toggleBookmark(finding.finding_id);
+                                  toggleBookmark(finding.finding_id, topicName);
                                 }}
                                 title={bookmarkedFindings.has(finding.finding_id) ? 'Remove bookmark' : 'Bookmark'}
                               >

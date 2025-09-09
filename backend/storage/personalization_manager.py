@@ -136,12 +136,28 @@ class PersonalizationManager:
         if event_type == "content_interaction":
             # Handle implicit feedback from content interactions
             if interaction_type == "bookmark":
-                # Bookmarking shows strong interest - boost source preferences
+                # Bookmarking shows strong interest - record analytics
                 content_data = metadata.get("data", {})
                 finding_id = content_data.get("findingId")
+                topic_name = content_data.get("topicName")
                 if finding_id:
                     logger.debug(f"👤 PersonalizationManager: Learning from bookmark action for user {user_id}")
-                    # This indicates positive engagement - could be used to boost topic/source preferences
+                    analytics = self.profile_manager.get_engagement_analytics(user_id)
+                    # Increment per-topic bookmark count
+                    if topic_name:
+                        by_topic = analytics.get("bookmarks_by_topic", {})
+                        by_topic[topic_name] = by_topic.get(topic_name, 0) + 1
+                        analytics["bookmarks_by_topic"] = by_topic
+                    # Maintain recent bookmarked finding ids (max 50)
+                    recent = analytics.get("bookmarked_findings", [])
+                    recent.append(finding_id)
+                    analytics["bookmarked_findings"] = recent[-50:]
+                    # Persist analytics
+                    self.profile_manager.storage.write(
+                        self.profile_manager._get_engagement_analytics_path(user_id),
+                        analytics
+                    )
+                    logger.debug(f"👤 PersonalizationManager: ✅ Updated bookmark analytics for user {user_id}")
                     
             elif interaction_type == "expand":
                 # Topic expansion shows interest in that topic area

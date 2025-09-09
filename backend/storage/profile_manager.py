@@ -336,6 +336,8 @@ class ProfileManager:
                 "most_engaged_source_types": [],
                 "follow_up_question_frequency": 0.0
             },
+            "bookmarks_by_topic": {},
+            "bookmarked_findings": [],
             "learned_adaptations": {
                 "tone_adjustments": {}
             }

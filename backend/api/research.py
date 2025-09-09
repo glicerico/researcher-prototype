@@ -19,6 +19,10 @@ class MotivationConfigUpdate(BaseModel):
     satisfaction_decay: Optional[float] = None
 
 
+class BookmarkUpdate(BaseModel):
+    bookmarked: bool
+
+
 @router.get("/research/findings/{user_id}")
 async def get_research_findings(
     user_id: str,
@@ -141,6 +145,31 @@ async def integrate_research_finding(finding_id: str, user_id: str = Depends(get
     except Exception as e:
         logger.error(f"Error integrating finding {finding_id} for user {user_id}: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error integrating finding: {str(e)}")
+
+
+@router.post("/research/findings/{finding_id}/bookmark")
+async def bookmark_research_finding(
+    finding_id: str,
+    update: BookmarkUpdate,
+    user_id: str = Depends(get_or_create_user_id)
+):
+    """Bookmark or unbookmark a specific research finding."""
+    try:
+        success = research_manager.mark_finding_bookmarked(user_id, finding_id, update.bookmarked)
+        if not success:
+            raise HTTPException(status_code=404, detail="Finding not found")
+
+        return {
+            "success": True,
+            "message": ("Bookmarked" if update.bookmarked else "Unbookmarked") + f" finding {finding_id}",
+            "finding_id": finding_id,
+            "bookmarked": update.bookmarked,
+        }
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Error updating bookmark for finding {finding_id} for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error updating bookmark: {str(e)}")
 
 
 @router.delete("/research/findings/{finding_id}")

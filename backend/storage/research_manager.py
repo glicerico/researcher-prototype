@@ -381,11 +381,12 @@ class ResearchManager:
                 findings_data[topic_name] = []
                 findings_data["metadata"]["topics_count"] = findings_data["metadata"].get("topics_count", 0) + 1
 
-            # Add unique ID, read status, and integration status
+            # Add unique ID, read status, bookmarked and integration status
             finding["finding_id"] = (
                 f"{user_id}_{topic_name.replace(' ', '_')}_{int(finding.get('research_time', time.time()))}"
             )
             finding["read"] = False
+            finding["bookmarked"] = False
             finding["integrated"] = False
 
             # Store the finding
@@ -402,6 +403,27 @@ class ResearchManager:
 
         except Exception as e:
             logger.error(f"Error storing research finding for user {user_id}, topic '{topic_name}': {str(e)}")
+            return False
+
+    def mark_finding_bookmarked(self, user_id: str, finding_id: str, bookmarked: bool) -> bool:
+        """Mark or unmark a research finding as bookmarked."""
+        try:
+            findings_data = self.storage.read(self._get_research_findings_path(user_id))
+            if not findings_data:
+                return False
+
+            for topic_name, findings in findings_data.items():
+                if topic_name == "metadata":
+                    continue
+                for finding in findings:
+                    if finding.get("finding_id") == finding_id:
+                        finding["bookmarked"] = bool(bookmarked)
+                        return self.storage.write(self._get_research_findings_path(user_id), findings_data)
+
+            logger.warning(f"Bookmark: finding {finding_id} not found for user {user_id}")
+            return False
+        except Exception as e:
+            logger.error(f"Error bookmarking finding {finding_id} for user {user_id}: {str(e)}")
             return False
 
     def mark_finding_as_read(self, user_id: str, finding_id: str) -> bool:
