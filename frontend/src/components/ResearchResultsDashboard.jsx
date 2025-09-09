@@ -576,7 +576,8 @@ const ResearchResultsDashboard = () => {
                 checked={filters.unreadOnly}
                 onChange={(e) => setFilters(prev => ({ ...prev, unreadOnly: e.target.checked }))}
               />
-              <span>Unread only</span>
+              <span className="checkbox-box" aria-hidden="true"></span>
+              <span className="checkbox-text">Unread only</span>
             </label>
           </div>
 
@@ -588,7 +589,8 @@ const ResearchResultsDashboard = () => {
                 checked={filters.bookmarkedOnly}
                 onChange={(e) => setFilters(prev => ({ ...prev, bookmarkedOnly: e.target.checked }))}
               />
-              <span>Bookmarked only</span>
+              <span className="checkbox-box" aria-hidden="true"></span>
+              <span className="checkbox-text">Bookmarked only</span>
             </label>
           </div>
 

@@ -338,18 +338,25 @@
 .checkbox-filter input {
   margin: 0;
   cursor: pointer;
+  position: absolute;
+  opacity: 0;
+  width: 1px;
+  height: 1px;
+  pointer-events: none;
 }
 
-.checkbox-filter input:checked + span {
+.checkbox-filter input:checked + .checkbox-box {
   background-color: var(--primary-color);
   border-color: var(--primary-color);
 }
-.checkbox-filter input:checked + span::after {
+.checkbox-filter input:checked + .checkbox-box::after {
   opacity: 1;
   color: #000;
 }
-.checkbox-filter span {
+.checkbox-filter .checkbox-box {
   user-select: none;
+  position: relative;
+  display: inline-block;
   width: 1.1rem;
   height: 1.1rem;
   border: 1px solid var(--border-color);
@@ -358,7 +365,7 @@
   transition: all 0.2s ease;
 }
 
-.checkbox-filter span::after {
+.checkbox-filter .checkbox-box::after {
   content: '✔';
   position: absolute;
   top: 50%;
@@ -367,6 +374,11 @@
   font-size: 0.8rem;
   opacity: 0;
   transition: opacity 0.2s ease;
+}
+
+.checkbox-filter .checkbox-text {
+  color: var(--text-secondary-color);
+  font-size: 0.875rem;
 }
 
 .clear-filters-btn {
