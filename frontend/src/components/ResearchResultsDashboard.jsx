@@ -31,6 +31,7 @@ const ResearchResultsDashboard = () => {
     searchTerm: '',
     dateRange: 'all',
     unreadOnly: false,
+    bookmarkedOnly: false,
     sortBy: 'date',
     sortOrder: 'desc'
   });
@@ -182,6 +183,13 @@ const ResearchResultsDashboard = () => {
       );
     }
 
+    // Bookmarked filter
+    if (filters.bookmarkedOnly) {
+      topics = topics.filter(topic =>
+        (researchData[topic] || []).some(finding => (finding.bookmarked || bookmarkedFindings.has(finding.finding_id)))
+      );
+    }
+
     // Sort topics
     topics.sort((a, b) => {
       const aFindings = researchData[a];
@@ -205,7 +213,7 @@ const ResearchResultsDashboard = () => {
     });
 
     return topics;
-  }, [researchData, filters]);
+  }, [researchData, filters, bookmarkedFindings]);
 
   // Handle topic expand/collapse
   const toggleTopic = async (topicName) => {
@@ -420,6 +428,7 @@ const ResearchResultsDashboard = () => {
       searchTerm: '',
       dateRange: 'all',
       unreadOnly: false,
+      bookmarkedOnly: false,
       sortBy: 'date',
       sortOrder: 'desc'
     });
@@ -471,7 +480,7 @@ const ResearchResultsDashboard = () => {
   const unreadCount = Object.values(researchData).reduce((sum, findings) => 
     sum + findings.filter(f => !f.read).length, 0
   );
-  const hasActiveFilters = filters.searchTerm || filters.dateRange !== 'all' || filters.unreadOnly;
+  const hasActiveFilters = filters.searchTerm || filters.dateRange !== 'all' || filters.unreadOnly || filters.bookmarkedOnly;
 
   return (
     <div className="research-dashboard" ref={scrollContainerRef}>
@@ -571,6 +580,18 @@ const ResearchResultsDashboard = () => {
             </label>
           </div>
 
+          {/* Bookmarked Filter */}
+          <div className="filter-group checkbox-group">
+            <label className="checkbox-filter">
+              <input
+                type="checkbox"
+                checked={filters.bookmarkedOnly}
+                onChange={(e) => setFilters(prev => ({ ...prev, bookmarkedOnly: e.target.checked }))}
+              />
+              <span>Bookmarked only</span>
+            </label>
+          </div>
+
           {/* Clear Filters */}
           {hasActiveFilters && (
             <div className="filter-group clear-group">
@@ -610,7 +631,10 @@ const ResearchResultsDashboard = () => {
         ) : (
           <div className="topics-list">
             {filteredTopics.map(topicName => {
-              const findings = researchData[topicName];
+              let findings = researchData[topicName];
+              if (filters.bookmarkedOnly) {
+                findings = findings.filter(f => (f.bookmarked || bookmarkedFindings.has(f.finding_id)));
+              }
               const isExpanded = expandedTopics.has(topicName);
               const unreadInTopic = findings.filter(f => !f.read).length;
               const latestFinding = findings[0];
