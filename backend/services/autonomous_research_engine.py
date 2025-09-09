@@ -16,6 +16,7 @@ logger = get_logger(__name__)
 import config
 from storage.profile_manager import ProfileManager
 from storage.research_manager import ResearchManager
+from storage.personalization_manager import PersonalizationManager
 from research_graph_builder import research_graph
 from services.motivation import MotivationSystem
 
@@ -25,13 +26,20 @@ class AutonomousResearcher:
     LangGraph-based autonomous research engine that conducts background research on subscribed topics.
     """
 
-    def __init__(self, profile_manager: ProfileManager, research_manager: ResearchManager, motivation_config_override: dict = None):
+    def __init__(self, profile_manager: ProfileManager, research_manager: ResearchManager, motivation_config_override: dict = None, personalization_manager: PersonalizationManager = None):
         """Initialize the autonomous researcher."""
         self.profile_manager = profile_manager
         self.research_manager = research_manager
         self.research_graph = research_graph
         self.is_running = False
         self.research_task = None
+        
+        # Use provided PersonalizationManager or create one using the same storage as profile_manager
+        if personalization_manager:
+            self.personalization_manager = personalization_manager
+        else:
+            # Extract storage manager from profile_manager to avoid duplication
+            self.personalization_manager = PersonalizationManager(profile_manager.storage, profile_manager)
         
         # Create motivation system with config overrides if provided
         if motivation_config_override:
@@ -40,9 +48,9 @@ class AutonomousResearcher:
             for key, value in motivation_config_override.items():
                 if hasattr(drives_config, key):
                     setattr(drives_config, key, value)
-            self.motivation = MotivationSystem(drives_config)
+            self.motivation = MotivationSystem(drives_config, self.personalization_manager)
         else:
-            self.motivation = MotivationSystem()
+            self.motivation = MotivationSystem(personalization_manager=self.personalization_manager)
             
         self.check_interval = config.MOTIVATION_CHECK_INTERVAL
 
@@ -158,8 +166,16 @@ class AutonomousResearcher:
 
                     logger.info(f"🔬 User {user_id} has {len(active_topics)} active research topics")
 
-                    # Limit topics per user
-                    topics_to_research = active_topics[: self.max_topics_per_user]
+                    # Use engagement-aware motivation system to prioritize topics
+                    prioritized_topics = self.motivation.evaluate_topics(user_id, active_topics)
+                    
+                    if not prioritized_topics:
+                        logger.debug(f"🔬 No topics motivated for research for user {user_id}")
+                        continue
+
+                    # Limit topics per user (already sorted by priority)
+                    topics_to_research = prioritized_topics[: self.max_topics_per_user]
+                    logger.info(f"🔬 Selected {len(topics_to_research)} prioritized topics for user {user_id}")
 
                     for topic in topics_to_research:
                         try:

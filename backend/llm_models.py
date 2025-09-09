@@ -26,6 +26,12 @@ class TopicSuggestionItem(BaseModel):
     name: str = Field(description="A concise, descriptive name for the topic (2-6 words)")
     description: str = Field(description="A brief explanation of what research would cover (1-2 sentences)")
     confidence_score: float = Field(description="Float between 0.0-1.0 indicating how research-worthy this topic is", ge=0.0, le=1.0)
+    staleness_coefficient: float = Field(
+        description="How quickly research pressure builds for this topic (0.1=very slow, 1.0=normal, 2.0=urgent)", 
+        ge=0.1, 
+        le=2.0,
+        default=1.0
+    )
 
 
 class TopicSuggestions(BaseModel):

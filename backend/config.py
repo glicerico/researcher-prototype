@@ -102,6 +102,12 @@ MOTIVATION_CURIOSITY_DECAY = float(os.getenv("MOTIVATION_CURIOSITY_DECAY", "0.00
 MOTIVATION_TIREDNESS_DECAY = float(os.getenv("MOTIVATION_TIREDNESS_DECAY", "0.0002"))
 MOTIVATION_SATISFACTION_DECAY = float(os.getenv("MOTIVATION_SATISFACTION_DECAY", "0.0002"))
 
+# Topic-level motivation parameters
+TOPIC_MOTIVATION_THRESHOLD = float(os.getenv("TOPIC_MOTIVATION_THRESHOLD", "0.5"))
+TOPIC_ENGAGEMENT_WEIGHT = float(os.getenv("TOPIC_ENGAGEMENT_WEIGHT", "0.3"))
+TOPIC_QUALITY_WEIGHT = float(os.getenv("TOPIC_QUALITY_WEIGHT", "0.2"))
+TOPIC_STALENESS_SCALE = float(os.getenv("TOPIC_STALENESS_SCALE", "0.0001"))  # Scale factor for staleness time
+
 # Admin interface configuration
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")  # Change this in production!
 ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET", "your-secret-key-change-in-production")

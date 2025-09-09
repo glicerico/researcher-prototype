@@ -427,6 +427,14 @@ For each topic, provide:
 - name: A concise, descriptive name (2-6 words) related to the current conversation
 - description: A brief explanation of what research would cover (1-2 sentences)
 - confidence_score: Float between 0.0-1.0 indicating how research-worthy this topic is
+- staleness_coefficient: Float between 0.1-2.0 indicating how quickly research pressure builds for this topic
+
+STALENESS COEFFICIENT GUIDELINES:
+- 2.0: Breaking news, urgent developments
+- 1.5: Technology trends, current events  
+- 1.0: General topics (default)
+- 0.5: Historical or theoretical topics
+- 0.1: Reference material, stable facts
 
 Return ONLY topics with confidence_score >= {min_confidence}
 Limit to maximum {max_suggestions} topics per conversation

@@ -17,6 +17,7 @@ def mock_profile_manager():
     """Create a mock ProfileManager for testing."""
     manager = MagicMock(spec=ProfileManager)
     manager.list_users.return_value = ["user1", "user2"]
+    manager.storage = MagicMock()  # Add mock storage for PersonalizationManager initialization
     return manager
 
 
@@ -438,8 +439,9 @@ class TestResearchCycleIntegration:
         autonomous_researcher.profile_manager.list_users.return_value = ["user1"]
         autonomous_researcher.research_manager.get_active_research_topics.return_value = sample_topics
         
-        
-        result = await autonomous_researcher._conduct_research_cycle()
+        # Mock motivation system to return all topics as motivated
+        with patch.object(autonomous_researcher.motivation, 'evaluate_topics', return_value=sample_topics):
+            result = await autonomous_researcher._conduct_research_cycle()
         
         assert result["topics_researched"] == 2
         assert result["findings_stored"] == 2
@@ -516,7 +518,9 @@ class TestErrorHandling:
         
         autonomous_researcher.research_manager.get_active_research_topics.side_effect = mock_get_active_topics
         
-        result = await autonomous_researcher._conduct_research_cycle()
+        # Mock motivation system to return topics as motivated for user2
+        with patch.object(autonomous_researcher.motivation, 'evaluate_topics', return_value=sample_topics):
+            result = await autonomous_researcher._conduct_research_cycle()
         
         # Should complete with results from user2 only
         assert result["topics_researched"] == 2  # Only user2's topics

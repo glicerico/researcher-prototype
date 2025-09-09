@@ -146,7 +146,8 @@ def topic_extractor_node(state: ChatState) -> ChatState:
                 valid_topics.append({
                     "name": topic.name,
                     "description": topic.description,
-                    "confidence_score": topic.confidence_score
+                    "confidence_score": topic.confidence_score,
+                    "staleness_coefficient": topic.staleness_coefficient
                 })
         
         # Sort by confidence score (highest first)

@@ -5,6 +5,7 @@ from __future__ import annotations
 import logging
 import time
 from dataclasses import dataclass
+from typing import List, Dict, Any, Optional
 
 import config
 
@@ -18,19 +19,24 @@ class DriveConfig:
     tiredness_decay: float = config.MOTIVATION_TIREDNESS_DECAY
     satisfaction_decay: float = config.MOTIVATION_SATISFACTION_DECAY
     threshold: float = config.MOTIVATION_THRESHOLD
+    topic_threshold: float = config.TOPIC_MOTIVATION_THRESHOLD
+    engagement_weight: float = config.TOPIC_ENGAGEMENT_WEIGHT
+    quality_weight: float = config.TOPIC_QUALITY_WEIGHT
+    staleness_scale: float = config.TOPIC_STALENESS_SCALE
 
 
 class MotivationSystem:
     """Track motivation drives and decide when research should occur."""
 
-    def __init__(self, drives: DriveConfig | None = None) -> None:
+    def __init__(self, drives: DriveConfig | None = None, personalization_manager=None) -> None:
         self.drives = drives or DriveConfig()
+        self.personalization_manager = personalization_manager
         self.boredom = 0.0
         self.curiosity = 0.0
         self.tiredness = 0.0
         self.satisfaction = 0.0
         self.last_tick = time.time()
-        logger.info(f"Motivation system initialized with threshold: {self.drives.threshold}")
+        logger.info(f"Motivation system initialized with threshold: {self.drives.threshold}, topic threshold: {self.drives.topic_threshold}")
 
     def tick(self) -> None:
         """Update drive levels based on time since last tick."""
@@ -116,3 +122,128 @@ class MotivationSystem:
                        f"Satisfaction: {self.satisfaction:.2f}, Tiredness: {self.tiredness:.2f})")
         
         return should_do_research
+
+    def _get_topic_engagement_score(self, user_id: str, topic_name: str) -> float:
+        """Extract engagement score from existing tracking data."""
+        if not self.personalization_manager:
+            return 0.0
+            
+        try:
+            # Get user profile data which contains engagement analytics
+            profile = self.personalization_manager.profile_manager.get_user_profile(user_id)
+            if not profile:
+                return 0.0
+                
+            # Extract engagement data from analytics
+            analytics = profile.get('analytics', {})
+            research_data = analytics.get('research_engagement', {})
+            
+            # Calculate engagement score based on various signals
+            engagement_score = 0.0
+            
+            # Manual reads are stronger signals than expansion reads
+            manual_reads = research_data.get('manual_reads', {}).get(topic_name, 0)
+            expansion_reads = research_data.get('expansion_reads', {}).get(topic_name, 0)
+            
+            # Weight manual reads higher (0.8) than expansion reads (0.3)
+            engagement_score += manual_reads * 0.8 + expansion_reads * 0.3
+            
+            # Add source exploration bonus
+            source_clicks = research_data.get('source_clicks', {}).get(topic_name, 0)
+            engagement_score += source_clicks * 0.4
+            
+            # Add research activation bonus (user actively enabled research)
+            activations = research_data.get('activations', {}).get(topic_name, 0)
+            engagement_score += activations * 1.0
+            
+            # Normalize to 0-1 range (cap at reasonable maximum)
+            return min(engagement_score / 5.0, 1.0)
+            
+        except Exception as e:
+            logger.debug(f"Error getting topic engagement score for {topic_name}: {str(e)}")
+            return 0.0
+
+    def _get_topic_success_rate(self, user_id: str, topic_name: str) -> float:
+        """Calculate research success rate from user engagement patterns."""
+        if not self.personalization_manager:
+            return 0.5  # Default neutral success rate
+            
+        try:
+            profile = self.personalization_manager.profile_manager.get_user_profile(user_id)
+            if not profile:
+                return 0.5
+                
+            analytics = profile.get('analytics', {})
+            
+            # High engagement after research indicates successful research
+            engagement_score = self._get_topic_engagement_score(user_id, topic_name)
+            
+            # Use engagement as proxy for success rate
+            # Higher engagement = more successful research
+            success_rate = 0.3 + (engagement_score * 0.4)  # Range: 0.3-0.7
+            
+            return success_rate
+            
+        except Exception as e:
+            logger.debug(f"Error getting topic success rate for {topic_name}: {str(e)}")
+            return 0.5
+
+    def should_research_topic(self, user_id: str, topic: Dict[str, Any]) -> bool:
+        """Check if specific topic should be researched (after global check)."""
+        if not self.should_research():  # Global motivation gate
+            return False
+            
+        topic_motivation = self._calculate_topic_motivation(user_id, topic)
+        should_research = topic_motivation >= self.drives.topic_threshold
+        
+        if should_research:
+            topic_name = topic.get('topic_name', 'Unknown')
+            logger.info(f"Topic research triggered for '{topic_name}' - motivation: {topic_motivation:.2f} >= threshold: {self.drives.topic_threshold:.2f}")
+        
+        return should_research
+
+    def _calculate_topic_motivation(self, user_id: str, topic: Dict[str, Any]) -> float:
+        """Calculate topic-specific motivation score."""
+        # Staleness pressure based on time since last research
+        last_researched = topic.get('last_researched', 0)
+        if last_researched == 0:
+            # Never researched - give immediate moderate pressure
+            staleness_time = 3600  # Equivalent to 1 hour
+        else:
+            staleness_time = time.time() - last_researched
+            
+        staleness_coefficient = topic.get('staleness_coefficient', 1.0)
+        staleness_pressure = staleness_time * staleness_coefficient * self.drives.staleness_scale
+        
+        # Get engagement-based factors
+        engagement_score = self._get_topic_engagement_score(user_id, topic.get('topic_name', ''))
+        success_rate = self._get_topic_success_rate(user_id, topic.get('topic_name', ''))
+        
+        # Calculate final motivation score
+        topic_motivation = (staleness_pressure + 
+                          engagement_score * self.drives.engagement_weight +
+                          success_rate * self.drives.quality_weight)
+        
+        return topic_motivation
+
+    def evaluate_topics(self, user_id: str, topics: List[Dict[str, Any]]) -> List[Dict[str, Any]]:
+        """Return engagement-prioritized topics ready for research."""
+        if not self.should_research():  # Global motivation gate
+            logger.debug(f"Global motivation check failed - no topics will be researched")
+            return []
+        
+        # Score topics using comprehensive motivation calculation
+        scored_topics = []
+        for topic in topics:
+            if self.should_research_topic(user_id, topic):
+                score = self._calculate_topic_motivation(user_id, topic)
+                scored_topics.append((topic, score))
+        
+        # Sort by motivation score (highest first)
+        sorted_topics = sorted(scored_topics, key=lambda x: x[1], reverse=True)
+        
+        if sorted_topics:
+            topic_names = [topic['topic_name'] for topic, score in sorted_topics[:3]]
+            logger.info(f"Motivated topics for user {user_id}: {', '.join(topic_names)}")
+        
+        return [topic for topic, score in sorted_topics]
