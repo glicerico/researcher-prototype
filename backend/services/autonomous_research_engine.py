@@ -47,13 +47,12 @@ class AutonomousResearcher:
         self.check_interval = config.MOTIVATION_CHECK_INTERVAL
 
         # Configure research parameters from config
-        self.research_interval = config.RESEARCH_INTERVAL_HOURS * 3600  # Convert to seconds
         self.max_topics_per_user = config.RESEARCH_MAX_TOPICS_PER_USER
         self.quality_threshold = config.RESEARCH_QUALITY_THRESHOLD
         self.enabled = config.RESEARCH_ENGINE_ENABLED
 
         logger.info(
-            f"🔬 LangGraph Autonomous Researcher initialized - Enabled: {self.enabled}, Interval: {config.RESEARCH_INTERVAL_HOURS}h"
+            f"🔬 LangGraph Autonomous Researcher initialized - Enabled: {self.enabled}"
         )
 
     async def start(self):
@@ -164,10 +163,6 @@ class AutonomousResearcher:
 
                     for topic in topics_to_research:
                         try:
-                            # Check if topic needs research (hasn't been researched recently)
-                            if not self._should_research_topic(topic):
-                                continue
-
                             logger.info(f"🔬 Researching topic: {topic['topic_name']} for user {user_id}")
 
                             # Conduct research for this topic using LangGraph
@@ -217,28 +212,6 @@ class AutonomousResearcher:
                 "average_quality": 0.0,
             }
 
-    def _should_research_topic(self, topic: Dict[str, Any]) -> bool:
-        """
-        Determine if a topic should be researched based on last research time.
-
-        Args:
-            topic: Topic dictionary with research metadata
-
-        Returns:
-            True if topic should be researched, False otherwise
-        """
-        last_researched = topic.get("last_researched")
-
-        if not last_researched:
-            # Never researched, should research
-            return True
-
-        # Check if enough time has passed since last research
-        current_time = time.time()
-        time_since_last_research = current_time - last_researched
-        min_interval = self.research_interval  # Same as engine interval
-
-        return time_since_last_research >= min_interval
 
     async def _research_topic_with_langgraph(self, user_id: str, topic: Dict[str, Any]) -> Optional[Dict[str, Any]]:
         """
@@ -409,7 +382,6 @@ class AutonomousResearcher:
         return {
             "enabled": self.enabled,
             "running": self.is_running,
-            "research_interval_hours": config.RESEARCH_INTERVAL_HOURS,
             "quality_threshold": self.quality_threshold,
             "max_topics_per_user": self.max_topics_per_user,
             "retention_days": config.RESEARCH_FINDINGS_RETENTION_DAYS,

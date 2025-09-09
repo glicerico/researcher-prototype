@@ -160,7 +160,6 @@ All variables live in `backend/.env` (see template):
 
 ```
 RESEARCH_ENGINE_ENABLED=true
-RESEARCH_INTERVAL_HOURS=2          # approximate cadence
 RESEARCH_MODEL=gpt-4o-mini
 RESEARCH_QUALITY_THRESHOLD=0.6
 RESEARCH_MAX_TOPICS_PER_USER=3

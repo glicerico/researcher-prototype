@@ -154,7 +154,7 @@ class TestAutonomousResearcherInitialization:
         status = autonomous_researcher.get_status()
         
         expected_keys = [
-            "enabled", "running", "research_interval_hours", "quality_threshold",
+            "enabled", "running", "quality_threshold",
             "max_topics_per_user", "retention_days", "engine_type", "research_graph_nodes"
         ]
         
@@ -169,36 +169,6 @@ class TestAutonomousResearcherInitialization:
 class TestResearchCycleLogic:
     """Test research cycle and topic research logic."""
 
-    def test_should_research_topic_never_researched(self, autonomous_researcher):
-        """Test should_research_topic for topics never researched."""
-        topic = {"topic_name": "Test Topic", "last_researched": None}
-        
-        result = autonomous_researcher._should_research_topic(topic)
-        
-        assert result is True
-
-    def test_should_research_topic_recently_researched(self, autonomous_researcher):
-        """Test should_research_topic for recently researched topics."""
-        topic = {
-            "topic_name": "Test Topic", 
-            "last_researched": time.time() - 60  # 1 minute ago
-        }
-        
-        result = autonomous_researcher._should_research_topic(topic)
-        
-        assert result is False  # Too recent for default interval
-
-    def test_should_research_topic_ready_for_research(self, autonomous_researcher):
-        """Test should_research_topic for topics ready for research."""
-        # Set to much longer than research interval (default is usually hours)
-        topic = {
-            "topic_name": "Test Topic", 
-            "last_researched": time.time() - (autonomous_researcher.research_interval + 1)
-        }
-        
-        result = autonomous_researcher._should_research_topic(topic)
-        
-        assert result is True
 
     @pytest.mark.asyncio
     async def test_research_topic_with_langgraph_success(self, autonomous_researcher, sample_topics):
@@ -468,8 +438,6 @@ class TestResearchCycleIntegration:
         autonomous_researcher.profile_manager.list_users.return_value = ["user1"]
         autonomous_researcher.research_manager.get_active_research_topics.return_value = sample_topics
         
-        # Mock should_research_topic to return True for all topics
-        autonomous_researcher._should_research_topic = MagicMock(return_value=True)
         
         result = await autonomous_researcher._conduct_research_cycle()
         
@@ -480,19 +448,6 @@ class TestResearchCycleIntegration:
         # Verify cleanup was called
         autonomous_researcher.research_manager.cleanup_old_research_findings.assert_called()
 
-    @pytest.mark.asyncio
-    async def test_conduct_research_cycle_topic_filtering(self, autonomous_researcher, sample_topics):
-        """Test research cycle respects topic research timing."""
-        autonomous_researcher.profile_manager.list_users.return_value = ["user1"]
-        autonomous_researcher.research_manager.get_active_research_topics.return_value = sample_topics
-        
-        # Mock should_research_topic to return True only for first topic
-        autonomous_researcher._should_research_topic = MagicMock(side_effect=[True, False])
-        
-        result = await autonomous_researcher._conduct_research_cycle()
-        
-        assert result["topics_researched"] == 1
-        assert result["findings_stored"] == 1
 
 
 class TestGlobalFunctions:
@@ -560,7 +515,6 @@ class TestErrorHandling:
             return sample_topics
         
         autonomous_researcher.research_manager.get_active_research_topics.side_effect = mock_get_active_topics
-        autonomous_researcher._should_research_topic = MagicMock(return_value=True)
         
         result = await autonomous_researcher._conduct_research_cycle()
         
