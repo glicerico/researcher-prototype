@@ -241,12 +241,17 @@ class MotivationSystem:
             follow_up_freq = interaction_signals.get('follow_up_question_frequency', 0.0)
             engagement_score += follow_up_freq * 0.3
             
+            # Link clicks for this topic (direct interest in sources)
+            link_clicks = profile.get('analytics', {}).get('link_clicks_by_topic', {}).get(topic_name, 0)
+            if link_clicks > 0:
+                engagement_score += min(link_clicks * 0.1, 0.5)
+            
             # NOTE: The PersonalizationManager tracks topic expansions, bookmarks, and mark_read 
             # actions via engagement_events, but these are not currently stored in a queryable
             # way by topic. The primary signal remains research findings read status.
             
             # Small baseline for users who have any tracked preferences
-            if most_engaged_sources or follow_up_freq > 0:
+            if most_engaged_sources or follow_up_freq > 0 or link_clicks > 0:
                 engagement_score += 0.2
             
             return min(engagement_score, 1.0)

@@ -2,6 +2,7 @@ import React, { useState } from 'react';
 import ReactMarkdown from 'react-markdown';
 import '../styles/ChatMessage.css';
 import { trackEngagement } from '../utils/engagementTracker';
+import { trackLinkClick } from '../services/api';
 
 const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUpClick, messageId }) => {
   const [showRoutingInfo, setShowRoutingInfo] = useState(false);
@@ -19,7 +20,14 @@ const ChatMessage = ({ role, content, routingInfo, followUpQuestions, onFollowUp
           href={href} 
           target="_blank" 
           rel="noopener noreferrer" 
-          onClick={(e) => e.stopPropagation()} // Prevent parent click handlers from interfering
+          onClick={async (e) => {
+            e.stopPropagation();
+            try {
+              await trackLinkClick(href, { source: 'chat_message', messageId });
+            } catch (err) {
+              console.error('Failed to track link click:', err);
+            }
+          }}
           {...props}
         >
           {children}

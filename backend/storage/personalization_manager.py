@@ -177,7 +177,7 @@ class PersonalizationManager:
                         analytics
                     )
                     logger.debug(f"👤 PersonalizationManager: ✅ Updated integration analytics for user {user_id}")
-                    
+
             elif interaction_type == "expand":
                 # Topic expansion shows interest in that topic area
                 content_data = metadata.get("data", {})
@@ -185,7 +185,33 @@ class PersonalizationManager:
                 if topic_name:
                     logger.debug(f"👤 PersonalizationManager: Learning from topic expansion for user {user_id}: {topic_name}")
                     # Could boost research priority for this topic
-                    
+                    # Placeholder for future weighting
+
+            elif interaction_type == "link_click":
+                # Link click routed through engagement tracker
+                content_data = metadata.get("data", {})
+                url = content_data.get("url")
+                topic_name = content_data.get("topicName")
+                analytics = self.profile_manager.get_engagement_analytics(user_id)
+                if topic_name:
+                    by_topic = analytics.get("link_clicks_by_topic", {})
+                    by_topic[topic_name] = by_topic.get(topic_name, 0) + 1
+                    analytics["link_clicks_by_topic"] = by_topic
+                if url:
+                    try:
+                        from urllib.parse import urlparse
+                        domain = urlparse(url).netloc
+                    except Exception:
+                        domain = None
+                    if domain:
+                        recent_domains = analytics.get("recent_link_domains", [])
+                        recent_domains.append(domain)
+                        analytics["recent_link_domains"] = recent_domains[-50:]
+                self.profile_manager.storage.write(
+                    self.profile_manager._get_engagement_analytics_path(user_id),
+                    analytics
+                )
+
             elif interaction_type == "mark_read":
                 # Mark as read shows content consumption
                 content_data = metadata.get("data", {})
@@ -210,6 +236,39 @@ class PersonalizationManager:
                     else:
                         logger.debug(f"👤 PersonalizationManager: Processed generic read action for user {user_id}")
                         # Generic read action
+
+        elif event_type == "link_click":
+            # Direct link click tracking (from sources)
+            try:
+                url = metadata.get("url", "") or metadata.get("data", {}).get("url", "")
+                ctx = metadata.get("context", {})
+                topic_name = ctx.get("topicName") if isinstance(ctx, dict) else None
+                analytics = self.profile_manager.get_engagement_analytics(user_id)
+                # Count by topic if provided
+                if topic_name:
+                    by_topic = analytics.get("link_clicks_by_topic", {})
+                    by_topic[topic_name] = by_topic.get(topic_name, 0) + 1
+                    analytics["link_clicks_by_topic"] = by_topic
+                # Track recent link domains
+                domain = None
+                if url:
+                    try:
+                        from urllib.parse import urlparse
+                        domain = urlparse(url).netloc
+                    except Exception:
+                        domain = None
+                if domain:
+                    recent_domains = analytics.get("recent_link_domains", [])
+                    recent_domains.append(domain)
+                    analytics["recent_link_domains"] = recent_domains[-50:]
+                # Persist
+                self.profile_manager.storage.write(
+                    self.profile_manager._get_engagement_analytics_path(user_id),
+                    analytics
+                )
+                logger.debug(f"👤 PersonalizationManager: ✅ Updated link click analytics for user {user_id}")
+            except Exception as e:
+                logger.error(f"👤 PersonalizationManager: ❌ Error learning from link click for user {user_id}: {str(e)}", exc_info=True)
                     
         elif event_type in ["research_activation", "feedback", "source_exploration"]:
             # These are explicit feedback - handle with higher weight

@@ -228,6 +228,20 @@ export const trackUserEngagement = async (interactionType, metadata) => {
   }
 };
 
+export const trackLinkClick = async (url, context = {}) => {
+  try {
+    const response = await api.post('/user/link-click', {
+      url,
+      context,
+      timestamp: Date.now()
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error tracking link click:', error);
+    throw error;
+  }
+};
+
 export const overrideLearnedBehavior = async (preferenceType, overrideValue, disableLearning = false) => {
   try {
     const response = await api.put('/user/personalization/override', {

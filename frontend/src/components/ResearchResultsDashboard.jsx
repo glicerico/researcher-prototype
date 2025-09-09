@@ -11,6 +11,7 @@ import {
   integrateResearchFinding,
   setFindingBookmarked
 } from '../services/api';
+import { trackLinkClick } from '../services/api';
 import { useEngagementTracking } from '../utils/engagementTracker';
 import '../styles/ResearchResultsDashboard.css';
 
@@ -38,32 +39,32 @@ const ResearchResultsDashboard = () => {
   const scrollContainerRef = useRef(null);
   const scrollPositionRef = useRef(null);
 
-  // Custom link renderer to open external links in new tab
-  const LinkRenderer = ({ href, children, ...props }) => {
-    // Check if it's an external link
+  // Custom link renderer factory to track source clicks with context
+  const createFindingLinkRenderer = (topicName, findingId) => ({ href, children, ...props }) => {
     const isExternal = href && (href.startsWith('http://') || href.startsWith('https://'));
-    
     if (isExternal) {
       return (
-        <a 
-          href={href} 
-          target="_blank" 
-          rel="noopener noreferrer" 
-          onClick={(e) => e.stopPropagation()} // Prevent parent click handlers from interfering
+        <a
+          href={href}
+          target="_blank"
+          rel="noopener noreferrer"
+          onClick={async (e) => {
+            e.stopPropagation();
+            try {
+              await trackLinkClick(href, { source: 'research_finding', topicName, findingName: findingId });
+              // Also track via engagement tracker for consistency
+              trackInteraction(`finding_${findingId}`, 'link_click', { url: href, topicName, findingId });
+            } catch (err) {
+              console.error('Failed to track source link click:', err);
+            }
+          }}
           {...props}
         >
           {children}
         </a>
       );
     }
-    
-    // Internal links or non-http links use default behavior
     return <a href={href} {...props}>{children}</a>;
-  };
-
-  // ReactMarkdown components configuration
-  const markdownComponents = {
-    a: LinkRenderer
   };
 
   // Load research data
@@ -757,9 +758,13 @@ const ResearchResultsDashboard = () => {
                                 const mainContent = parts[0];
                                 const sourcesContent = parts.length > 1 ? parts[1] : null;
                                 
+                                // Build link renderer with context for this finding
+                                const linkRenderer = createFindingLinkRenderer(topicName, finding.finding_id);
+                                const components = { a: linkRenderer };
+
                                 return (
                                   <div className="finding-formatted-content">
-                                    <ReactMarkdown components={markdownComponents}>{mainContent}</ReactMarkdown>
+                                    <ReactMarkdown components={components}>{mainContent}</ReactMarkdown>
                                     {sourcesContent && (
                                       <div className="sources-container">
                                         <button 
@@ -772,7 +777,7 @@ const ResearchResultsDashboard = () => {
                                           {showSourcesForFinding.has(finding.finding_id) ? 'Hide Sources' : 'Show Sources'}
                                         </button>
                                         {showSourcesForFinding.has(finding.finding_id) && (
-                                          <ReactMarkdown components={markdownComponents}>{`**Sources:**${sourcesContent}`}</ReactMarkdown>
+                                          <ReactMarkdown components={components}>{`**Sources:**${sourcesContent}`}</ReactMarkdown>
                                         )}
                                       </div>
                                     )}
