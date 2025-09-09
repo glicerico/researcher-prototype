@@ -67,6 +67,32 @@ uvicorn app:app --reload
 cd frontend && npm start
 ```
 
+## Motivation System Configuration
+
+The intelligent motivation system can be fine-tuned via environment variables in `.env`:
+
+### Global Motivation Settings
+```env
+MOTIVATION_CHECK_INTERVAL=60        # Seconds between motivation checks
+MOTIVATION_THRESHOLD=2.0            # Global threshold for research activity
+MOTIVATION_BOREDOM_RATE=0.0005      # Rate at which boredom increases
+MOTIVATION_CURIOSITY_DECAY=0.0002   # Rate at which curiosity decreases
+```
+
+### Per-Topic Motivation Settings  
+```env
+TOPIC_MOTIVATION_THRESHOLD=0.5      # Minimum score for individual topic research
+TOPIC_ENGAGEMENT_WEIGHT=0.3         # Weight of user engagement in topic scoring
+TOPIC_QUALITY_WEIGHT=0.2           # Weight of research success rate in scoring
+TOPIC_STALENESS_SCALE=0.0001       # Scale factor converting time to staleness pressure
+```
+
+**How It Works:**
+1. **Global Gate**: System checks if overall motivation exceeds threshold (boredom, curiosity vs tiredness, satisfaction)
+2. **Topic Evaluation**: If motivated globally, evaluates each topic using: `staleness_pressure + (engagement_score * weight) + (quality_score * weight)`
+3. **Staleness Pressure**: `time_since_last_research * topic.staleness_coefficient * TOPIC_STALENESS_SCALE`
+4. **Research Priority**: Topics above `TOPIC_MOTIVATION_THRESHOLD` are prioritized by combined score
+
 ## Code Conventions
 
 ### Python (Backend)
@@ -111,7 +137,11 @@ cd frontend && npm start
 
 - **Chat Pipeline**: LangGraph orchestration in `graph_builder.py`
 - **Research Engine**: Autonomous background research via `research_graph_builder.py`
-- **Motivation System**: Native scoring determines when to research (`motivation.py`)
+- **Intelligent Motivation System**: Hierarchical motivation with per-topic prioritization (`motivation.py`)
+  - Global motivation drives (boredom, curiosity, tiredness, satisfaction) gate overall research activity
+  - Per-topic motivation evaluates individual topics using staleness coefficients, user engagement, and success rates
+  - LLM-assessed staleness coefficients (2.0=breaking news, 1.0=normal, 0.1=reference material)
+  - Integration with user engagement tracking for personalized research scheduling
 - **Knowledge Graph**: Zep-powered memory and visualization
 - **Admin Console**: JWT-secured interface with prompt editor
 - **Search Integration**: Perplexity for internet search, OpenAlex for academic search

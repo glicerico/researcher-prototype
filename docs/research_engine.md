@@ -12,7 +12,7 @@ The **autonomous research engine** runs in the background, gathering high-qualit
 
 1. **Topic discovery** – after each chat message the `topic_extractor_node` suggests candidate topics.  
 2. **Subscription** – the UI lets you enable research per topic; selected topics are persisted in `storage_data/`.
-3. **Motivation model** – internal boredom / curiosity / tiredness / satisfaction drives decide when to launch a research cycle (default every ~2 h on average).  You can tweak rates & threshold via environment variables or debug APIs.
+3. **Intelligent motivation model** – hierarchical system with global drives (boredom/curiosity/tiredness/satisfaction) that gate overall research activity, plus per-topic evaluation that prioritizes which specific topics to research based on staleness, user engagement, and success rates.
 4. **Graph workflow** – the research LangGraph (`research_graph_builder.py`) runs: initialization ➜ query generation ➜ source selection ➜ multi-source search coordination ➜ integration ➜ quality scoring ➜ deduplication ➜ storage.
 5. **Review** – findings appear in the sidebar with summary, quality bars & source links.
 
@@ -60,18 +60,36 @@ Research Topic → Query Generation → Source Selection → Multi-Source Search
 - **Quality Filtering**: Results assessed across multiple source types
 - **Automatic Relevance**: Sources selected based on topic characteristics
 
-## Motivation System Mechanics
+## Hierarchical Motivation System
 
-The research engine uses a drive-based motivation system where **boredom** and **curiosity** accumulate over time, while **tiredness** and **satisfaction** act as inhibitors during research.
+The research engine uses a two-tier intelligent motivation system combining global drives with per-topic evaluation for optimal research scheduling.
 
-### Drive Equations
+### Tier 1: Global Motivation Gates
+Global drives determine whether any research should occur at all:
 
-The motivation level is calculated as:
 ```
-motivation = (boredom + curiosity) - (tiredness + satisfaction)
+global_motivation = (boredom + curiosity) - (tiredness + satisfaction)
 ```
 
-**Research triggers when**: `motivation ≥ MOTIVATION_THRESHOLD`
+**Research cycle triggers when**: `global_motivation ≥ MOTIVATION_THRESHOLD`
+
+### Tier 2: Per-Topic Prioritization  
+When globally motivated, the system evaluates each topic individually:
+
+```
+topic_score = staleness_pressure + (engagement_score × weight) + (quality_score × weight)
+```
+
+**Topics researched when**: `topic_score ≥ TOPIC_MOTIVATION_THRESHOLD`
+
+#### Staleness Pressure Calculation
+```
+staleness_pressure = time_since_last_research × staleness_coefficient × TOPIC_STALENESS_SCALE
+```
+
+- **staleness_coefficient**: LLM-assessed per-topic urgency (0.1=stable, 2.0=breaking news)
+- **time_since_last_research**: Hours since topic was last researched  
+- **TOPIC_STALENESS_SCALE**: Configurable time-to-pressure conversion (default: 0.0001)
 
 #### Drive Updates Over Time
 
@@ -82,18 +100,22 @@ motivation = (boredom + curiosity) - (tiredness + satisfaction)
 | **Tiredness** | During research | `tiredness += time_delta` then `tiredness -= TIREDNESS_DECAY × time_delta` |
 | **Satisfaction** | After research | `satisfaction += quality_score` then `satisfaction -= SATISFACTION_DECAY × time_delta` |
 
-### Visual Flow Diagram
+### Hierarchical Flow Diagram
 
 ```mermaid
 stateDiagram-v2
     [*] --> Idle
-    Idle --> Motivated : "motivation ≥ threshold<br/>(boredom + curiosity) > (tiredness + satisfaction)"
-    Motivated --> Researching : "spawns research cycle"
+    Idle --> GlobalCheck : "Check global motivation"
+    GlobalCheck --> Idle : "motivation < threshold"
+    GlobalCheck --> TopicEval : "motivation ≥ MOTIVATION_THRESHOLD"
+    TopicEval --> NoTopics : "no topics above TOPIC_MOTIVATION_THRESHOLD"
+    TopicEval --> Researching : "prioritized topics found"
+    NoTopics --> Idle : "wait for next cycle"
     Researching --> Idle : "research complete<br/>satisfaction ↑, tiredness ↑"
     
-    note right of Idle : "• Boredom accumulates<br/>• Curiosity decays<br/>• Tiredness/satisfaction decay"
-    note right of Motivated : "• High motivation state<br/>• Ready to research"
-    note right of Researching : "• Research active<br/>• Tiredness builds<br/>• Will add satisfaction when done"
+    note right of Idle : "• Global drives accumulate/decay<br/>• Topic staleness increases"
+    note right of TopicEval : "• Evaluate each topic:<br/>  staleness + engagement + quality<br/>• Sort by priority"
+    note right of Researching : "• Research highest priority topics<br/>• Update engagement data"
 ```
 
 ### Parameter Impact Examples
@@ -124,6 +146,7 @@ graph LR
 
 ### Parameter Tuning Guide
 
+#### Global Motivation Parameters
 | Behavior Goal | Parameter Changes | Effect |
 |---------------|------------------|--------|
 | **More frequent research** | ↑ `BOREDOM_RATE` or ↓ `MOTIVATION_THRESHOLD` | Triggers research sooner |
@@ -132,6 +155,16 @@ graph LR
 | **Shorter research sessions** | ↑ `TIREDNESS_DECAY` | Gets tired faster |
 | **More persistent curiosity** | ↓ `CURIOSITY_DECAY` | Curiosity lasts longer |
 | **Quick satisfaction reset** | ↑ `SATISFACTION_DECAY` | Ready for new research sooner |
+
+#### Per-Topic Parameters  
+| Behavior Goal | Parameter Changes | Effect |
+|---------------|------------------|--------|
+| **Research more topics per cycle** | ↓ `TOPIC_MOTIVATION_THRESHOLD` | Lower bar for topic selection |
+| **Only research high-priority topics** | ↑ `TOPIC_MOTIVATION_THRESHOLD` | Higher bar for topic selection |
+| **Prioritize user engagement more** | ↑ `TOPIC_ENGAGEMENT_WEIGHT` | Heavily used topics get priority |
+| **Prioritize research quality more** | ↑ `TOPIC_QUALITY_WEIGHT` | Successful topics get priority |  
+| **Faster staleness pressure buildup** | ↑ `TOPIC_STALENESS_SCALE` | Topics become urgent sooner |
+| **Slower staleness pressure buildup** | ↓ `TOPIC_STALENESS_SCALE` | Topics stay fresh longer |
 
 #### Example Configurations
 
@@ -154,20 +187,36 @@ MOTIVATION_BOREDOM_RATE=0.0002
 * Use the debug API (`/research/debug/motivation`) to monitor drive levels.
 * Periodically mark findings as read or delete old ones to keep the sidebar tidy.
 
-## Configuration Reference (excerpt)
+## Configuration Reference
 
 All variables live in `backend/.env` (see template):
 
-```
+```env
+# Research Engine
 RESEARCH_ENGINE_ENABLED=true
 RESEARCH_MODEL=gpt-4o-mini
 RESEARCH_QUALITY_THRESHOLD=0.6
 RESEARCH_MAX_TOPICS_PER_USER=3
 
-# Motivation drives
+# Global Motivation Drives
 MOTIVATION_THRESHOLD=2.0
 MOTIVATION_BOREDOM_RATE=0.0005
 MOTIVATION_CURIOSITY_DECAY=0.0002
 MOTIVATION_TIREDNESS_DECAY=0.0002
 MOTIVATION_SATISFACTION_DECAY=0.0002
-``` 
+
+# Per-Topic Motivation (NEW)
+TOPIC_MOTIVATION_THRESHOLD=0.5      # Minimum score for individual topic research
+TOPIC_ENGAGEMENT_WEIGHT=0.3         # Weight of user engagement in topic scoring
+TOPIC_QUALITY_WEIGHT=0.2           # Weight of research success rate in scoring  
+TOPIC_STALENESS_SCALE=0.0001       # Scale factor converting time to staleness pressure
+```
+
+### Staleness Coefficient Guidelines
+
+The LLM automatically assigns staleness coefficients during topic extraction:
+- **2.0**: Breaking news, urgent developments
+- **1.5**: Technology trends, current events  
+- **1.0**: General topics (default)
+- **0.5**: Historical or theoretical topics
+- **0.1**: Reference material, stable facts 
