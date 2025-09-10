@@ -11,7 +11,7 @@ from dependencies import (
     profile_manager,
     generate_display_name_from_user_id,
 )
-from storage.personalization_manager import PersonalizationManager
+from services.personalization_manager import PersonalizationManager
 from services.logging_config import get_logger
 
 router = APIRouter()

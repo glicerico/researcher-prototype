@@ -16,7 +16,7 @@ logger = get_logger(__name__)
 import config
 from storage.profile_manager import ProfileManager
 from storage.research_manager import ResearchManager
-from storage.personalization_manager import PersonalizationManager
+from services.personalization_manager import PersonalizationManager
 from research_graph_builder import research_graph
 from services.motivation import MotivationSystem
 

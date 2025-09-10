@@ -16,8 +16,8 @@ Directory quick-look:
   • `research_graph_builder.py` LangGraph builder for the background research flow.
   • `nodes/`          Composable LangGraph nodes (router, search, analysis, research, …).
   • `api/`            Modular FastAPI routers (chat, research, graph, topics, users, admin, status, notifications).
-  • `services/`       Core services (logging_config, prompt/search/auth/status managers, research engine, etc.).
-  • `storage/`        Managers for profiles, personalization, research data, Zep integration.
+  • `services/`       Core services (logging_config, prompt/search/auth/status managers, personalization manager, research engine, etc.).
+  • `storage/`        Managers for profiles, research data, Zep integration.
   • `storage_data/`   JSON persistence for users, conversations, and research findings (git-ignored).
   • `tests/`          Pytest test-suite (`unit/` & `integration/`).
   • `run_tests.sh`    Helper script to run tests / coverage.
