@@ -7,7 +7,7 @@ import asyncio
 import time
 from typing import Dict, Set, Optional
 from fastapi import WebSocket, WebSocketDisconnect
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from dependencies import profile_manager
 
 logger = logging.getLogger(__name__)
@@ -94,7 +94,7 @@ class NotificationService:
                 "topic_id": topic_id,
                 "result_id": result_id,
                 "topic_name": topic_name,
-                "timestamp": datetime.now(UTC).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
         }
         logger.info(f"📡 NotificationService: Sending new research notification to user {user_id}")
@@ -109,7 +109,7 @@ class NotificationService:
                 "topic_id": topic_id,
                 "results_count": results_count,
                 "topic_name": topic_name,
-                "timestamp": datetime.now(UTC).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
         }
         await connection_manager.send_to_user(user_id, message)
@@ -122,7 +122,7 @@ class NotificationService:
             "data": {
                 "status": status,
                 "details": details or {},
-                "timestamp": datetime.now(UTC).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
         }
         await connection_manager.broadcast_to_all(message)

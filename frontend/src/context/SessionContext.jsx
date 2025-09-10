@@ -2,6 +2,7 @@ import React, { createContext, useContext, useState, useEffect, useCallback } fr
 
 // Get API URL from environment variables with fallback for development
 const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:8000';
+const APP_MODE = process.env.REACT_APP_MODE || 'dev';
 
 const SessionContext = createContext();
 
@@ -105,17 +106,22 @@ export const SessionProvider = ({ children }) => {
     }
   }, [sessionId, userId]);
 
-  // Validate stored user ID on app startup and set guest user if none exists
+  // Validate stored user ID on app startup; in dev default to guest if none
   useEffect(() => {
     const validateStoredUserId = async () => {
       const storedUserId = localStorage.getItem('user_id');
       
       if (!storedUserId) {
-        // No user selected, set guest user as default
-        console.log('No user selected, using guest user as default');
-        setUserId('guest');
-        setUserDisplayName('Guest User');
-        localStorage.setItem('user_id', 'guest');
+        if (APP_MODE === 'dev') {
+          // No user selected, set guest user as default in dev mode
+          console.log('No user selected, using guest user as default (dev mode)');
+          setUserId('guest');
+          setUserDisplayName('Guest User');
+          localStorage.setItem('user_id', 'guest');
+        } else {
+          // In test mode, do not auto-assign guest; allow initializer to handle it
+          console.log('No user selected (test mode), awaiting initializer');
+        }
         return;
       }
       
@@ -127,19 +133,31 @@ export const SessionProvider = ({ children }) => {
         });
         
         if (response.status === 404) {
-          console.log('Stored user ID is invalid, using guest user as default');
+          console.log('Stored user ID is invalid');
           localStorage.removeItem('user_id');
-          setUserId('guest');
-          setUserDisplayName('Guest User');
-          localStorage.setItem('user_id', 'guest');
+          if (APP_MODE === 'dev') {
+            setUserId('guest');
+            setUserDisplayName('Guest User');
+            localStorage.setItem('user_id', 'guest');
+          } else {
+            // In test mode, leave user unset
+            setUserId('');
+            setUserDisplayName('');
+          }
         }
       } catch (error) {
         console.error('Error validating stored user ID:', error);
-        // On error, also fall back to guest user
-        console.log('Error validating user, using guest user as default');
-        setUserId('guest');
-        setUserDisplayName('Guest User');
-        localStorage.setItem('user_id', 'guest');
+        if (APP_MODE === 'dev') {
+          // On error in dev, fall back to guest user
+          console.log('Error validating user, using guest user as default');
+          setUserId('guest');
+          setUserDisplayName('Guest User');
+          localStorage.setItem('user_id', 'guest');
+        } else {
+          // In test mode, leave user unset
+          setUserId('');
+          setUserDisplayName('');
+        }
       }
     };
     
