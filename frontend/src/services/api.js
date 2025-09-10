@@ -91,8 +91,12 @@ export const getUsers = async () => {
 export const createUser = async (userData) => {
   try {
     const displayName = userData.display_name;
+    const email = userData.email;
+    const params = { };
+    if (displayName) params.display_name = displayName;
+    if (email) params.email = email;
     const response = await api.post('/users', null, {
-      params: { display_name: displayName }
+      params
     });
     return response.data;
   } catch (error) {
