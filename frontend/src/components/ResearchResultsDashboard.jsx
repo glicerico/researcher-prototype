@@ -25,6 +25,7 @@ const ResearchResultsDashboard = () => {
   const [error, setError] = useState(null);
   const [isBackgroundRefreshing, setIsBackgroundRefreshing] = useState(false);
   const [expandedTopics, setExpandedTopics] = useState(new Set());
+  const [expandedFindings, setExpandedFindings] = useState(new Set());
   const [bookmarkedFindings, setBookmarkedFindings] = useState(new Set());
   const [showSourcesForFinding, setShowSourcesForFinding] = useState(new Set());
   const [integratingFindings, setIntegratingFindings] = useState(new Set());
@@ -108,6 +109,11 @@ const ResearchResultsDashboard = () => {
 
       setResearchData(groupedFindings);
 
+      // Ensure topics default to expanded so result titles are visible by default
+      if (!isBackground && expandedTopics.size === 0) {
+        setExpandedTopics(new Set(Object.keys(groupedFindings)));
+      }
+
     } catch (err) {
       console.error('Error loading research data:', err);
       setError(`Failed to load research data: ${err.message || 'Please try again.'}`);
@@ -118,7 +124,7 @@ const ResearchResultsDashboard = () => {
         setIsBackgroundRefreshing(false);
       }
     }
-  }, [userId, filters.unreadOnly]);
+  }, [userId, filters.unreadOnly, expandedTopics.size]);
 
   useEffect(() => {
     loadResearchData(false);
@@ -220,48 +226,54 @@ const ResearchResultsDashboard = () => {
   const toggleTopic = async (topicName) => {
     const newExpanded = new Set(expandedTopics);
     const isExpanding = !newExpanded.has(topicName);
-    
+
     if (newExpanded.has(topicName)) {
       newExpanded.delete(topicName);
     } else {
       newExpanded.add(topicName);
     }
     setExpandedTopics(newExpanded);
-    
-    // If expanding, mark all findings in this topic as read
-    if (isExpanding) {
-      const findings = researchData[topicName] || [];
-      const unreadFindings = findings.filter(f => !f.read);
-      
-      // Mark each unread finding as read
-      for (const finding of unreadFindings) {
-        try {
-          await markFindingAsRead(finding.finding_id);
-          
-          // Track this as a read interaction for preferences learning
-          trackInteraction(`finding_${finding.finding_id}`, 'mark_read', {
-            action: 'expansion_read',
-            findingId: finding.finding_id,
-            topicName: topicName,
-            trigger: 'topic_expansion'
-          });
-        } catch (err) {
-          console.error('Error marking finding as read during expansion:', err);
-        }
-      }
-      
-      // Refresh data to update read status
-      if (unreadFindings.length > 0) {
-        await loadResearchData(true);
-      }
-    }
-    
-    // Track topic expansion interaction - useful for personalization
+
+    // Track topic expansion/collapse
     trackInteraction(`topic_${topicName}`, isExpanding ? 'expand' : 'collapse', {
       findings_count: (researchData[topicName] || []).length,
-      topicName,
-      marked_as_read_count: isExpanding ? (researchData[topicName] || []).filter(f => !f.read).length : 0
+      topicName
     });
+  };
+
+  // Handle finding expand/collapse and mark-as-read per finding
+  const toggleFinding = async (topicName, findingId, isAlreadyRead) => {
+    const newExpanded = new Set(expandedFindings);
+    const isExpanding = !newExpanded.has(findingId);
+
+    if (newExpanded.has(findingId)) {
+      newExpanded.delete(findingId);
+    } else {
+      newExpanded.add(findingId);
+    }
+    setExpandedFindings(newExpanded);
+
+    if (isExpanding && !isAlreadyRead) {
+      try {
+        await markFindingAsRead(findingId);
+        // Update local state to reflect read status without full reload
+        setResearchData(prev => {
+          const next = { ...prev };
+          if (next[topicName]) {
+            next[topicName] = next[topicName].map(f => f.finding_id === findingId ? { ...f, read: true } : f);
+          }
+          return next;
+        });
+        trackInteraction(`finding_${findingId}`, 'mark_read', {
+          action: 'expansion_read',
+          findingId,
+          topicName,
+          trigger: 'finding_expansion'
+        });
+      } catch (err) {
+        console.error('Error marking finding as read:', err);
+      }
+    }
   };
 
   // Handle bookmark toggle
@@ -683,8 +695,9 @@ const ResearchResultsDashboard = () => {
                     </div>
                   </div>
 
+                  {/* Show list by default (topics default to expanded); users can collapse per topic */}
                   {isExpanded && (
-                    <div className="findings-list">
+                  <div className="findings-list">
                       {findings.map((finding, index) => (
                         <div 
                           key={finding.finding_id || index} 
@@ -698,9 +711,23 @@ const ResearchResultsDashboard = () => {
                               <span className="quality-badge">
                                 {finding.quality_score?.toFixed(1) || 'N/A'}
                               </span>
+                              {/* new indicator moved into the title for better visibility */}
+                            </div>
+                            <div 
+                              className="finding-title"
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                toggleFinding(topicName, finding.finding_id, !!finding.read);
+                              }}
+                              title={finding.findings_summary || (finding.key_insights && finding.key_insights[0]) || 'Open result'}
+                            >
                               {!finding.read && (
-                                <span className="new-indicator">New</span>
+                                <span className="new-badge" title="New" aria-label="New">New</span>
                               )}
+                              <span className="finding-title-text">
+                                {(finding.findings_summary || (finding.key_insights && finding.key_insights[0]) || 'Open result')}
+                              </span>
+                              <span className={`finding-toggle ${expandedFindings.has(finding.finding_id) ? 'expanded' : ''}`}>▼</span>
                             </div>
                             
                             <div className="finding-actions">
@@ -749,6 +776,7 @@ const ResearchResultsDashboard = () => {
                             </div>
                           </div>
 
+                          {expandedFindings.has(finding.finding_id) && (
                           <div className="finding-content">
                             {/* Display formatted content with citations if available, otherwise fallback to summary */}
                             {finding.formatted_content ? (
@@ -801,6 +829,7 @@ const ResearchResultsDashboard = () => {
                               </div>
                             )}
                           </div>
+                          )}
                         </div>
                       ))}
                     </div>

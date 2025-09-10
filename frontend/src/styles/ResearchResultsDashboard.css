@@ -604,12 +604,46 @@
   margin-bottom: 0.5rem;
 }
 
+.finding-title {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  cursor: pointer;
+  flex: 1;
+  font-weight: 600;
+  color: var(--text-color);
+  min-width: 0; /* allow flex item to shrink */
+  overflow: hidden; /* enable text ellipsis within */
+}
+
+.finding-title-text {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  display: block;
+  max-width: 100%;
+  flex: 1; 
+  min-width: 0;
+}
+
+.finding-toggle {
+  font-size: 0.9rem;
+  color: var(--text-secondary-color);
+  transition: transform 0.2s ease;
+  flex-shrink: 0;
+}
+
+.finding-toggle.expanded {
+  transform: rotate(180deg);
+}
+
 .finding-meta {
   display: flex;
   align-items: center;
   gap: 0.75rem;
   color: var(--text-secondary-color);
   font-size: 0.8rem;
+  flex-shrink: 0; /* keep meta compact, don't push width */
 }
 
 .finding-date {
@@ -631,6 +665,7 @@
 .quality-badge.low { background-color: var(--danger-color); color: var(--button-text-color); }
 
 .new-indicator {
+  display: inline-block;
   width: 8px;
   height: 8px;
   border-radius: 50%;
@@ -648,6 +683,22 @@
   display: flex;
   gap: 0.5rem;
   align-items: center;
+  flex-shrink: 0; /* keep actions from wrapping or stretching */
+}
+
+/* New badge for unread results */
+.new-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 0.1rem 0.5rem;
+  border-radius: 9999px;
+  background: var(--primary-color);
+  color: #000;
+  font-size: 0.75rem;
+  font-weight: 700;
+  line-height: 1;
+  flex-shrink: 0;
 }
 
 .bookmark-btn,
