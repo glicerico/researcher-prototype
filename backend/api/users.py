@@ -102,10 +102,12 @@ async def list_users():
 
 
 @router.post("/users")
-async def create_user(display_name: Optional[str] = None):
+async def create_user(display_name: Optional[str] = None, email: Optional[str] = None):
     metadata = {}
     if display_name:
         metadata["display_name"] = display_name
+    if email:
+        metadata["email"] = email
 
     user_id = profile_manager.create_user(metadata)
     if not user_id:
@@ -118,6 +120,7 @@ async def create_user(display_name: Optional[str] = None):
         "success": True,
         "user_id": user_id,
         "display_name": display_name or generate_display_name_from_user_id(user_id),
+        "email": email,
     }
 
 
