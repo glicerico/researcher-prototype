@@ -42,7 +42,8 @@ const TopicsDashboard = () => {
     confidenceFilter: 'all',
     researchStatus: 'all',
     sortBy: 'date',
-    sortOrder: 'desc' // asc, desc
+    sortOrder: 'desc', // asc, desc
+    autoOnly: false,
   });
   const [expandedTopics, setExpandedTopics] = useState(new Set());
 
@@ -169,6 +170,10 @@ const TopicsDashboard = () => {
             !topic.description.toLowerCase().includes(searchLower)) {
           return false;
         }
+      }
+      // Auto expansions only filter
+      if (filters.autoOnly && !topic.is_expansion) {
+        return false;
       }
       
       return true;
@@ -512,11 +517,20 @@ const TopicsDashboard = () => {
                           className="topic-checkbox"
                         />
                         <h3 className="topic-name">{topic.name}</h3>
+                        {topic.is_expansion && (
+                          <span className="auto-badge" aria-label="Auto expansion">Auto</span>
+                        )}
                         {topic.is_active_research && (
                           <span className="research-status-badge">
                             <span className="badge-icon">🔬</span>
                             <span className="badge-text">RESEARCHING</span>
                           </span>
+                        )}
+                        {topic.expansion_status === 'paused' && (
+                          <span className="expansion-status paused" aria-label="Expansion status: Paused">Paused</span>
+                        )}
+                        {topic.expansion_status === 'retired' && (
+                          <span className="expansion-status retired" aria-label="Expansion status: Retired">Retired</span>
                         )}
                       </div>
                       <div className="topic-stats">
@@ -529,6 +543,16 @@ const TopicsDashboard = () => {
                         {topic.session_id && (
                           <span className="session-info">
                             Session: {topic.session_id.substring(0, 8)}...
+                          </span>
+                        )}
+                        {topic.is_expansion && topic.origin && topic.origin.parent_topic && (
+                          <span className="parent-tag" aria-label={"Parent topic: " + topic.origin.parent_topic}>
+                            Parent: {topic.origin.parent_topic}
+                          </span>
+                        )}
+                        {topic.is_expansion && topic.origin && (
+                          <span className="expansion-hint">
+                            {topic.origin.method}{topic.origin.similarity != null ? ' · ' + Number(topic.origin.similarity).toFixed(2) : ''}
                           </span>
                         )}
                       </div>
@@ -546,6 +570,14 @@ const TopicsDashboard = () => {
                         <h4>Description</h4>
                         <p>{topic.description}</p>
                       </div>
+                      {topic.is_expansion && topic.origin && topic.origin.parent_topic && (
+                        <div className="parent-line">
+                          Expanded from: <strong>{topic.origin.parent_topic}</strong> (depth {topic.expansion_depth})
+                          {topic.origin.rationale && (
+                            <p className="expansion-hint">{topic.origin.rationale}</p>
+                          )}
+                        </div>
+                      )}
                       
                       {topic.conversation_context && (
                         <div className="topic-context">

@@ -10,11 +10,13 @@ const TopicsFilters = ({ filters, onFiltersChange, topicsCount }) => {
   };
 
   const clearFilters = () => {
-    onFiltersChange({
+    onFiltersChange(prev => ({
+      ...prev,
       searchTerm: '',
       sortBy: 'confidence',
-      sortOrder: 'desc'
-    });
+      sortOrder: 'desc',
+      autoOnly: false,
+    }));
   };
 
   const hasActiveFilters = filters.searchTerm;
@@ -67,6 +69,19 @@ const TopicsFilters = ({ filters, onFiltersChange, topicsCount }) => {
             >
               {filters.sortOrder === 'desc' ? '↓' : '↑'}
             </button>
+          </div>
+        </div>
+
+        {/* Auto expansions filter */}
+        <div className="filter-group auto-group">
+          <label htmlFor="auto-only">Auto expansions only</label>
+          <div>
+            <input
+              id="auto-only"
+              type="checkbox"
+              checked={!!filters.autoOnly}
+              onChange={(e) => handleFilterChange('autoOnly', e.target.checked)}
+            />
           </div>
         </div>
 

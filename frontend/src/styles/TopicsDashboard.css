@@ -224,6 +224,57 @@
   color: var(--text-secondary-color);
 }
 
+/* Expansion badges and tags */
+.auto-badge {
+  background: #eef;
+  color: #334;
+  border-radius: 10px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.parent-tag {
+  background: #f6f7fb;
+  color: #566;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.expansion-status.paused {
+  background: #fff7db;
+  color: #7a5;
+  border-radius: 10px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.expansion-status.retired {
+  background: #fde8e8;
+  color: #a55;
+  border-radius: 10px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.expansion-hint {
+  color: #889;
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+.parent-line {
+  margin-top: 8px;
+  color: #556;
+  font-size: 13px;
+}
+
 .confidence-score {
   font-weight: 500;
   color: var(--text-color);
