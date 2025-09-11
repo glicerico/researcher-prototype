@@ -65,7 +65,7 @@ class ZepManager:
         """
         if not self.is_enabled():
             return False
-        
+
         try:
             # Parse display name or generate from user_id
             first_name, last_name = self._parse_user_name(user_id, display_name)
@@ -93,6 +93,140 @@ class ZepManager:
         except Exception as e:
             logger.error(f"Failed to create ZEP user {user_id}: {str(e)}")
             return False
+
+    async def search_graph(
+        self,
+        user_id: str,
+        query: str,
+        scope: str,
+        reranker: Optional[str] = "cross_encoder",
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Search Zep knowledge graph for nodes or edges.
+
+        Args:
+            user_id: The user ID
+            query: The search query
+            scope: One of {"nodes", "edges"}
+            reranker: Optional reranker name
+            limit: Max results
+
+        Returns:
+            Normalized list of dictionaries with key fields and similarity if provided.
+        """
+        if not self.is_enabled():
+            return []
+
+        if scope not in {"nodes", "edges"}:
+            logger.error(f"Invalid graph search scope: {scope}")
+            return []
+
+        try:
+            results = await self.client.graph.search(
+                query=query,
+                user_id=user_id,
+                scope=scope,
+                reranker=reranker,
+                limit=limit,
+            )
+
+            normalized: List[Dict[str, Any]] = []
+
+            def _extract_similarity(obj: Any) -> Optional[float]:
+                # Preserve any available similarity/score under a standard key
+                for key in ("similarity", "score", "relevance"):
+                    # Support both dict-like and attribute access
+                    if isinstance(obj, dict) and key in obj:
+                        try:
+                            return float(obj[key])  # type: ignore[return-value]
+                        except Exception:
+                            continue
+                    if hasattr(obj, key):
+                        try:
+                            return float(getattr(obj, key))
+                        except Exception:
+                            continue
+                return None
+
+            if not results:
+                return []
+
+            for item in results:
+                sim = _extract_similarity(item)
+                # Convert SDK objects to dicts safely, tolerating missing attrs
+                if scope == "nodes":
+                    # If result looks like an edge, skip (defensive in case backend returns mixed)
+                    if (isinstance(item, dict) and (item.get("source_node_uuid") or item.get("target_node_uuid"))) or (
+                        hasattr(item, "source_node_uuid") or hasattr(item, "target_node_uuid")
+                    ):
+                        continue
+                    name = None
+                    labels: List[str] = []
+                    uuid_val = None
+                    if isinstance(item, dict):
+                        name = item.get("name")
+                        labels = item.get("labels", []) or []
+                        uuid_val = item.get("uuid") or item.get("uuid_")
+                    else:
+                        name = getattr(item, "name", None)
+                        labels = getattr(item, "labels", []) or []
+                        uuid_val = getattr(item, "uuid", None) or getattr(item, "uuid_", None)
+
+                    normalized.append(
+                        {
+                            "name": name or (labels[0] if labels else None),
+                            "labels": labels if isinstance(labels, list) else [],
+                            "uuid": uuid_val,
+                            "similarity": sim,
+                        }
+                    )
+                else:  # edges
+                    # Ensure item has edge-like fields; otherwise skip
+                    has_edge_fields = False
+                    if isinstance(item, dict):
+                        has_edge_fields = bool(item.get("source_node_uuid") or item.get("target_node_uuid") or item.get("fact"))
+                    else:
+                        has_edge_fields = bool(
+                            getattr(item, "source_node_uuid", None)
+                            or getattr(item, "target_node_uuid", None)
+                            or getattr(item, "fact", None)
+                        )
+                    if not has_edge_fields:
+                        continue
+                    fact = None
+                    name = None
+                    src = None
+                    tgt = None
+                    uuid_val = None
+                    if isinstance(item, dict):
+                        fact = item.get("fact")
+                        name = item.get("name")
+                        src = item.get("source_node_uuid")
+                        tgt = item.get("target_node_uuid")
+                        uuid_val = item.get("uuid") or item.get("uuid_")
+                    else:
+                        fact = getattr(item, "fact", None)
+                        name = getattr(item, "name", None)
+                        src = getattr(item, "source_node_uuid", None)
+                        tgt = getattr(item, "target_node_uuid", None)
+                        uuid_val = getattr(item, "uuid", None) or getattr(item, "uuid_", None)
+
+                    normalized.append(
+                        {
+                            "fact": fact,
+                            "name": fact or name,
+                            "source_node_uuid": src,
+                            "target_node_uuid": tgt,
+                            "uuid": uuid_val,
+                            "similarity": sim,
+                        }
+                    )
+
+            return [n for n in normalized if n.get("name")]
+
+        except Exception as e:
+            logger.error(f"Failed Zep graph search (scope={scope}): {str(e)}")
+            return []
     
     async def create_thread(self, thread_id: str, user_id: str) -> bool:
         """

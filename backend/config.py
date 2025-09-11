@@ -33,6 +33,13 @@ PUBMED_EMAIL = os.getenv("PUBMED_EMAIL", "researcher@example.com")
 ZEP_API_KEY = os.getenv("ZEP_API_KEY")
 ZEP_ENABLED = os.getenv("ZEP_ENABLED", "false").lower() == "true"
 
+# Topic Expansion (Phase 1 - debug) configuration
+EXPANSION_ENABLED = os.getenv("EXPANSION_ENABLED", "false").lower() == "true"
+ZEP_SEARCH_LIMIT = int(os.getenv("ZEP_SEARCH_LIMIT", "10"))
+ZEP_SEARCH_RERANKER = os.getenv("ZEP_SEARCH_RERANKER", "cross_encoder")
+EXPLORATION_PER_ROOT_MAX = int(os.getenv("EXPLORATION_PER_ROOT_MAX", "2"))
+EXPANSION_MIN_SIMILARITY = float(os.getenv("EXPANSION_MIN_SIMILARITY", "0.35"))
+
 # LangSmith tracing configuration
 LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
 LANGCHAIN_ENDPOINT = os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")
