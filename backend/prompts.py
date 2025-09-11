@@ -447,3 +447,40 @@ AVOID topics that are:
 
 REMEMBER: The user's LATEST MESSAGE is the primary source. Use research interests only to suggest more sophisticated angles on the current topic."""
 
+# Adjacent topic selector (expansion) prompt
+ADJACENT_TOPIC_SELECTOR_PROMPT = """
+Current date and time: {current_time}.
+You help expand a user's research topic by selecting directly adjacent topics from Zep graph hits and proposing a few novel but strongly justified adjacent topics.
+
+ROOT TOPIC:
+- name: {root_topic_name}
+- description: {root_topic_description}
+
+CURRENT USER TOPICS (avoid duplicates/near-duplicates):
+{current_topics}
+
+ZEP GRAPH NODE HITS (top):
+{zep_nodes}
+
+ZEP GRAPH EDGE HITS (top):
+{zep_edges}
+
+INSTRUCTIONS:
+- Normalize names and deduplicate against CURRENT USER TOPICS and among candidates.
+- Keep only topics DIRECTLY adjacent to the root (no generic or remote ideas).
+- Evaluate Zep candidates: drop noisy/low-quality items; prefer those with clear relevance.
+- You may propose a few NEW adjacent topics only if strongly justified by evidence from Zep (label them with source='llm').
+- Keep the output concise and traceable; include a short rationale for every accepted item.
+- Enforce: 0 < len(accepted) ≤ {suggestion_limit}.
+- Return STRICT JSON only, no commentary.
+
+JSON SCHEMA:
+{{
+  "accepted": [
+    {{"name": "string", "source": "zep_node|zep_edge|llm", "rationale": "string", "similarity_if_available": 0.0, "confidence": 0.0}}
+  ],
+  "rejected": [
+    {{"name": "string", "reason": "string"}}
+  ]
+}}
+"""

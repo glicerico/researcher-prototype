@@ -41,6 +41,13 @@ EXPLORATION_PER_ROOT_MAX = int(os.getenv("EXPLORATION_PER_ROOT_MAX", "2"))
 EXPANSION_MIN_SIMILARITY = float(os.getenv("EXPANSION_MIN_SIMILARITY", "0.35"))
 EXPANSION_MAX_PARALLEL = int(os.getenv("EXPANSION_MAX_PARALLEL", "2"))
 
+# Expansion LLM (Phase 3)
+EXPANSION_LLM_ENABLED = os.getenv("EXPANSION_LLM_ENABLED", "true").lower() == "true"
+EXPANSION_LLM_MODEL = os.getenv("EXPANSION_LLM_MODEL", "gpt-4o-mini")
+EXPANSION_LLM_MAX_TOKENS = int(os.getenv("EXPANSION_LLM_MAX_TOKENS", "800"))
+EXPANSION_LLM_TEMPERATURE = float(os.getenv("EXPANSION_LLM_TEMPERATURE", "0.2"))
+EXPANSION_LLM_SUGGESTION_LIMIT = int(os.getenv("EXPANSION_LLM_SUGGESTION_LIMIT", "6"))
+
 # LangSmith tracing configuration
 LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"
 LANGCHAIN_ENDPOINT = os.getenv("LANGCHAIN_ENDPOINT", "https://api.smith.langchain.com")

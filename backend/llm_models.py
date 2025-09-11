@@ -188,3 +188,25 @@ class RelevanceSelection(BaseModel):
 class EvidenceSummary(BaseModel):
     """Model for evidence summarizer output."""
     summary_text: str = Field(description="Concise summary with citation markers")
+
+
+class ExpansionAcceptedItem(BaseModel):
+    """Accepted expansion candidate from LLM selection."""
+    name: str = Field(description="Canonical topic name")
+    source: str = Field(description="'zep_node' | 'zep_edge' | 'llm'")
+    rationale: str = Field(description="Short justification for inclusion")
+    similarity_if_available: Optional[float] = Field(
+        default=None, description="Similarity score if known from Zep"
+    )
+    confidence: float = Field(description="LLM confidence 0.0-1.0")
+
+
+class ExpansionRejectedItem(BaseModel):
+    name: str = Field(description="Rejected topic name")
+    reason: str = Field(description="Short reason for rejection")
+
+
+class ExpansionSelection(BaseModel):
+    """Structured output for adjacent topic selection."""
+    accepted: List[ExpansionAcceptedItem]
+    rejected: List[ExpansionRejectedItem] = Field(default_factory=list)
