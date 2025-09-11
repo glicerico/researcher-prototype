@@ -19,6 +19,7 @@ from storage.research_manager import ResearchManager
 from services.personalization_manager import PersonalizationManager
 from research_graph_builder import research_graph
 from services.motivation import MotivationSystem
+from services.topic_expansion_service import TopicExpansionService
 
 
 class AutonomousResearcher:
@@ -58,6 +59,17 @@ class AutonomousResearcher:
         self.max_topics_per_user = config.RESEARCH_MAX_TOPICS_PER_USER
         self.quality_threshold = config.RESEARCH_QUALITY_THRESHOLD
         self.enabled = config.RESEARCH_ENGINE_ENABLED
+
+        # Topic expansion service (Phase 2 wiring)
+        try:
+            from dependencies import zep_manager as _zep_manager_singleton  # type: ignore
+            self.topic_expansion_service = TopicExpansionService(_zep_manager_singleton, self.research_manager)
+        except Exception:
+            # Fallback: create a placeholder that returns no candidates
+            self.topic_expansion_service = TopicExpansionService(None, self.research_manager)  # type: ignore[arg-type]
+
+        # Concurrency guard for expansions
+        self._expansion_semaphore = asyncio.Semaphore(max(1, int(getattr(config, 'EXPANSION_MAX_PARALLEL', 2))))
 
         logger.info(
             f"🔬 LangGraph Autonomous Researcher initialized - Enabled: {self.enabled}"
@@ -179,18 +191,75 @@ class AutonomousResearcher:
 
                     for topic in topics_to_research:
                         try:
-                            logger.info(f"🔬 Researching topic: {topic['topic_name']} for user {user_id}")
+                            root_name = topic['topic_name']
+                            logger.info(f"🔬 Researching topic: {root_name} for user {user_id}")
 
-                            # Conduct research for this topic using LangGraph
-                            research_result = await self._research_topic_with_langgraph(user_id, topic)
+                            tasks = []
 
-                            total_topics_researched += 1
+                            async def _run_root() -> Optional[Dict[str, Any]]:
+                                return await self._research_topic_with_langgraph(user_id, topic)
 
-                            if research_result and research_result.get("stored", False):
-                                total_findings_stored += 1
+                            tasks.append(asyncio.create_task(_run_root()))
 
-                            if research_result and research_result.get("quality_score"):
-                                quality_scores.append(research_result.get("quality_score"))
+                            # Phase 2: schedule Zep-only expansions
+                            created_expansions: List[Dict[str, Any]] = []
+                            if getattr(config, 'EXPANSION_ENABLED', False):
+                                try:
+                                    candidates = await self.topic_expansion_service.generate_candidates(user_id, topic)
+                                    logger.debug(f"🔬 Expansion candidates for '{root_name}': {len(candidates)}")
+                                    if candidates:
+                                        k = min(getattr(config, 'EXPLORATION_PER_ROOT_MAX', 2), len(candidates))
+                                        selected = candidates[:k]
+                                        logger.info(
+                                            f"🔬 Choosing {len(selected)}/{len(candidates)} expansions for '{root_name}'"
+                                        )
+                                        for cand in selected:
+                                            desc = f"Auto expansion of {root_name}"
+                                            res = self.research_manager.add_custom_topic(
+                                                user_id=user_id,
+                                                topic_name=cand.name,
+                                                description=desc,
+                                                confidence_score=0.8,
+                                                enable_research=True,
+                                            )
+                                            if res and res.get('success'):
+                                                topic_obj = res.get('topic', {})
+                                                created_expansions.append({
+                                                    "topic": topic_obj,
+                                                    "candidate": cand,
+                                                })
+                                                sim_txt = (
+                                                    f"{cand.similarity:.2f}" if isinstance(cand.similarity, (int, float)) else "n/a"
+                                                )
+                                                logger.info(
+                                                    f"🔬 Scheduled expansion: {cand.name} (source={cand.source}, sim={sim_txt})"
+                                                )
+                                            else:
+                                                logger.debug(
+                                                    f"🔬 Skipping expansion '{cand.name}' - duplicate or failed to persist"
+                                                )
+                                except Exception as e:
+                                    logger.error(f"🔬 Expansion generation failed for '{root_name}': {str(e)}")
+
+                            # Launch expansion research tasks (bounded by semaphore)
+                            for item in created_expansions:
+                                exp_topic = item["topic"]
+                                async def _run_expansion(t=exp_topic) -> Optional[Dict[str, Any]]:
+                                    async with self._expansion_semaphore:
+                                        return await self._research_topic_with_langgraph(user_id, t)
+                                tasks.append(asyncio.create_task(_run_expansion()))
+
+                            results = await asyncio.gather(*tasks, return_exceptions=True)
+
+                            for res in results:
+                                if isinstance(res, Exception):
+                                    logger.error(f"🔬 Error in research task: {res}")
+                                    continue
+                                total_topics_researched += 1
+                                if res and res.get("stored", False):
+                                    total_findings_stored += 1
+                                if res and res.get("quality_score"):
+                                    quality_scores.append(res.get("quality_score"))
 
                             # Small delay between topics to avoid overwhelming APIs
                             await asyncio.sleep(1)
