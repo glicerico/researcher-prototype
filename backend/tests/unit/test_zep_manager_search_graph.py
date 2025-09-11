@@ -70,3 +70,21 @@ async def test_search_graph_invalid_scope_returns_empty():
     out = await z.search_graph("u1", "q", scope="invalid")
     assert out == []
 
+
+@pytest.mark.asyncio
+async def test_search_graph_timeout_returns_empty(monkeypatch):
+    class TimeoutGraph:
+        async def search(self, **kwargs):
+            raise asyncio.TimeoutError()
+
+    class TimeoutClient:
+        def __init__(self):
+            self.graph = TimeoutGraph()
+
+    monkeypatch.setattr("config.ZEP_SEARCH_TIMEOUT_SECONDS", 1, raising=False)
+    monkeypatch.setattr("config.ZEP_SEARCH_RETRIES", 0, raising=False)
+    z = ZepManager()
+    z.enabled = True
+    z.client = TimeoutClient()
+    out = await z.search_graph("u1", "q", scope="nodes")
+    assert out == []

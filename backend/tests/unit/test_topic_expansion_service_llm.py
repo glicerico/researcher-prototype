@@ -135,6 +135,26 @@ async def test_generate_candidates_llm_only_validated_by_zep(monkeypatch):
 
 
 @pytest.mark.asyncio
+async def test_generate_candidates_llm_timeout_fallback(monkeypatch):
+    monkeypatch.setattr(app_config, "EXPANSION_LLM_ENABLED", True, raising=False)
+    monkeypatch.setattr(app_config, "EXPANSION_LLM_TIMEOUT_SECONDS", 1, raising=False)
+    zep = MagicMock()
+    zep.search_graph = AsyncMock(return_value=[_mk_zep_node("A", 0.9)])
+    research = MagicMock()
+    research.get_user_topics.return_value = {"sessions": {"s1": []}}
+    svc = TopicExpansionService(zep, research)
+
+    with patch("services.topic_expansion_service.ChatOpenAI") as chat:
+        # Simulate hang by blocking invoke; our wait_for should timeout
+        def blocking_invoke(_):
+            import time as _t
+            _t.sleep(2)
+        chat.return_value.with_structured_output.return_value.invoke.side_effect = blocking_invoke
+        out = await svc.generate_candidates("u1", {"topic_name": "Root"})
+        assert any(c.source.startswith("zep_") for c in out)
+
+
+@pytest.mark.asyncio
 async def test_generate_candidates_llm_flag_disabled(monkeypatch):
     monkeypatch.setattr(app_config, "EXPANSION_LLM_ENABLED", False, raising=False)
     zep = MagicMock()
@@ -175,4 +195,3 @@ async def test_dedupe_against_existing_topics(monkeypatch):
         out = await svc.generate_candidates("u1", {"topic_name": "Root"})
         # Should dedupe against existing topics, resulting in empty list
         assert out == []
-

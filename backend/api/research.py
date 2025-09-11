@@ -260,6 +260,12 @@ async def debug_expand_topics(user_id: str, req: ExpansionRequest):
         if not config.ZEP_ENABLED or not zep_manager.is_enabled():
             return {"success": False, "error": "Zep disabled"}
 
+        # Validate input
+        root = req.root_topic or {}
+        name = (root.get("topic_name") or "").strip()
+        if not name:
+            return {"success": False, "error": "Invalid root_topic.topic_name"}
+
         # Generate candidates
         svc = TopicExpansionService(zep_manager, research_manager)
         candidates: List[ExpansionCandidate] = await svc.generate_candidates(user_id, req.root_topic)
@@ -312,6 +318,7 @@ async def debug_expand_topics(user_id: str, req: ExpansionRequest):
             "created_topics": created,
             "skipped_duplicates": skipped_duplicates,
             "limit": (req.limit if req.limit is not None else config.EXPLORATION_PER_ROOT_MAX),
+            "metrics": getattr(svc, "metrics", {}),
         }
 
     except Exception as e:

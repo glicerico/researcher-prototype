@@ -3,6 +3,7 @@ Zep Memory Manager for storing chat interactions in knowledge graph.
 """
 
 import uuid
+import asyncio
 from typing import Optional, List, Dict, Any
 from zep_cloud.client import AsyncZep
 from zep_cloud import Message
@@ -121,112 +122,135 @@ class ZepManager:
             logger.error(f"Invalid graph search scope: {scope}")
             return []
 
-        try:
-            results = await self.client.graph.search(
-                query=query,
-                user_id=user_id,
-                scope=scope,
-                reranker=reranker,
-                limit=limit,
-            )
-
-            normalized: List[Dict[str, Any]] = []
-
-            def _extract_similarity(obj: Any) -> Optional[float]:
-                # Preserve any available similarity/score under a standard key
-                for key in ("similarity", "score", "relevance"):
-                    # Support both dict-like and attribute access
-                    if isinstance(obj, dict) and key in obj:
-                        try:
-                            return float(obj[key])  # type: ignore[return-value]
-                        except Exception:
-                            continue
-                    if hasattr(obj, key):
-                        try:
-                            return float(getattr(obj, key))
-                        except Exception:
-                            continue
-                return None
-
-            if not results:
-                return []
-
-            for item in results:
-                sim = _extract_similarity(item)
-                # Convert SDK objects to dicts safely, tolerating missing attrs
-                if scope == "nodes":
-                    # If result looks like an edge, skip (defensive in case backend returns mixed)
-                    if (isinstance(item, dict) and (item.get("source_node_uuid") or item.get("target_node_uuid"))) or (
-                        hasattr(item, "source_node_uuid") or hasattr(item, "target_node_uuid")
-                    ):
-                        continue
-                    name = None
-                    labels: List[str] = []
-                    uuid_val = None
-                    if isinstance(item, dict):
-                        name = item.get("name")
-                        labels = item.get("labels", []) or []
-                        uuid_val = item.get("uuid") or item.get("uuid_")
-                    else:
-                        name = getattr(item, "name", None)
-                        labels = getattr(item, "labels", []) or []
-                        uuid_val = getattr(item, "uuid", None) or getattr(item, "uuid_", None)
-
-                    normalized.append(
-                        {
-                            "name": name or (labels[0] if labels else None),
-                            "labels": labels if isinstance(labels, list) else [],
-                            "uuid": uuid_val,
-                            "similarity": sim,
-                        }
+        timeout = getattr(config, "ZEP_SEARCH_TIMEOUT_SECONDS", 5)
+        retries = getattr(config, "ZEP_SEARCH_RETRIES", 2)
+        attempt = 0
+        last_exc: Optional[Exception] = None
+        while attempt <= retries:
+            try:
+                results = await asyncio.wait_for(
+                    self.client.graph.search(
+                        query=query,
+                        user_id=user_id,
+                        scope=scope,
+                        reranker=reranker,
+                        limit=limit,
+                    ),
+                    timeout=timeout,
+                )
+                last_exc = None
+                break
+            except Exception as e:
+                last_exc = e
+                attempt += 1
+                if attempt > retries:
+                    logger.error(
+                        f"Zep graph.search failed after {attempt} attempts (scope={scope}): {str(e)}"
                     )
-                else:  # edges
-                    # Ensure item has edge-like fields; otherwise skip
-                    has_edge_fields = False
-                    if isinstance(item, dict):
-                        has_edge_fields = bool(item.get("source_node_uuid") or item.get("target_node_uuid") or item.get("fact"))
-                    else:
-                        has_edge_fields = bool(
-                            getattr(item, "source_node_uuid", None)
-                            or getattr(item, "target_node_uuid", None)
-                            or getattr(item, "fact", None)
-                        )
-                    if not has_edge_fields:
+                    results = []
+                    break
+                # Jittered backoff
+                import random
+                wait_s = 0.1 + random.random() * 0.3
+                logger.debug(
+                    f"Zep graph.search attempt {attempt} failed (scope={scope}): {str(e)}; retrying in {wait_s:.2f}s"
+                )
+                await asyncio.sleep(wait_s)
+
+        # Post-search normalization
+        normalized: List[Dict[str, Any]] = []
+
+        def _extract_similarity(obj: Any) -> Optional[float]:
+            # Preserve any available similarity/score under a standard key
+            for key in ("similarity", "score", "relevance"):
+                # Support both dict-like and attribute access
+                if isinstance(obj, dict) and key in obj:
+                    try:
+                        return float(obj[key])  # type: ignore[return-value]
+                    except Exception:
                         continue
-                    fact = None
-                    name = None
-                    src = None
-                    tgt = None
-                    uuid_val = None
-                    if isinstance(item, dict):
-                        fact = item.get("fact")
-                        name = item.get("name")
-                        src = item.get("source_node_uuid")
-                        tgt = item.get("target_node_uuid")
-                        uuid_val = item.get("uuid") or item.get("uuid_")
-                    else:
-                        fact = getattr(item, "fact", None)
-                        name = getattr(item, "name", None)
-                        src = getattr(item, "source_node_uuid", None)
-                        tgt = getattr(item, "target_node_uuid", None)
-                        uuid_val = getattr(item, "uuid", None) or getattr(item, "uuid_", None)
+                if hasattr(obj, key):
+                    try:
+                        return float(getattr(obj, key))
+                    except Exception:
+                        continue
+            return None
 
-                    normalized.append(
-                        {
-                            "fact": fact,
-                            "name": fact or name,
-                            "source_node_uuid": src,
-                            "target_node_uuid": tgt,
-                            "uuid": uuid_val,
-                            "similarity": sim,
-                        }
-                    )
-
-            return [n for n in normalized if n.get("name")]
-
-        except Exception as e:
-            logger.error(f"Failed Zep graph search (scope={scope}): {str(e)}")
+        if not results:
             return []
+
+        for item in results:
+            sim = _extract_similarity(item)
+            # Convert SDK objects to dicts safely, tolerating missing attrs
+            if scope == "nodes":
+                # If result looks like an edge, skip (defensive in case backend returns mixed)
+                if (isinstance(item, dict) and (item.get("source_node_uuid") or item.get("target_node_uuid"))) or (
+                    hasattr(item, "source_node_uuid") or hasattr(item, "target_node_uuid")
+                ):
+                    continue
+                name = None
+                labels: List[str] = []
+                uuid_val = None
+                if isinstance(item, dict):
+                    name = item.get("name")
+                    labels = item.get("labels", []) or []
+                    uuid_val = item.get("uuid") or item.get("uuid_")
+                else:
+                    name = getattr(item, "name", None)
+                    labels = getattr(item, "labels", []) or []
+                    uuid_val = getattr(item, "uuid", None) or getattr(item, "uuid_", None)
+
+                normalized.append(
+                    {
+                        "name": name or (labels[0] if labels else None),
+                        "labels": labels if isinstance(labels, list) else [],
+                        "uuid": uuid_val,
+                        "similarity": sim,
+                    }
+                )
+            else:  # edges
+                # Ensure item has edge-like fields; otherwise skip
+                has_edge_fields = False
+                if isinstance(item, dict):
+                    has_edge_fields = bool(item.get("source_node_uuid") or item.get("target_node_uuid") or item.get("fact"))
+                else:
+                    has_edge_fields = bool(
+                        getattr(item, "source_node_uuid", None)
+                        or getattr(item, "target_node_uuid", None)
+                        or getattr(item, "fact", None)
+                    )
+                if not has_edge_fields:
+                    continue
+                fact = None
+                name = None
+                src = None
+                tgt = None
+                uuid_val = None
+                if isinstance(item, dict):
+                    fact = item.get("fact")
+                    name = item.get("name")
+                    src = item.get("source_node_uuid")
+                    tgt = item.get("target_node_uuid")
+                    uuid_val = item.get("uuid") or item.get("uuid_")
+                else:
+                    fact = getattr(item, "fact", None)
+                    name = getattr(item, "name", None)
+                    src = getattr(item, "source_node_uuid", None)
+                    tgt = getattr(item, "target_node_uuid", None)
+                    uuid_val = getattr(item, "uuid", None) or getattr(item, "uuid_", None)
+
+                normalized.append(
+                    {
+                        "fact": fact,
+                        "name": fact or name,
+                        "source_node_uuid": src,
+                        "target_node_uuid": tgt,
+                        "uuid": uuid_val,
+                        "similarity": sim,
+                    }
+                )
+
+        return [n for n in normalized if n.get("name")]
     
     async def create_thread(self, thread_id: str, user_id: str) -> bool:
         """

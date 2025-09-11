@@ -39,23 +39,44 @@ ZEP_SEARCH_LIMIT = int(os.getenv("ZEP_SEARCH_LIMIT", "10"))
 ZEP_SEARCH_RERANKER = os.getenv("ZEP_SEARCH_RERANKER", "cross_encoder")
 EXPLORATION_PER_ROOT_MAX = int(os.getenv("EXPLORATION_PER_ROOT_MAX", "2"))
 EXPANSION_MIN_SIMILARITY = float(os.getenv("EXPANSION_MIN_SIMILARITY", "0.35"))
-EXPANSION_MAX_PARALLEL = int(os.getenv("EXPANSION_MAX_PARALLEL", "2"))
+def _clamp_float(v: float, lo: float = 0.0, hi: float = 1.0) -> float:
+    try:
+        return max(lo, min(hi, float(v)))
+    except Exception:
+        return lo
+
+def _clamp_int(v: int, lo: int = 0, hi: int = 1_000_000) -> int:
+    try:
+        return max(lo, min(hi, int(v)))
+    except Exception:
+        return lo
+
+EXPANSION_MAX_PARALLEL = _clamp_int(int(os.getenv("EXPANSION_MAX_PARALLEL", "2")), 1, 64)
 
 # Expansion LLM (Phase 3)
 EXPANSION_LLM_ENABLED = os.getenv("EXPANSION_LLM_ENABLED", "true").lower() == "true"
 EXPANSION_LLM_MODEL = os.getenv("EXPANSION_LLM_MODEL", "gpt-4o-mini")
-EXPANSION_LLM_MAX_TOKENS = int(os.getenv("EXPANSION_LLM_MAX_TOKENS", "800"))
-EXPANSION_LLM_TEMPERATURE = float(os.getenv("EXPANSION_LLM_TEMPERATURE", "0.2"))
-EXPANSION_LLM_SUGGESTION_LIMIT = int(os.getenv("EXPANSION_LLM_SUGGESTION_LIMIT", "6"))
+EXPANSION_LLM_MAX_TOKENS = _clamp_int(int(os.getenv("EXPANSION_LLM_MAX_TOKENS", "800")), 100, 4000)
+EXPANSION_LLM_TEMPERATURE = _clamp_float(float(os.getenv("EXPANSION_LLM_TEMPERATURE", "0.2")), 0.0, 1.0)
+EXPANSION_LLM_SUGGESTION_LIMIT = _clamp_int(int(os.getenv("EXPANSION_LLM_SUGGESTION_LIMIT", "6")), 1, 20)
+# Optional timeout (seconds) for the single LLM call
+EXPANSION_LLM_TIMEOUT_SECONDS = _clamp_int(int(os.getenv("EXPANSION_LLM_TIMEOUT_SECONDS", "12")), 1, 120)
 
 # Expansion lifecycle (Phase 4)
-EXPANSION_MAX_DEPTH = int(os.getenv("EXPANSION_MAX_DEPTH", "2"))
-EXPANSION_ENGAGEMENT_WINDOW_DAYS = int(os.getenv("EXPANSION_ENGAGEMENT_WINDOW_DAYS", "7"))
-EXPANSION_PROMOTE_ENGAGEMENT = float(os.getenv("EXPANSION_PROMOTE_ENGAGEMENT", "0.35"))
-EXPANSION_RETIRE_ENGAGEMENT = float(os.getenv("EXPANSION_RETIRE_ENGAGEMENT", "0.1"))
-EXPANSION_MIN_QUALITY = float(os.getenv("EXPANSION_MIN_QUALITY", "0.6"))
-EXPANSION_BACKOFF_DAYS = int(os.getenv("EXPANSION_BACKOFF_DAYS", "7"))
-EXPANSION_RETIRE_TTL_DAYS = int(os.getenv("EXPANSION_RETIRE_TTL_DAYS", "30"))
+EXPANSION_MAX_DEPTH = _clamp_int(int(os.getenv("EXPANSION_MAX_DEPTH", "2")), 1, 10)
+EXPANSION_ENGAGEMENT_WINDOW_DAYS = _clamp_int(int(os.getenv("EXPANSION_ENGAGEMENT_WINDOW_DAYS", "7")), 1, 90)
+EXPANSION_PROMOTE_ENGAGEMENT = _clamp_float(float(os.getenv("EXPANSION_PROMOTE_ENGAGEMENT", "0.35")))
+EXPANSION_RETIRE_ENGAGEMENT = _clamp_float(float(os.getenv("EXPANSION_RETIRE_ENGAGEMENT", "0.1")))
+EXPANSION_MIN_QUALITY = _clamp_float(float(os.getenv("EXPANSION_MIN_QUALITY", "0.6")))
+EXPANSION_BACKOFF_DAYS = _clamp_int(int(os.getenv("EXPANSION_BACKOFF_DAYS", "7")), 1, 365)
+EXPANSION_RETIRE_TTL_DAYS = _clamp_int(int(os.getenv("EXPANSION_RETIRE_TTL_DAYS", "30")), 1, 365)
+
+# Zep search hardening
+ZEP_SEARCH_TIMEOUT_SECONDS = _clamp_int(int(os.getenv("ZEP_SEARCH_TIMEOUT_SECONDS", "5")), 1, 60)
+ZEP_SEARCH_RETRIES = _clamp_int(int(os.getenv("ZEP_SEARCH_RETRIES", "2")), 0, 5)
+
+# Clamp similarity threshold
+EXPANSION_MIN_SIMILARITY = _clamp_float(EXPANSION_MIN_SIMILARITY, 0.0, 1.0)
 
 # LangSmith tracing configuration
 LANGCHAIN_TRACING_V2 = os.getenv("LANGCHAIN_TRACING_V2", "false").lower() == "true"

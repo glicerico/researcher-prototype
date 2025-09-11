@@ -29,6 +29,12 @@ class TopicExpansionService:
     def __init__(self, zep_manager: ZepManager, research_manager: ResearchManager) -> None:
         self.zep = zep_manager
         self.research = research_manager
+        self.metrics: Dict[str, int] = {
+            "expansion_candidates_total": 0,
+            "expansion_llm_accepted": 0,
+            "expansion_llm_rejected": 0,
+            "expansion_fallbacks": 0,
+        }
 
     async def generate_candidates(self, user_id: str, root_topic: Dict[str, Any]) -> List[ExpansionCandidate]:
         """Generate topic expansion candidates using Zep graph search (+ optional LLM selection)."""
@@ -59,6 +65,7 @@ class TopicExpansionService:
         edges_task = self.zep.search_graph(user_id, query, scope="edges", reranker=reranker, limit=limit)
 
         nodes_res, edges_res = await asyncio.gather(nodes_task, edges_task)
+        self.metrics["expansion_candidates_total"] += (len(nodes_res) + len(edges_res))
 
         logger.debug(
             f"Zep search returned {len(nodes_res)} nodes and {len(edges_res)} edges for expansion"
@@ -185,10 +192,17 @@ class TopicExpansionService:
             )
             structured = llm.with_structured_output(ExpansionSelection)
             messages = [SystemMessage(content=prompt)]
-            selection: ExpansionSelection = structured.invoke(messages)
+            # Run the single call with a timeout to avoid blocking
+            llm_timeout = int(getattr(config, "EXPANSION_LLM_TIMEOUT_SECONDS", 12))
+            selection: ExpansionSelection = await asyncio.wait_for(
+                asyncio.to_thread(structured.invoke, messages),
+                timeout=llm_timeout,
+            )
 
             accepted = selection.accepted or []
             rejected = selection.rejected or []
+            self.metrics["expansion_llm_accepted"] += len(accepted)
+            self.metrics["expansion_llm_rejected"] += len(rejected)
             if rejected:
                 logger.debug(
                     "LLM rejected items: "
@@ -236,9 +250,15 @@ class TopicExpansionService:
                     ExpansionCandidate(name=nm, source=src if src in ("zep_node", "zep_edge", "llm") else "llm", similarity=sim, rationale=getattr(item, "rationale", None))
                 )
 
+            # Enforce suggestion limit
+            limit_out = int(getattr(config, "EXPANSION_LLM_SUGGESTION_LIMIT", 6))
+            if len(final) > limit_out:
+                final = final[:limit_out]
+
             # Fallback to Phase 1 if nothing accepted
             if not final:
                 logger.warning("Expansion LLM returned no usable items; falling back to Zep-only.")
+                self.metrics["expansion_fallbacks"] += 1
                 return phase1_flow()
 
             # Sort as specified: similarity desc; Zep items before LLM; deterministic by name
@@ -255,4 +275,5 @@ class TopicExpansionService:
 
         except Exception as e:
             logger.warning(f"Expansion LLM failed or invalid JSON; fallback to Zep-only. Error: {str(e)}")
+            self.metrics["expansion_fallbacks"] += 1
             return phase1_flow()

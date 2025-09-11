@@ -150,6 +150,40 @@ ZEP_ENABLED=false  # optional advanced memory
 ```
 The React app reads `frontend/.env.*` – `REACT_APP_API_URL` should point to the backend.
 
+### Expansion Flags (Phases 1–4)
+- `EXPANSION_ENABLED` (default false): enable autonomous expansion generation in research loop.
+- `EXPLORATION_PER_ROOT_MAX` (default 2): per-root budget of child expansions to persist.
+- `EXPANSION_MAX_PARALLEL` (default 2): max concurrent expansion research tasks.
+- `EXPANSION_MIN_SIMILARITY` (default 0.35): drop candidates below this Zep similarity if provided.
+- Zep search:
+  - `ZEP_SEARCH_LIMIT` (default 10)
+  - `ZEP_SEARCH_RERANKER` (default cross_encoder)
+  - `ZEP_SEARCH_TIMEOUT_SECONDS` (default 5)
+  - `ZEP_SEARCH_RETRIES` (default 2)
+- LLM selection (Phase 3):
+  - `EXPANSION_LLM_ENABLED` (default true)
+  - `EXPANSION_LLM_MODEL` (default gpt-4o-mini)
+  - `EXPANSION_LLM_MAX_TOKENS` (default 800)
+  - `EXPANSION_LLM_TEMPERATURE` (default 0.2)
+  - `EXPANSION_LLM_SUGGESTION_LIMIT` (default 6)
+  - `EXPANSION_LLM_TIMEOUT_SECONDS` (default 12)
+- Lifecycle (Phase 4):
+  - `EXPANSION_MAX_DEPTH` (default 2)
+  - `EXPANSION_ENGAGEMENT_WINDOW_DAYS` (default 7)
+  - `EXPANSION_PROMOTE_ENGAGEMENT` (default 0.35)
+  - `EXPANSION_RETIRE_ENGAGEMENT` (default 0.1)
+  - `EXPANSION_MIN_QUALITY` (default 0.6)
+  - `EXPANSION_BACKOFF_DAYS` (default 7)
+  - `EXPANSION_RETIRE_TTL_DAYS` (default 30)
+
+### Expansion Flow Overview
+- Phase 1: Zep-only graph search for nodes/edges to propose candidates (debug endpoint).
+- Phase 2: Integrate Zep-only candidates into research loop with a small per-root budget.
+- Phase 3: Single LLM call to dedupe, quality-select, and propose adjacent topics (validated via Zep).
+- Phase 4: Lifecycle gating—promote, pause, retire expansion topics based on engagement and recent quality; only promoted parents spawn children under depth/backoff limits.
+
+Debug endpoint: `POST /api/research/debug/expand/{user_id}` accepts `{ root_topic, create_topics?, enable_research?, limit? }`. Returns candidate list, created topics, skipped duplicates, and basic metrics. When Zep disabled, returns `{ success: false, error: 'Zep disabled' }`.
+
 ---
 
 ## 8. When Working as Codex

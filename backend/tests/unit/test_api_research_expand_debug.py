@@ -74,6 +74,19 @@ def test_expand_debug_returns_candidates_and_persists_when_requested(client, mon
         assert data["created_topics"] == [{"topic_id": "t1", "name": "Topic A"}]
         assert data["skipped_duplicates"] == ["Topic B"]
         assert data["limit"] == 2
+        assert "metrics" in data
+
+
+def test_expand_debug_invalid_root_topic_returns_error(client, monkeypatch):
+    monkeypatch.setattr(app_config, "ZEP_ENABLED", True, raising=False)
+    with patch("api.research.zep_manager") as zm, patch("api.research.research_manager") as rm:
+        zm.is_enabled.return_value = True
+        body = {"root_topic": {"topic_name": "   "}}
+        resp = client.post("/api/research/debug/expand/u1", json=body)
+        assert resp.status_code == 200
+        data = resp.json()
+        assert data["success"] is False
+        assert "Invalid root_topic.topic_name" in data["error"]
 
 
 def test_expand_debug_ignores_expansion_flag_when_false(client, monkeypatch):
