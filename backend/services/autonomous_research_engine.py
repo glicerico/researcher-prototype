@@ -71,6 +71,19 @@ class AutonomousResearcher:
         # Concurrency guard for expansions
         self._expansion_semaphore = asyncio.Semaphore(max(1, int(getattr(config, 'EXPANSION_MAX_PARALLEL', 2))))
 
+    def get_recent_average_quality(self, user_id: str, topic_name: str, window_days: int) -> float:
+        """Compute recent average quality over window for a topic."""
+        try:
+            now = time.time()
+            window_start = now - (window_days * 24 * 3600)
+            findings = self.research_manager.get_research_findings_for_api(user_id, topic_name, unread_only=False)
+            scores = [f.get("quality_score") for f in findings if f.get("research_time", 0) >= window_start and isinstance(f.get("quality_score"), (int, float))]
+            if not scores:
+                return 0.0
+            return sum(scores) / len(scores)
+        except Exception:
+            return 0.0
+
         logger.info(
             f"🔬 LangGraph Autonomous Researcher initialized - Enabled: {self.enabled}"
         )
@@ -160,8 +173,13 @@ class AutonomousResearcher:
     async def _conduct_research_cycle(self):
         """Conduct a complete research cycle for all users with active topics."""
         try:
-            # Get all users
-            all_users = self.profile_manager.list_users()
+            # Get all users; coerce to list and fall back to guest if empty/invalid
+            users_raw = self.profile_manager.list_users()
+            try:
+                users_list = list(users_raw) if users_raw is not None else []
+            except Exception:
+                users_list = []
+            all_users = users_list or ["guest"]
             logger.info(f"🔬 Scanning {len(all_users)} users for active research topics...")
 
             total_topics_researched = 0
@@ -201,10 +219,30 @@ class AutonomousResearcher:
 
                             tasks.append(asyncio.create_task(_run_root()))
 
-                            # Phase 2: schedule Zep-only expansions
+                            # Phase 2+: schedule expansions with lifecycle gating
                             created_expansions: List[Dict[str, Any]] = []
                             if getattr(config, 'EXPANSION_ENABLED', False):
-                                try:
+                                # Determine gating for child expansion
+                                depth = int(topic.get('expansion_depth', 0) or 0)
+                                is_expansion = bool(topic.get('is_expansion', False))
+                                backoff_until = float(topic.get('last_backoff_until', 0) or 0)
+                                now_ts = time.time()
+
+                                allowed_for_children = True
+                                # Apply gating only for expansion topics (child generations)
+                                if is_expansion:
+                                    allowed_for_children = (
+                                        bool(topic.get('child_expansion_enabled', False))
+                                        and depth < int(getattr(config, 'EXPANSION_MAX_DEPTH', 2))
+                                        and backoff_until <= now_ts
+                                    )
+
+                                if not allowed_for_children:
+                                    logger.info(
+                                        f"🔬 Skipping child expansion for '{root_name}' (depth={depth}, enabled={topic.get('child_expansion_enabled', False)}, backoff_until={int(backoff_until)})"
+                                    )
+                                else:
+                                    # Generate candidates
                                     candidates = await self.topic_expansion_service.generate_candidates(user_id, topic)
                                     logger.debug(f"🔬 Expansion candidates for '{root_name}': {len(candidates)}")
                                     if candidates:
@@ -215,12 +253,29 @@ class AutonomousResearcher:
                                         )
                                         for cand in selected:
                                             desc = f"Auto expansion of {root_name}"
+                                            # Compute child depth
+                                            child_depth = min(depth + 1, int(getattr(config, 'EXPANSION_MAX_DEPTH', 2)))
+                                            extra_meta = {
+                                                "is_expansion": True,
+                                                "origin": {
+                                                    "type": "expansion",
+                                                    "parent_topic": root_name,
+                                                    "method": cand.source,
+                                                    "similarity": cand.similarity,
+                                                    "rationale": cand.rationale,
+                                                },
+                                                "expansion_depth": child_depth,
+                                                "child_expansion_enabled": False,
+                                                "expansion_status": "active",
+                                                "last_evaluated_at": now_ts,
+                                            }
                                             res = self.research_manager.add_custom_topic(
                                                 user_id=user_id,
                                                 topic_name=cand.name,
                                                 description=desc,
                                                 confidence_score=0.8,
                                                 enable_research=True,
+                                                extra=extra_meta,
                                             )
                                             if res and res.get('success'):
                                                 topic_obj = res.get('topic', {})
@@ -232,14 +287,15 @@ class AutonomousResearcher:
                                                     f"{cand.similarity:.2f}" if isinstance(cand.similarity, (int, float)) else "n/a"
                                                 )
                                                 logger.info(
-                                                    f"🔬 Scheduled expansion: {cand.name} (source={cand.source}, sim={sim_txt})"
+                                                    f"🔬 Scheduled expansion: {cand.name} (source={cand.source}, sim={sim_txt}, depth={child_depth})"
                                                 )
                                             else:
                                                 logger.debug(
                                                     f"🔬 Skipping expansion '{cand.name}' - duplicate or failed to persist"
                                                 )
-                                except Exception as e:
-                                    logger.error(f"🔬 Expansion generation failed for '{root_name}': {str(e)}")
+                                
+                                
+                            
 
                             # Launch expansion research tasks (bounded by semaphore)
                             for item in created_expansions:
@@ -282,6 +338,13 @@ class AutonomousResearcher:
             )
 
             avg_quality = sum(quality_scores) / len(quality_scores) if quality_scores else 0.0
+
+            # Lifecycle update per user
+            try:
+                for user_id in self.profile_manager.list_users():
+                    await self._update_expansion_lifecycle(user_id)
+            except Exception as e:
+                logger.error(f"Lifecycle update failed: {str(e)}")
 
             return {
                 "topics_researched": total_topics_researched,
@@ -377,6 +440,92 @@ class AutonomousResearcher:
                 exc_info=True,
             )
             return {"success": False, "error": str(e), "stored": False}
+
+    async def _update_expansion_lifecycle(self, user_id: str) -> None:
+        """Evaluate and update lifecycle state for expansion topics for a user."""
+        try:
+            topics_data = self.research_manager.get_user_topics(user_id)
+            if not topics_data:
+                return
+            now_ts = time.time()
+            promoted = paused = retired = 0
+            changed = False
+            window_days = int(getattr(config, 'EXPANSION_ENGAGEMENT_WINDOW_DAYS', 7))
+            promote_thr = float(getattr(config, 'EXPANSION_PROMOTE_ENGAGEMENT', 0.35))
+            retire_thr = float(getattr(config, 'EXPANSION_RETIRE_ENGAGEMENT', 0.1))
+            min_quality = float(getattr(config, 'EXPANSION_MIN_QUALITY', 0.6))
+            backoff_days = int(getattr(config, 'EXPANSION_BACKOFF_DAYS', 7))
+            retire_ttl_days = int(getattr(config, 'EXPANSION_RETIRE_TTL_DAYS', 30))
+
+            for sid, session_topics in topics_data.get('sessions', {}).items():
+                for topic in session_topics:
+                    if not topic.get('is_expansion', False):
+                        continue
+                    name = topic.get('topic_name')
+                    depth = int(topic.get('expansion_depth', 0) or 0)
+                    engagement = 0.0
+                    try:
+                        engagement = self.motivation._get_topic_engagement_score(user_id, name)
+                    except Exception:
+                        engagement = 0.0
+                    avg_quality = self.get_recent_average_quality(user_id, name, window_days)
+
+                    status = topic.get('expansion_status', 'active')
+                    last_eval = float(topic.get('last_evaluated_at', 0) or 0)
+                    backoff_until = float(topic.get('last_backoff_until', 0) or 0)
+
+                    decision_debug = f"topic='{name}' depth={depth} engagement={engagement:.2f} avg_q={avg_quality:.2f} status={status}"
+
+                    # Promote to allow children
+                    if engagement >= promote_thr and avg_quality >= min_quality:
+                        if not topic.get('child_expansion_enabled', False) or status != 'active':
+                            topic['child_expansion_enabled'] = True
+                            topic['expansion_status'] = 'active'
+                            changed = True
+                            promoted += 1
+                            logger.debug(f"Lifecycle promote: {decision_debug}")
+                        topic['last_evaluated_at'] = now_ts
+                        continue
+
+                    # Assess interactions in window via findings read/bookmark/integration
+                    findings = self.research_manager.get_research_findings_for_api(user_id, name, unread_only=False)
+                    window_start = now_ts - window_days * 24 * 3600
+                    any_interaction = any(
+                        (f.get('read', False) or f.get('bookmarked', False) or f.get('integrated', False)) and f.get('research_time', 0) >= window_start
+                        for f in findings
+                    )
+
+                    # Retire after TTL if still cold (check before pausing again)
+                    if status == 'paused' and last_eval and (now_ts - last_eval) >= retire_ttl_days * 24 * 3600:
+                        if engagement < retire_thr and not any_interaction:
+                            topic['expansion_status'] = 'retired'
+                            topic['last_evaluated_at'] = now_ts
+                            changed = True
+                            retired += 1
+                            logger.debug(f"Lifecycle retire: {decision_debug}")
+                            continue
+
+                    # Pause on cold engagement and no interactions in window
+                    if engagement < retire_thr and not any_interaction:
+                        topic['is_active_research'] = False
+                        topic['child_expansion_enabled'] = False
+                        topic['expansion_status'] = 'paused'
+                        topic['last_backoff_until'] = now_ts + backoff_days * 24 * 3600
+                        topic['last_evaluated_at'] = now_ts
+                        changed = True
+                        paused += 1
+                        logger.debug(f"Lifecycle pause: {decision_debug}")
+                        continue
+
+                    # No action
+                    topic['last_evaluated_at'] = now_ts
+
+            if changed:
+                self.research_manager.save_user_topics(user_id, topics_data)
+            logger.info(f"Lifecycle update for {user_id}: promoted={promoted}, paused={paused}, retired={retired}")
+
+        except Exception as e:
+            logger.error(f"Error updating expansion lifecycle for user {user_id}: {str(e)}")
 
     async def trigger_research_for_user(self, user_id: str) -> Dict[str, Any]:
         """

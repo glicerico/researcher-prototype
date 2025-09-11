@@ -192,6 +192,26 @@ class ResearchManager:
         """
         return self.storage.write(self._get_topics_path(user_id), topics_data)
 
+    def update_topic_fields_by_name(self, user_id: str, topic_name: str, updates: Dict[str, Any]) -> bool:
+        """Update arbitrary fields on a topic identified by name across sessions.
+
+        Backward-compatible: if fields are missing they will be added.
+        """
+        try:
+            topics_data = self.get_user_topics(user_id)
+            updated = False
+            for session_id, session_topics in topics_data.get("sessions", {}).items():
+                for topic in session_topics:
+                    if topic.get("topic_name") == topic_name:
+                        topic.update(updates)
+                        updated = True
+            if updated:
+                return self.save_user_topics(user_id, topics_data)
+            return False
+        except Exception as e:
+            logger.error(f"Error updating topic '{topic_name}' for user {user_id}: {str(e)}")
+            return False
+
     def get_active_research_topics(self, user_id: str) -> List[Dict[str, Any]]:
         """
         Get all active research topics for a user.
@@ -993,7 +1013,7 @@ class ResearchManager:
                     "sessions_affected": 0,
                 }
 
-    def add_custom_topic(self, user_id: str, topic_name: str, description: str, confidence_score: float = 0.8, enable_research: bool = False) -> Dict[str, Any]:
+    def add_custom_topic(self, user_id: str, topic_name: str, description: str, confidence_score: float = 0.8, enable_research: bool = False, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Add a custom research topic for a user.
 
@@ -1049,6 +1069,11 @@ class ResearchManager:
                     "research_count": 0,
                     "is_custom": True,  # Flag to identify custom topics
                 }
+
+                # Merge optional metadata for expansions (Phase 4)
+                if extra and isinstance(extra, dict):
+                    for k, v in extra.items():
+                        new_topic[k] = v
 
                 if enable_research:
                     new_topic["research_enabled_at"] = current_time
