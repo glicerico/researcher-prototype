@@ -1,16 +1,10 @@
 from typing import Optional, List
 from fastapi import APIRouter, Depends, HTTPException
-from pydantic import BaseModel
 
 from models import (
     PersonalityConfig, UserSummary, UserProfile, PreferencesConfig,
     EngagementAnalytics, PersonalizationHistory, PreferenceOverride
 )
-
-class CreateUserRequest(BaseModel):
-    display_name: Optional[str] = None
-    email: Optional[str] = None
-    personality: Optional[PersonalityConfig] = None
 from dependencies import (
     get_existing_user_id,
     get_or_create_user_id,
@@ -108,11 +102,7 @@ async def list_users():
 
 
 @router.post("/users")
-async def create_user(user_data: CreateUserRequest):
-    display_name = user_data.display_name
-    email = user_data.email
-    personality_data = user_data.personality
-    
+async def create_user(display_name: Optional[str] = None, email: Optional[str] = None):
     metadata = {}
     if display_name:
         metadata["display_name"] = display_name
@@ -122,12 +112,6 @@ async def create_user(user_data: CreateUserRequest):
     user_id = profile_manager.create_user(metadata)
     if not user_id:
         raise HTTPException(status_code=500, detail="Failed to create user")
-
-    # Update personality if provided
-    if personality_data:
-        success = profile_manager.update_personality(user_id, personality_data.model_dump())
-        if not success:
-            logger.warning(f"Failed to update personality for user {user_id}")
 
     # Initialize personalization files for new user
     profile_manager.migrate_user_personalization_files(user_id)

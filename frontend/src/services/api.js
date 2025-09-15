@@ -90,8 +90,14 @@ export const getUsers = async () => {
 
 export const createUser = async (userData) => {
   try {
-    console.log('Creating user with data:', userData);
-    const response = await api.post('/users', userData);
+    const displayName = userData.display_name;
+    const email = userData.email;
+    const params = { };
+    if (displayName) params.display_name = displayName;
+    if (email) params.email = email;
+    const response = await api.post('/users', null, {
+      params
+    });
     return response.data;
   } catch (error) {
     console.error('Error creating user:', error);
