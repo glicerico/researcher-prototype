@@ -1,0 +1,89 @@
+.test-user-initializer {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: radial-gradient(1200px circle at 20% 10%, rgba(99, 102, 241, 0.15), transparent 40%),
+              radial-gradient(900px circle at 80% 20%, rgba(16, 185, 129, 0.12), transparent 40%),
+              linear-gradient(180deg, rgba(17, 24, 39, 0.9), rgba(17, 24, 39, 0.95));
+  backdrop-filter: blur(6px);
+}
+
+.initializer-card {
+  width: 420px;
+  padding: 28px;
+  border-radius: 16px;
+  background: linear-gradient(180deg, rgba(31, 41, 55, 0.95), rgba(31, 41, 55, 0.9));
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+  color: #e5e7eb;
+}
+
+.initializer-card h3 {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  color: #f9fafb;
+}
+
+.initializer-card p {
+  margin: 0 0 18px 0;
+  font-size: 14px;
+  color: #9ca3af;
+}
+
+.initializer-card input[type="text"],
+.initializer-card input[type="email"] {
+  width: 100%;
+  padding: 12px 14px;
+  margin: 10px 0;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.04);
+  color: #f3f4f6;
+  outline: none;
+  transition: border-color 0.2s, background 0.2s;
+}
+
+.initializer-card input:focus {
+  border-color: rgba(99, 102, 241, 0.6);
+  background: rgba(255, 255, 255, 0.06);
+}
+
+.initializer-actions {
+  display: flex;
+  gap: 10px;
+  margin-top: 14px;
+}
+
+.initializer-actions button {
+  flex: 1;
+  padding: 12px 14px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  background: linear-gradient(180deg, rgba(99, 102, 241, 0.9), rgba(99, 102, 241, 0.85));
+  color: white;
+  cursor: pointer;
+  transition: transform 0.05s ease, box-shadow 0.2s ease;
+}
+
+.initializer-actions button:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 24px rgba(99, 102, 241, 0.35);
+}
+
+.initializer-actions button:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.initializer-error {
+  margin-top: 8px;
+  color: #fecaca;
+  background: rgba(239, 68, 68, 0.1);
+  border: 1px solid rgba(239, 68, 68, 0.2);
+  padding: 8px 10px;
+  border-radius: 8px;
+}
+
+

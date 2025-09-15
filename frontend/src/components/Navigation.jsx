@@ -241,6 +241,17 @@ const Navigation = () => {
                 )}
               </div>
             )}
+
+            {isOnChatPage && isTestMode && userId && (
+              <div className="chat-controls">
+                <button 
+                  className="profile-button"
+                  onClick={handleToggleUserProfile}
+                >
+                  {showUserProfile ? 'Hide Settings' : 'User Settings'}
+                </button>
+              </div>
+            )}
           </div>
         </div>
       </nav>
@@ -281,8 +292,20 @@ const Navigation = () => {
               if (id) {
                 updateUserId(id);
                 if (displayName) updateUserDisplayName(displayName);
+                setShowUserProfile(true);
               }
             }} />
+          </div>
+        </div>
+      )}
+
+      {isOnChatPage && isTestMode && showUserProfile && userId && (
+        <div className="profile-modal-overlay" onClick={handleToggleUserProfile}>
+          <div className="profile-modal-content" onClick={(e) => e.stopPropagation()}>
+            <UserProfile 
+              userId={userId} 
+              onProfileUpdated={handleProfileUpdated} 
+            />
           </div>
         </div>
       )}

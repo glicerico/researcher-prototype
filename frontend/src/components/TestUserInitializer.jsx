@@ -1,8 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { createUser, getCurrentUser } from '../services/api';
+import '../styles/TestUserInitializer.css';
 
 const TestUserInitializer = ({ onInitialized }) => {
   const [email, setEmail] = useState('');
+  const [username, setUsername] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
 
@@ -22,27 +24,23 @@ const TestUserInitializer = ({ onInitialized }) => {
         }
       })();
     }
-  }, [onInitialized]);
-
-  const continueAsGuest = async () => {
-    try {
-      setLoading(true);
-      setError(null);
-      // Guest user is handled by the backend when no header is present.
-      localStorage.setItem('user_id', 'guest');
-      onInitialized('guest');
-    } catch (e) {
-      setError('Failed to continue as guest');
-    } finally {
-      setLoading(false);
+    // Pre-fill a random username
+    if (!username) {
+      const rand = Math.random().toString(36).slice(2, 6);
+      setUsername(`user-${rand}`);
     }
-  };
+  }, [onInitialized]);
 
   const createUserWithOptionalEmail = async () => {
     try {
       setLoading(true);
       setError(null);
-      const payload = {};
+      if (!username || !username.trim()) {
+        setError('Please provide a username');
+        setLoading(false);
+        return;
+      }
+      const payload = { display_name: username.trim() };
       if (email && email.trim()) {
         payload.email = email.trim();
       }
@@ -64,7 +62,14 @@ const TestUserInitializer = ({ onInitialized }) => {
     <div className="test-user-initializer">
       <div className="initializer-card">
         <h3>Set up your test user</h3>
-        <p>Enter an email (optional) or continue as guest.</p>
+        <p>Choose a username and optionally add an email to continue.</p>
+        <input
+          type="text"
+          placeholder="Username"
+          value={username}
+          onChange={(e) => setUsername(e.target.value)}
+          disabled={loading}
+        />
         <input
           type="email"
           placeholder="Email (optional)"
@@ -76,9 +81,6 @@ const TestUserInitializer = ({ onInitialized }) => {
         <div className="initializer-actions">
           <button onClick={createUserWithOptionalEmail} disabled={loading}>
             {loading ? 'Creating…' : 'Create User'}
-          </button>
-          <button onClick={continueAsGuest} disabled={loading}>
-            Continue as Guest
           </button>
         </div>
       </div>
