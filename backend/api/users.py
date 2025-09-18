@@ -69,6 +69,24 @@ async def update_user_display_name(display_name: str, user_id: str = Depends(get
     return {"success": True, "message": "Display name updated successfully"}
 
 
+@router.put("/user/email")
+async def update_user_email(email: str, user_id: str = Depends(get_or_create_user_id)):
+    # Get current user data to preserve other metadata
+    user_data = profile_manager.get_user(user_id)
+    if not user_data:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    # Update metadata with new email
+    metadata = user_data.get("metadata", {})
+    metadata["email"] = email
+    
+    success = profile_manager.update_user(user_id, {"metadata": metadata})
+    if not success:
+        raise HTTPException(status_code=500, detail="Failed to update email")
+
+    return {"success": True, "message": "Email updated successfully"}
+
+
 @router.get("/users", response_model=List[UserSummary])
 async def list_users():
     user_ids = profile_manager.list_users()

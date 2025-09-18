@@ -148,6 +148,18 @@ export const updateUserDisplayName = async (displayName) => {
   }
 };
 
+export const updateUserEmail = async (email) => {
+  try {
+    const response = await api.put('/user/email', null, {
+      params: { email: email }
+    });
+    return response.data;
+  } catch (error) {
+    console.error('Error updating user email:', error);
+    throw error;
+  }
+};
+
 export const updateUserPersonality = async (personality) => {
   try {
     const response = await api.put('/user/personality', personality);
