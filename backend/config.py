@@ -45,6 +45,7 @@ def _clamp_float(v: float, lo: float = 0.0, hi: float = 1.0) -> float:
     except Exception:
         return lo
 
+# Clamp an integer value to the range [lo, hi]. Returns lo if conversion fails.
 def _clamp_int(v: int, lo: int = 0, hi: int = 1_000_000) -> int:
     try:
         return max(lo, min(hi, int(v)))
