@@ -12,7 +12,6 @@ import {
   deleteTopicById, 
   cleanupTopics,
   deleteNonActivatedTopics,
-  createCustomTopic,
   enableTopicResearchById,
   disableTopicResearchById,
   getResearchEngineStatus,

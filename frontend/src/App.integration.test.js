@@ -1,15 +1,6 @@
 import { render, screen, waitFor } from '@testing-library/react';
 import App from './App';
 
-// Mock API functions
-const mockGetModels = jest.fn().mockResolvedValue({
-  models: {
-    'gpt-4o-mini': { name: 'GPT-4o Mini', provider: 'OpenAI' },
-    'gpt-4o': { name: 'GPT-4o', provider: 'OpenAI' }
-  },
-  default_model: 'gpt-4o-mini'
-});
-
 // Integration tests - these test against the real backend
 describe('App Integration Tests', () => {
   // These tests only run if the backend is available

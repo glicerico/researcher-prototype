@@ -1,6 +1,5 @@
 import React from 'react';
-import { render, screen, fireEvent, waitFor, act } from '@testing-library/react';
-import userEvent from '@testing-library/user-event';
+import { render, screen, fireEvent, waitFor } from '@testing-library/react';
 import ChatPage from './ChatPage';
 import { useSession } from '../context/SessionContext';
 import * as api from '../services/api';
@@ -67,14 +66,6 @@ jest.mock('./ConversationTopics', () => {
   };
 });
 
-// Mock API functions
-const mockGetModels = jest.fn().mockResolvedValue({
-  models: {
-    'gpt-4o-mini': { name: 'GPT-4o Mini', provider: 'OpenAI' },
-    'gpt-4o': { name: 'GPT-4o', provider: 'OpenAI' }
-  },
-  default_model: 'gpt-4o-mini'
-});
 
 describe('ChatPage Comprehensive Tests', () => {
   let mockSessionContext;
@@ -118,11 +109,11 @@ describe('ChatPage Comprehensive Tests', () => {
       
       const sendButton = screen.getByTestId('send-button');
       
-      await act(async () => {
-        fireEvent.click(sendButton);
+      fireEvent.click(sendButton);
+      
+      await waitFor(() => {
+        expect(api.sendChatMessage).toHaveBeenCalled();
       });
-
-      expect(api.sendChatMessage).toHaveBeenCalled();
       expect(mockSessionContext.updateMessages).toHaveBeenCalled();
     });
 
@@ -133,9 +124,7 @@ describe('ChatPage Comprehensive Tests', () => {
       
       const sendButton = screen.getByTestId('send-button');
       
-      act(() => {
-        fireEvent.click(sendButton);
-      });
+      fireEvent.click(sendButton);
 
       await waitFor(() => {
         expect(screen.getByText('disabled')).toBeInTheDocument();
@@ -150,11 +139,11 @@ describe('ChatPage Comprehensive Tests', () => {
       
       const sendButton = screen.getByTestId('send-button');
       
-      await act(async () => {
-        fireEvent.click(sendButton);
-      });
+      fireEvent.click(sendButton);
 
-      expect(consoleErrorSpy).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(consoleErrorSpy).toHaveBeenCalled();
+      });
       
       await waitFor(() => {
         expect(screen.getByText('enabled')).toBeInTheDocument();
@@ -173,12 +162,11 @@ describe('ChatPage Comprehensive Tests', () => {
       
       const sendButton = screen.getByTestId('send-button');
       
-      await act(async () => {
-        fireEvent.click(sendButton);
-      });
+      fireEvent.click(sendButton);
 
-      expect(api.sendChatMessage).toHaveBeenCalledWith(
-        expect.arrayContaining([
+      await waitFor(() => {
+        expect(api.sendChatMessage).toHaveBeenCalledWith(
+          expect.arrayContaining([
           expect.objectContaining({ 
             role: 'system', 
             content: 'You are a helpful assistant.' 
@@ -189,7 +177,8 @@ describe('ChatPage Comprehensive Tests', () => {
         expect.any(Number),
         null,
         expect.any(String)
-      );
+        );
+      });
     });
 
     test('generates personality-based system message', async () => {
@@ -203,23 +192,23 @@ describe('ChatPage Comprehensive Tests', () => {
       
       const sendButton = screen.getByTestId('send-button');
       
-      await act(async () => {
-        fireEvent.click(sendButton);
-      });
+      fireEvent.click(sendButton);
 
-      expect(api.sendChatMessage).toHaveBeenCalledWith(
-        expect.arrayContaining([
-          expect.objectContaining({ 
-            role: 'system', 
-            content: expect.stringContaining('professional')
-          })
-        ]),
-        expect.any(String),
-        expect.any(Number),
-        expect.any(Number),
-        expect.any(Object),
-        expect.any(String)
-      );
+      await waitFor(() => {
+        expect(api.sendChatMessage).toHaveBeenCalledWith(
+          expect.arrayContaining([
+            expect.objectContaining({ 
+              role: 'system', 
+              content: expect.stringContaining('professional')
+            })
+          ]),
+          expect.any(String),
+          expect.any(Number),
+          expect.any(Number),
+          expect.any(Object),
+          expect.any(String)
+        );
+      });
     });
   });
 
@@ -234,9 +223,7 @@ describe('ChatPage Comprehensive Tests', () => {
       
       const sendButton = screen.getByTestId('send-button');
       
-      await act(async () => {
-        fireEvent.click(sendButton);
-      });
+      fireEvent.click(sendButton);
 
       await waitFor(() => {
         expect(mockSessionContext.updateSessionId).toHaveBeenCalledWith('updated-session-789');
@@ -253,9 +240,7 @@ describe('ChatPage Comprehensive Tests', () => {
       
       const sendButton = screen.getByTestId('send-button');
       
-      await act(async () => {
-        fireEvent.click(sendButton);
-      });
+      fireEvent.click(sendButton);
 
       await waitFor(() => {
         expect(mockSessionContext.updateConversationTopics).toHaveBeenCalledWith([
@@ -271,9 +256,7 @@ describe('ChatPage Comprehensive Tests', () => {
       
       const updateButton = screen.getByTestId('update-topics');
       
-      await act(async () => {
-        fireEvent.click(updateButton);
-      });
+      fireEvent.click(updateButton);
       
       expect(mockSessionContext.updateConversationTopics).toHaveBeenCalledWith([
         'AI Ethics', 'Machine Learning'
@@ -285,9 +268,7 @@ describe('ChatPage Comprehensive Tests', () => {
       
       const toggleButton = screen.getByTestId('toggle-topics');
       
-      await act(async () => {
-        fireEvent.click(toggleButton);
-      });
+      fireEvent.click(toggleButton);
       
       // Test that toggle functionality works
       expect(toggleButton).toBeInTheDocument();
@@ -302,11 +283,11 @@ describe('ChatPage Comprehensive Tests', () => {
       
       const sendButton = screen.getByTestId('send-button');
       
-      await act(async () => {
-        fireEvent.click(sendButton);
-      });
+      fireEvent.click(sendButton);
 
-      expect(api.triggerUserActivity).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(api.triggerUserActivity).toHaveBeenCalled();
+      });
     });
 
     test('handles user activity trigger failure gracefully', async () => {
@@ -319,11 +300,11 @@ describe('ChatPage Comprehensive Tests', () => {
       
       const sendButton = screen.getByTestId('send-button');
       
-      await act(async () => {
-        fireEvent.click(sendButton);
-      });
+      fireEvent.click(sendButton);
 
-      expect(api.sendChatMessage).toHaveBeenCalled();
+      await waitFor(() => {
+        expect(api.sendChatMessage).toHaveBeenCalled();
+      });
       expect(consoleWarnSpy).toHaveBeenCalled();
 
       consoleWarnSpy.mockRestore();
