@@ -37,7 +37,7 @@ class TopicExpansionService:
         }
 
     async def generate_candidates(self, user_id: str, root_topic: Dict[str, Any]) -> List[ExpansionCandidate]:
-        """Generate topic expansion candidates using Zep graph search (+ optional LLM selection)."""
+        """Generate topic expansion candidates using Zep graph search with optional LLM selection and validation."""
         # Build short query
         topic_name = (root_topic.get("topic_name") or "").strip()
         description = (root_topic.get("description") or "").strip()
@@ -57,6 +57,11 @@ class TopicExpansionService:
 
         logger.info(f"🔎 Expansion query for user {user_id}: '{query}'")
 
+        # Early check: if Zep is disabled, no expansions can be generated
+        if not self.zep or not self.zep.is_enabled():
+            logger.info(f"🔎 Expansion skipped for '{topic_name}': Zep is disabled (required for candidate generation and validation)")
+            return []
+
         # Concurrent Zep searches
         reranker = config.ZEP_SEARCH_RERANKER
         limit = config.ZEP_SEARCH_LIMIT
@@ -71,7 +76,7 @@ class TopicExpansionService:
             f"Zep search returned {len(nodes_res)} nodes and {len(edges_res)} edges for expansion"
         )
 
-        # Phase 1 normalization (used for fallback too)
+        # Convert Zep results to candidate objects
         def zep_to_candidates(nodes: List[Dict[str, Any]], edges: List[Dict[str, Any]]) -> List[ExpansionCandidate]:
             out: List[ExpansionCandidate] = []
             for n in nodes:
@@ -137,39 +142,19 @@ class TopicExpansionService:
             if (e.get("fact") or e.get("name"))
         ]
 
-        def phase1_flow() -> List[ExpansionCandidate]:
+        def _rank_zep_candidates() -> List[ExpansionCandidate]:
+            """Process Zep results: deduplicate, filter by similarity, and rank by relevance."""
             base = zep_to_candidates(nodes_res, edges_res)
-            seen_local: set = set()
-            deduped_local: List[ExpansionCandidate] = []
-            for c in base:
-                key = norm_name(c.name)
-                if key in seen_local or key in existing_norms:
-                    continue
-                seen_local.add(key)
-                deduped_local.append(c)
-
-            min_sim = config.EXPANSION_MIN_SIMILARITY
-            filtered_local: List[ExpansionCandidate] = []
-            for c in deduped_local:
-                if c.similarity is not None and c.similarity < min_sim:
-                    continue
-                filtered_local.append(c)
-
-            def sort_key(c: ExpansionCandidate):
-                sim_key = c.similarity if c.similarity is not None else -1.0
-                src_pref = 2 if c.source == "zep_node" else 1  # nodes before edges
-                return (sim_key, src_pref, c.name)
-
-            filtered_local.sort(key=sort_key, reverse=True)
+            filtered_local = self._filter_and_dedupe_candidates(base, existing_norms, norm_name)
 
             logger.info(
                 f"🧩 Generated {len(filtered_local)} expansion candidates from Zep (query='{query}')"
             )
             return filtered_local
 
-        # If LLM disabled, return Phase 1 behavior
-        if not getattr(config, "EXPANSION_LLM_ENABLED", True):
-            return phase1_flow()
+        # If LLM disabled, use Zep-only ranking
+        if not config.EXPANSION_LLM_ENABLED:
+            return _rank_zep_candidates()
 
         # Build LLM prompt
         try:
@@ -181,19 +166,19 @@ class TopicExpansionService:
                 current_topics=json.dumps(sorted(list(set(existing_names)))[:20], ensure_ascii=False),
                 zep_nodes=json.dumps(nodes_ctx, ensure_ascii=False),
                 zep_edges=json.dumps(edges_ctx, ensure_ascii=False),
-                suggestion_limit=int(getattr(config, "EXPANSION_LLM_SUGGESTION_LIMIT", 6)),
+                suggestion_limit=config.EXPANSION_LLM_SUGGESTION_LIMIT,
             )
 
             llm = ChatOpenAI(
-                model=getattr(config, "EXPANSION_LLM_MODEL", config.DEFAULT_MODEL),
-                temperature=float(getattr(config, "EXPANSION_LLM_TEMPERATURE", 0.2)),
-                max_tokens=int(getattr(config, "EXPANSION_LLM_MAX_TOKENS", 800)),
-                api_key=getattr(config, "OPENAI_API_KEY", None),
+                model=config.EXPANSION_LLM_MODEL,
+                temperature=config.EXPANSION_LLM_TEMPERATURE,
+                max_tokens=config.EXPANSION_LLM_MAX_TOKENS,
+                api_key=config.OPENAI_API_KEY,
             )
             structured = llm.with_structured_output(ExpansionSelection)
             messages = [SystemMessage(content=prompt)]
             # Run the single call with a timeout to avoid blocking
-            llm_timeout = int(getattr(config, "EXPANSION_LLM_TIMEOUT_SECONDS", 12))
+            llm_timeout = config.EXPANSION_LLM_TIMEOUT_SECONDS
             selection: ExpansionSelection = await asyncio.wait_for(
                 asyncio.to_thread(structured.invoke, messages),
                 timeout=llm_timeout,
@@ -209,71 +194,109 @@ class TopicExpansionService:
                     + ", ".join([f"{r.name}: {r.reason}" for r in rejected if r and getattr(r, "name", None)])
                 )
 
-            final: List[ExpansionCandidate] = []
-            min_sim = config.EXPANSION_MIN_SIMILARITY
-            seen_final: set = set()
-
-            async def validate_llm_item(name: str) -> Optional[float]:
-                # Validate via Zep (nodes preferred); take best similarity if any
-                res = await self.zep.search_graph(user_id, name, scope="nodes", reranker=config.ZEP_SEARCH_RERANKER, limit=3)
-                if not res:
-                    return None
-                best = max([r for r in res if r.get("similarity") is not None], key=lambda x: x.get("similarity"), default=None)
-                return best.get("similarity") if best else None
-
-            # Validate LLM-accepted items
-            for item in accepted:
-                try:
-                    nm = item.name.strip()
-                except Exception:
-                    continue
-                key = norm_name(nm)
-                if key in seen_final or key in existing_norms:
-                    continue
-                src = (item.source or "llm").lower()
-                sim = getattr(item, "similarity_if_available", None)
-                if src == "llm":
-                    try:
-                        sim = await validate_llm_item(nm)
-                    except Exception as e:
-                        logger.debug(f"LLM-only validation error for '{nm}': {str(e)}")
-                        sim = None
-                    # Drop if no similarity or below threshold
-                    if sim is None or (isinstance(sim, (int, float)) and sim < min_sim):
-                        continue
-                else:
-                    # Zep-derived; if similarity provided and below threshold, drop
-                    if sim is not None and sim < min_sim:
-                        continue
-                seen_final.add(key)
-                final.append(
-                    ExpansionCandidate(name=nm, source=src if src in ("zep_node", "zep_edge", "llm") else "llm", similarity=sim, rationale=getattr(item, "rationale", None))
-                )
+            # Validate and consolidate LLM suggestions with Zep data
+            final = await self._process_llm_suggestions(user_id, accepted, existing_norms, norm_name)
 
             # Enforce suggestion limit
-            limit_out = int(getattr(config, "EXPANSION_LLM_SUGGESTION_LIMIT", 6))
+            limit_out = config.EXPANSION_LLM_SUGGESTION_LIMIT
             if len(final) > limit_out:
                 final = final[:limit_out]
 
-            # Fallback to Phase 1 if nothing accepted
+            # Fallback to Zep-only ranking if LLM returned nothing usable
             if not final:
-                logger.warning("Expansion LLM returned no usable items; falling back to Zep-only.")
+                logger.warning("Expansion LLM returned no usable items; falling back to Zep-only ranking.")
                 self.metrics["expansion_fallbacks"] += 1
-                return phase1_flow()
+                return _rank_zep_candidates()
 
-            # Sort as specified: similarity desc; Zep items before LLM; deterministic by name
-            def sort_key(c: ExpansionCandidate):
-                sim_key = c.similarity if c.similarity is not None else -1.0
-                src_pref = 2 if c.source.startswith("zep_") else 1
-                return (sim_key, src_pref, c.name)
-
-            final.sort(key=sort_key, reverse=True)
+            # Sort candidates by relevance
+            final = self._sort_candidates(final)
             logger.info(
                 f"🧩 Expansion LLM accepted={len(final)} (from nodes={len(nodes_ctx)} edges={len(edges_ctx)}); returning ranked list"
             )
             return final
 
         except Exception as e:
-            logger.warning(f"Expansion LLM failed or invalid JSON; fallback to Zep-only. Error: {str(e)}")
+            logger.warning(f"Expansion LLM failed or invalid JSON; fallback to Zep-only ranking. Error: {str(e)}")
             self.metrics["expansion_fallbacks"] += 1
-            return phase1_flow()
+            return _rank_zep_candidates()
+
+    async def _process_llm_suggestions(self, user_id: str, accepted: List[Any], existing_norms: set, norm_name) -> List[ExpansionCandidate]:
+        """Process and validate LLM suggestions against Zep data."""
+        final: List[ExpansionCandidate] = []
+        seen_final: set = set()
+        min_sim = config.EXPANSION_MIN_SIMILARITY
+
+        async def validate_with_zep(name: str) -> Optional[float]:
+            """Validate LLM suggestion via Zep search to get similarity score."""
+            try:
+                res = await self.zep.search_graph(user_id, name, scope="nodes", reranker=config.ZEP_SEARCH_RERANKER, limit=3)
+                if not res:
+                    return None
+                best = max([r for r in res if r.get("similarity") is not None], key=lambda x: x.get("similarity"), default=None)
+                return best.get("similarity") if best else None
+            except Exception as e:
+                logger.debug(f"Zep validation error for '{name}': {str(e)}")
+                return None
+
+        for item in accepted:
+            try:
+                name = item.name.strip()
+            except Exception:
+                continue
+                
+            key = norm_name(name)
+            if key in seen_final or key in existing_norms:
+                continue
+
+            source = (item.source or "llm").lower()
+            similarity = getattr(item, "similarity_if_available", None)
+            
+            # Validate LLM-only suggestions via Zep
+            if source == "llm":
+                similarity = await validate_with_zep(name)
+                if similarity is None or similarity < min_sim:
+                    continue
+            elif similarity is not None and similarity < min_sim:
+                # Zep-derived item below threshold
+                continue
+
+            seen_final.add(key)
+            validated_source = source if source in ("zep_node", "zep_edge", "llm") else "llm"
+            rationale = getattr(item, "rationale", None)
+            
+            final.append(ExpansionCandidate(
+                name=name, 
+                source=validated_source, 
+                similarity=similarity, 
+                rationale=rationale
+            ))
+
+        return self._sort_candidates(final)
+    
+    def _filter_and_dedupe_candidates(self, candidates: List[ExpansionCandidate], existing_norms: set, norm_name) -> List[ExpansionCandidate]:
+        """Deduplicate and filter candidates by similarity threshold."""
+        seen: set = set()
+        deduped: List[ExpansionCandidate] = []
+        
+        for candidate in candidates:
+            key = norm_name(candidate.name)
+            if key in seen or key in existing_norms:
+                continue
+            seen.add(key)
+            deduped.append(candidate)
+
+        # Filter by similarity threshold
+        min_sim = config.EXPANSION_MIN_SIMILARITY
+        filtered = [c for c in deduped if c.similarity is None or c.similarity >= min_sim]
+        
+        return self._sort_candidates(filtered)
+    
+    def _sort_candidates(self, candidates: List[ExpansionCandidate]) -> List[ExpansionCandidate]:
+        """Sort candidates by similarity (desc), source preference (Zep before LLM), then name."""
+        def sort_key(c: ExpansionCandidate):
+            sim_key = c.similarity if c.similarity is not None else -1.0
+            src_pref = 2 if c.source.startswith("zep_") else 1
+            return (sim_key, src_pref, c.name)
+
+        candidates.sort(key=sort_key, reverse=True)
+        return candidates

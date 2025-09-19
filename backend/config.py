@@ -33,7 +33,7 @@ PUBMED_EMAIL = os.getenv("PUBMED_EMAIL", "researcher@example.com")
 ZEP_API_KEY = os.getenv("ZEP_API_KEY")
 ZEP_ENABLED = os.getenv("ZEP_ENABLED", "false").lower() == "true"
 
-# Topic Expansion (Phase 1 - debug) configuration
+# Topic Expansion Pipeline configuration
 EXPANSION_ENABLED = os.getenv("EXPANSION_ENABLED", "false").lower() == "true"
 ZEP_SEARCH_LIMIT = int(os.getenv("ZEP_SEARCH_LIMIT", "10"))
 ZEP_SEARCH_RERANKER = os.getenv("ZEP_SEARCH_RERANKER", "cross_encoder")
@@ -54,7 +54,7 @@ def _clamp_int(v: int, lo: int = 0, hi: int = 1_000_000) -> int:
 
 EXPANSION_MAX_PARALLEL = _clamp_int(int(os.getenv("EXPANSION_MAX_PARALLEL", "2")), 1, 64)
 
-# Expansion LLM (Phase 3)
+# Expansion LLM selection and augmentation
 EXPANSION_LLM_ENABLED = os.getenv("EXPANSION_LLM_ENABLED", "true").lower() == "true"
 EXPANSION_LLM_MODEL = os.getenv("EXPANSION_LLM_MODEL", "gpt-4o-mini")
 EXPANSION_LLM_MAX_TOKENS = _clamp_int(int(os.getenv("EXPANSION_LLM_MAX_TOKENS", "800")), 100, 4000)
@@ -63,7 +63,7 @@ EXPANSION_LLM_SUGGESTION_LIMIT = _clamp_int(int(os.getenv("EXPANSION_LLM_SUGGEST
 # Optional timeout (seconds) for the single LLM call
 EXPANSION_LLM_TIMEOUT_SECONDS = _clamp_int(int(os.getenv("EXPANSION_LLM_TIMEOUT_SECONDS", "12")), 1, 120)
 
-# Expansion lifecycle (Phase 4)
+# Expansion lifecycle and depth management
 EXPANSION_MAX_DEPTH = _clamp_int(int(os.getenv("EXPANSION_MAX_DEPTH", "2")), 1, 10)
 EXPANSION_ENGAGEMENT_WINDOW_DAYS = _clamp_int(int(os.getenv("EXPANSION_ENGAGEMENT_WINDOW_DAYS", "7")), 1, 90)
 EXPANSION_PROMOTE_ENGAGEMENT = _clamp_float(float(os.getenv("EXPANSION_PROMOTE_ENGAGEMENT", "0.35")))

@@ -60,7 +60,7 @@ class AutonomousResearcher:
         self.quality_threshold = config.RESEARCH_QUALITY_THRESHOLD
         self.enabled = config.RESEARCH_ENGINE_ENABLED
 
-        # Topic expansion service (Phase 2 wiring)
+        # Initialize topic expansion service
         try:
             from dependencies import zep_manager as _zep_manager_singleton  # type: ignore
             self.topic_expansion_service = TopicExpansionService(_zep_manager_singleton, self.research_manager)
@@ -69,7 +69,7 @@ class AutonomousResearcher:
             self.topic_expansion_service = TopicExpansionService(None, self.research_manager)  # type: ignore[arg-type]
 
         # Concurrency guard for expansions
-        self._expansion_semaphore = asyncio.Semaphore(max(1, int(getattr(config, 'EXPANSION_MAX_PARALLEL', 2))))
+        self._expansion_semaphore = asyncio.Semaphore(max(1, config.EXPANSION_MAX_PARALLEL))
 
     def get_recent_average_quality(self, user_id: str, topic_name: str, window_days: int) -> float:
         """Compute recent average quality over window for a topic."""
@@ -219,9 +219,9 @@ class AutonomousResearcher:
 
                             tasks.append(asyncio.create_task(_run_root()))
 
-                            # Phase 2+: schedule expansions with lifecycle gating
+                            # Schedule expansions with lifecycle gating
                             created_expansions: List[Dict[str, Any]] = []
-                            if getattr(config, 'EXPANSION_ENABLED', False):
+                            if config.EXPANSION_ENABLED:
                                 # Determine gating for child expansion
                                 depth = int(topic.get('expansion_depth', 0) or 0)
                                 is_expansion = bool(topic.get('is_expansion', False))
@@ -229,24 +229,41 @@ class AutonomousResearcher:
                                 now_ts = time.time()
 
                                 allowed_for_children = True
+                                gating_reason = ""
+                                
                                 # Apply gating only for expansion topics (child generations)
                                 if is_expansion:
-                                    allowed_for_children = (
-                                        bool(topic.get('child_expansion_enabled', False))
-                                        and depth < int(getattr(config, 'EXPANSION_MAX_DEPTH', 2))
-                                        and backoff_until <= now_ts
-                                    )
+                                    child_enabled = bool(topic.get('child_expansion_enabled', False))
+                                    max_depth = config.EXPANSION_MAX_DEPTH
+                                    depth_ok = depth < max_depth
+                                    backoff_ok = backoff_until <= now_ts
+                                    
+                                    allowed_for_children = child_enabled and depth_ok and backoff_ok
+                                    
+                                    if not allowed_for_children:
+                                        reasons = []
+                                        if not child_enabled:
+                                            reasons.append("child expansion not enabled")
+                                        if not depth_ok:
+                                            reasons.append(f"depth {depth} >= max {max_depth}")
+                                        if not backoff_ok:
+                                            remaining_hrs = (backoff_until - now_ts) / 3600
+                                            reasons.append(f"backoff active ({remaining_hrs:.1f}h remaining)")
+                                        gating_reason = ", ".join(reasons)
 
                                 if not allowed_for_children:
                                     logger.info(
-                                        f"🔬 Skipping child expansion for '{root_name}' (depth={depth}, enabled={topic.get('child_expansion_enabled', False)}, backoff_until={int(backoff_until)})"
+                                        f"🔬 Skipping child expansion for '{root_name}': {gating_reason}"
                                     )
                                 else:
                                     # Generate candidates
                                     candidates = await self.topic_expansion_service.generate_candidates(user_id, topic)
-                                    logger.debug(f"🔬 Expansion candidates for '{root_name}': {len(candidates)}")
+                                    if not candidates:
+                                        logger.info(f"🔬 No expansion candidates generated for '{root_name}' (check Zep availability and similarity thresholds)")
+                                    else:
+                                        logger.debug(f"🔬 Generated {len(candidates)} expansion candidates for '{root_name}'")
                                     if candidates:
-                                        k = min(getattr(config, 'EXPLORATION_PER_ROOT_MAX', 2), len(candidates))
+                                        k = min(config.EXPLORATION_PER_ROOT_MAX, len(candidates))
                                         selected = candidates[:k]
                                         logger.info(
                                             f"🔬 Choosing {len(selected)}/{len(candidates)} expansions for '{root_name}'"
@@ -254,7 +271,7 @@ class AutonomousResearcher:
                                         for cand in selected:
                                             desc = f"Auto expansion of {root_name}"
                                             # Compute child depth
-                                            child_depth = min(depth + 1, int(getattr(config, 'EXPANSION_MAX_DEPTH', 2)))
+                                            child_depth = min(depth + 1, config.EXPANSION_MAX_DEPTH)
                                             extra_meta = {
                                                 "is_expansion": True,
                                                 "origin": {
@@ -450,12 +467,12 @@ class AutonomousResearcher:
             now_ts = time.time()
             promoted = paused = retired = 0
             changed = False
-            window_days = int(getattr(config, 'EXPANSION_ENGAGEMENT_WINDOW_DAYS', 7))
-            promote_thr = float(getattr(config, 'EXPANSION_PROMOTE_ENGAGEMENT', 0.35))
-            retire_thr = float(getattr(config, 'EXPANSION_RETIRE_ENGAGEMENT', 0.1))
-            min_quality = float(getattr(config, 'EXPANSION_MIN_QUALITY', 0.6))
-            backoff_days = int(getattr(config, 'EXPANSION_BACKOFF_DAYS', 7))
-            retire_ttl_days = int(getattr(config, 'EXPANSION_RETIRE_TTL_DAYS', 30))
+            window_days = config.EXPANSION_ENGAGEMENT_WINDOW_DAYS
+            promote_thr = config.EXPANSION_PROMOTE_ENGAGEMENT
+            retire_thr = config.EXPANSION_RETIRE_ENGAGEMENT
+            min_quality = config.EXPANSION_MIN_QUALITY
+            backoff_days = config.EXPANSION_BACKOFF_DAYS
+            retire_ttl_days = config.EXPANSION_RETIRE_TTL_DAYS
 
             for sid, session_topics in topics_data.get('sessions', {}).items():
                 for topic in session_topics:
