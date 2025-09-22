@@ -84,7 +84,34 @@ npm run test:unit         # component tests
 npm run test:integration  # integration tests (API mocked)
 ```
 
-## 6. Building for production
+## 6. Email Notifications (SMTP)
+
+Backend supports email notifications for background research updates. Configure SMTP in `backend/.env`:
+
+```
+# Gmail/Workspace example
+SMTP_HOST=smtp.gmail.com
+SMTP_PORT=587
+SMTP_USE_TLS=true
+SMTP_USE_SSL=false
+SMTP_USER=<your_email_address>
+SMTP_PASSWORD=<your_16_char_app_password>
+EMAIL_FROM=<display_from_address>
+
+# Deep-link base for email buttons
+FRONTEND_URL=http://localhost:3000
+```
+
+Important:
+- Use an App Password, not your normal email password. For Google accounts: enable 2-Step Verification, then create an App Password (Google will give a 16-character code). Paste that into `SMTP_PASSWORD`.
+- Ensure the user profile has an email set (`metadata.email`).
+
+To test quickly:
+1. Start backend with the env set.
+2. Create or enable a topic with `enable_research: true`.
+3. Trigger research and wait for a finding/completion; you should receive emails.
+
+## 7. Building for production
 
 ```bash
 # Backend (example with Gunicorn + Uvicorn workers)
