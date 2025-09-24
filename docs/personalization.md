@@ -29,8 +29,8 @@ Manages user profiles, preferences, and engagement analytics.
 - `{user_id}_engagement_analytics.json` - Interaction data and metrics
 - `{user_id}_personalization_history.json` - Learning history and changes
 
-#### 👤 PersonalizationManager (`backend/storage/personalization_manager.py`)
-Advanced learning engine that analyzes user behavior and adapts system responses.
+#### 👤 PersonalizationManager (`backend/services/personalization_manager.py`)
+Learning engine that analyzes user behavior and adapts system responses.
 
 **Learning Capabilities:**
 - **Source Type Preferences**: Learns which research sources users engage with most
@@ -245,7 +245,7 @@ The personalization system provides REST API endpoints for managing user prefere
 ### Base URL
 
 ```
-http://localhost:8000/api/users
+http://localhost:8000
 ```
 
 ### API Endpoints
@@ -255,7 +255,7 @@ http://localhost:8000/api/users
 Retrieves the current user's personalization preferences.
 
 ```http
-GET /api/users/preferences
+GET /user/preferences
 ```
 
 **Response:**
@@ -296,7 +296,7 @@ GET /api/users/preferences
 Updates the user's personalization preferences.
 
 ```http
-PUT /api/users/preferences
+PUT /user/preferences
 Content-Type: application/json
 ```
 
@@ -347,7 +347,7 @@ Content-Type: application/json
 Records user interaction data for personalization learning.
 
 ```http
-POST /api/users/engagement/track
+POST /user/engagement/track
 Content-Type: application/json
 ```
 
@@ -405,7 +405,7 @@ Content-Type: application/json
 Retrieves comprehensive personalization data including learned behaviors, adaptation history, and user overrides.
 
 ```http
-GET /api/users/personalization
+GET /user/personalization
 ```
 
 **Response:**
@@ -458,7 +458,7 @@ GET /api/users/personalization
 Allows users to manually override or disable specific learned behaviors.
 
 ```http
-POST /api/users/personalization/override
+PUT /user/personalization/override
 Content-Type: application/json
 ```
 
@@ -513,13 +513,13 @@ Content-Type: application/json
 ```javascript
 // Get user preferences
 async function getUserPreferences() {
-  const response = await fetch('/api/users/preferences');
+  const response = await fetch('/user/preferences');
   return await response.json();
 }
 
 // Update preferences
 async function updatePreferences(preferences) {
-  const response = await fetch('/api/users/preferences', {
+  const response = await fetch('/user/preferences', {
     method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(preferences)
@@ -529,7 +529,7 @@ async function updatePreferences(preferences) {
 
 // Track engagement 
 async function trackEngagement(interactionType, metadata) {
-  const response = await fetch('/api/users/engagement/track', {
+  const response = await fetch('/user/engagement/track', {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
@@ -542,8 +542,8 @@ async function trackEngagement(interactionType, metadata) {
 
 // Override learned behavior
 async function overridePreference(preferenceType, value, disableLearning = false) {
-  const response = await fetch('/api/users/personalization/override', {
-    method: 'POST',
+  const response = await fetch('/user/personalization/override', {
+    method: 'PUT',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify({
       preference_type: preferenceType,
@@ -575,39 +575,15 @@ async def track_research_engagement(user_id: str, topic: str, feedback: str, lin
     
     async with httpx.AsyncClient() as client:
         response = await client.post(
-            "http://localhost:8000/api/users/engagement/track",
+            "http://localhost:8000/user/engagement/track",
             json=engagement_data
         )
         return response.json()
 ```
 
-### Learning Algorithms
+### Learning Implementation
 
-#### Source Type Learning
-```python
-def _adjust_source_preferences(self, user_id: str, source_types: List[str], 
-                             engagement_score: float):
-    """Adjust source type preferences based on engagement metrics."""
-    for source_type in source_types:
-        if engagement_score > 0.7:
-            # Increase preference for highly engaging content
-            current_pref = preferences.get(source_type, 0.5)
-            new_pref = min(1.0, current_pref + 0.05)
-            preferences[source_type] = new_pref
-```
-
-#### Format Optimization
-```python
-def _optimize_response_format(self, user_id: str, response_length: int, 
-                            feedback: str):
-    """Learn optimal response length based on explicit feedback only."""
-    if feedback == "up":
-        # User gave positive feedback - increase optimal length
-        optimal_length = max(current_optimal, response_length)
-    elif feedback == "down":
-        # User gave negative feedback - decrease optimal length
-        optimal_length = min(current_optimal, response_length * 0.8)
-```
+The PersonalizationManager implements learning algorithms that adjust user preferences based on engagement patterns, feedback, and interaction history. The specific algorithms adapt source preferences and format optimization based on user behavior.
 
 ## Privacy and Security
 
@@ -674,9 +650,8 @@ source venv/bin/activate
 ### Debugging
 
 Enable debug logging for detailed personalization operations:
-```python
-import logging
-logging.getLogger("researcher_prototype.personalization").setLevel(logging.DEBUG)
+```bash
+export LOG_LEVEL=DEBUG
 ```
 
 For comprehensive logging analysis and monitoring, see the [Logging System Documentation](logging-system.md).

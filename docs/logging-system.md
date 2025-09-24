@@ -1,10 +1,10 @@
 # Logging System Documentation
 
-This document describes the unified logging system used throughout the AI researcher assistant, with special focus on the personalization system monitoring capabilities.
+This document describes the logging system used throughout the AI researcher assistant, covering emoji-based patterns, component identification, and monitoring capabilities.
 
 ## Overview
 
-The system uses a standardized emoji-based logging format that provides visual process identification and status indicators across all components. This makes it easy for administrators to monitor system health, debug issues, and track user interactions.
+The system uses emoji-based logging patterns for visual process identification and status indicators across key components. This helps with monitoring system health, debugging issues, and tracking user interactions.
 
 ## Logging Format
 
@@ -32,13 +32,14 @@ All personalization components use **👤** for unified identification:
 - **👤 EngagementTracker** - User analytics and behavior tracking
 
 ### LangGraph Processing Nodes
-Each processing node has its own identifier:
+Key processing nodes use specific identifiers:
 
-- **🔍** - Search operations (SearchNode, TopicExtractor, QueryGenerator)
-- **💾** - Storage operations (ResearchStorage)
-- **🎯** - Quality assessment (ResearchQualityAssessor) 
-- **🧠** - Memory/initialization operations (InitializerNode, IntegratorNode)
-- **🔄** - Deduplication operations (ResearchDeduplication)
+- **🔍** - Multi-source analyzer and search coordination
+- **🔬** - Search optimization and query refinement  
+- **🧠** - Initialization, integration, and memory operations
+- **🎯** - Research quality assessment
+- **💾** - Research storage operations
+- **✨** - Response rendering and formatting
 
 ### API Layer
 - **🌐 API** - Web API endpoints and request handling
@@ -144,21 +145,14 @@ Used for warnings, non-critical issues, and informational alerts:
 🔍 Search: ❌ Perplexity API request failed with status code 429
 ```
 
-#### Search Optimizer and Merge Logs
+#### Search Optimizer Logs
 ```
-🔬 Search Optimizer: Produced refined query: "..."
+🔬 Search Optimizer: Refining user query for search
+🔬 Search Optimizer: Produced refined query: "machine learning applications"
 🔬 Search Optimizer: Determined recency filter: "week"
 🔬 Search Optimizer: No recency filter needed (timeless content)
-🔍 Search: Using optimizer-determined recency filter: week
+🔬 Search Optimizer: Produced HN-optimized query: "ML applications discussion"
 ```
-
-The workflow context stores for observability:
-
-- `refined_search_query`
-- `search_recency_filter`
-- `optimizer_search_mode`
-- `optimizer_context_size`
-- `optimizer_confidence`
 
 #### Storage Operations (`💾`)
 ```
@@ -183,6 +177,7 @@ The workflow context stores for observability:
 🧠 Initializer: ✅ Generated new thread ID: user123-20240101_120000
 🧠 Initializer: ✅ Retrieved memory context from ZEP
 🧠 Initializer: ⚠️ No memory context found for this thread
+🧠 Integrator: Processing all contextual information
 🧠 Integrator: ✅ Generated response: "Based on recent research..."
 ```
 
@@ -286,34 +281,23 @@ grep "🌐.*❌" application.log
 
 ## Log Levels and Configuration
 
-### Python Backend Logging
+### Backend Logging Configuration
 
-The backend uses Python's standard logging module with custom formatters:
+The backend uses Python's standard logging module configured in `services/logging_config.py`:
 
 ```python
-import logging
+# Configure logging level via environment variable
+export LOG_LEVEL=DEBUG  # or INFO, WARNING, ERROR
 
-# Set log level for personalization components
-logging.getLogger("researcher_prototype.personalization").setLevel(logging.DEBUG)
-
-# Set log level for API components  
-logging.getLogger("researcher_prototype.api").setLevel(logging.INFO)
-
-# Set log level for LangGraph nodes
-logging.getLogger("researcher_prototype.nodes").setLevel(logging.INFO)
+# The system automatically configures:
+# - Console output with timestamps
+# - Reduced noise from third-party libraries
+# - Centralized logger creation via get_logger()
 ```
 
-### Frontend Console Logging
+### Frontend Logging
 
-The frontend uses console logging for development and debugging:
-
-```javascript
-// Enable detailed engagement tracking logs
-localStorage.setItem('debug_engagement', 'true');
-
-// Enable personalization component logs
-localStorage.setItem('debug_personalization', 'true');
-```
+The frontend uses standard console logging for development and debugging.
 
 ## Log Analysis Tools
 
@@ -431,20 +415,7 @@ engagement_tracking_duration = Histogram('engagement_tracking_duration_seconds',
 
 #### Structured Logging
 
-For production, consider structured logging with JSON format:
-
-```python
-import structlog
-
-logger = structlog.get_logger()
-logger.info("preferences_updated", 
-           user_id="user123", 
-           component="ProfileManager",
-           categories=["content_preferences"],
-           status="success")
-```
-
-This enables better log aggregation and analysis in tools like ELK stack or Splunk.
+For production environments, the current emoji-based format can be extended with structured logging tools like `structlog` for better log aggregation and analysis.
 
 ## Troubleshooting Common Issues
 
@@ -488,4 +459,4 @@ grep "👤 EngagementTracker" application.log | grep -E "(slow|timeout|performan
 grep "🌐 API" application.log | grep -E "(timeout|slow|delay)"
 ```
 
-This logging system provides comprehensive visibility into all aspects of the AI researcher assistant, making it easy to monitor system health, debug issues, and ensure optimal performance of the personalization features.
+This logging system provides visibility into key components of the AI researcher assistant, helping with monitoring system health, debugging issues, and tracking user interactions.

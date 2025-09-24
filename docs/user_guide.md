@@ -16,7 +16,7 @@ Welcome!  This guide walks you through everyday use of the **Researcher-Prototyp
 
 ## 2. Managing Users
 
-• **User menu (top-right)** – click the avatar to open the user manager.  
+• **User dropdown (top-right)** – click the user button (👤) to open the user manager.  
 • **Create** – give a display name and press *Create*.  
 • **Switch** – select any user from the dropdown; each user has isolated chat history, personality and research topics.  
 
@@ -42,7 +42,7 @@ Changes apply instantly and are stored in your profile.
 1. Type your message and hit **Enter**.  
 2. A typing indicator shows the assistant is thinking.  
 3. Messages are saved automatically; scroll to review.  
-4. Click **Show RoutingInfo** next to any assistant reply to see which intent (chat / search / analysis) was detected, which sources were selected for search queries, and the lightweight model used.  
+4. Click **Show Routing Info** next to any assistant reply to see which module was used, the reasoning, and the router model used.  
 
 ---
 
@@ -70,7 +70,7 @@ After each message the system may suggest **Topics** related to your conversatio
 
 ### Topics dashboard
 
-Click **Research Topics** in the **Dashboard** dropdown to open a full dashboard where you can:
+Click **📊 Dashboards** then **🔍 Research Topics** to open a full dashboard where you can:
 
 * **▶️ Enable Engine** – Enable/disable the autonomous researcher.
 * **🚀 Research Now** – trigger immediate research; ignores motivation threshold.
@@ -85,7 +85,7 @@ Click **Research Topics** in the **Dashboard** dropdown to open a full dashboard
 
 In addition to system-suggested topics, you can create your own custom research topics:
 
-1. **Open Topics Dashboard** – Click **Research Topics** in the Dashboard dropdown
+1. **Open Topics Dashboard** – Click **📊 Dashboards** then **🔍 Research Topics**
 2. **Click ➕ Add Topic** – Opens the custom topic creation form  
 3. **Fill in Details**:
    - **Topic Name** (1-100 characters) – Clear, descriptive name for your research topic
@@ -102,7 +102,7 @@ In addition to system-suggested topics, you can create your own custom research 
 
 ### Reviewing Findings
 
-Click **Research Results** in the **Dashboard** dropdown to open a full dashboard where findings appear underneath each topic with:
+Click **📊 Dashboards** then **📊 Research Results** to open a full dashboard where findings appear underneath each topic with:
 
 * **Summary**
 * Quality score
@@ -112,7 +112,7 @@ Click **Research Results** in the **Dashboard** dropdown to open a full dashboar
 ---
 ## 7. Knowledge Graph Visualization
 
-Click **Knowledge Graph** in the **Dashboard** dropdown.
+Click **📊 Dashboards** then **🕸️ Knowledge Graph**.
 
 The Knowledge Graph shows your personal knowledge network stored in Zep as an interactive visualization. The graph automatically arranges itself naturally and remembers your viewing preferences.
 

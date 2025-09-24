@@ -10,7 +10,7 @@ The Zep Knowledge Graph Visualization feature allows users to view their knowled
 
 1. **API Endpoints** (`backend/api/graph.py`):
    - `POST /api/graph/fetch` - Fetches graph data (nodes and edges) from Zep
-   - `GET /api/graph/test/{user_id}` - Tests graph connectivity for debugging
+   - Debug connectivity testing available in development mode
 
 2. **Data Models**:
    - `GraphNode` - Represents a node in the knowledge graph
@@ -72,8 +72,8 @@ The Zep Knowledge Graph Visualization feature allows users to view their knowled
 
 ### For End Users
 
-1. Navigate to User Settings in the application
-2. Click the "Knowledge Graph" button
+1. Navigate to **📊 Dashboards** in the top navigation
+2. Click **🕸️ Knowledge Graph** from the dropdown menu
 3. The graph will load automatically with natural layout and auto-centering
 
 #### Graph Interactions
@@ -156,7 +156,8 @@ import GraphVisualization from './components/graph/GraphVisualization';
 
 ### Environment Variables
 
-- `ZEP_API_KEY` - Required for Zep Cloud SDK authentication
+- `ZEP_API_KEY` - Required for Zep Cloud SDK authentication  
+- `ZEP_ENABLED` - Set to 'true' to enable Zep integration
 - `REACT_APP_DEBUG` - Set to 'true' to enable debug features
 
 ### Customization Options
