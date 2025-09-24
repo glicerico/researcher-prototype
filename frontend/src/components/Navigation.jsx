@@ -3,6 +3,7 @@ import { Link, useLocation } from 'react-router-dom';
 import { useSession } from '../context/SessionContext';
 // Removed unused useNotifications import
 import UserDropdown from './UserDropdown';
+import TestUserInitializer from './TestUserInitializer';
 import UserProfile from './UserProfile';
 import UserSelector from './UserSelector';
 import KnowledgeGraphViewer from './graph/KnowledgeGraphViewer';
@@ -32,6 +33,8 @@ const Navigation = () => {
   const [isDashboardsOpen, setIsDashboardsOpen] = useState(false);
 
   const isOnChatPage = location.pathname === '/';
+  const appMode = process.env.REACT_APP_MODE || 'dev';
+  const isTestMode = appMode === 'test';
 
   // Close dropdown on click outside
   useEffect(() => {
@@ -220,7 +223,7 @@ const Navigation = () => {
           <div className="nav-right">
             <NotificationPanel />
             
-            {isOnChatPage && (
+            {isOnChatPage && !isTestMode && (
               <div className="chat-controls">
                 <UserDropdown 
                   onUserSelected={handleUserSelected} 
@@ -236,6 +239,17 @@ const Navigation = () => {
                     {showUserProfile ? 'Hide Settings' : 'User Settings'}
                   </button>
                 )}
+              </div>
+            )}
+
+            {isOnChatPage && isTestMode && userId && (
+              <div className="chat-controls">
+                <button 
+                  className="profile-button"
+                  onClick={handleToggleUserProfile}
+                >
+                  {showUserProfile ? 'Hide Settings' : 'User Settings'}
+                </button>
               </div>
             )}
           </div>
@@ -266,6 +280,31 @@ const Navigation = () => {
               userId={userId} 
               userName={userDisplayName || 'User'}
               onClose={() => setShowKnowledgeGraph(false)}
+            />
+          </div>
+        </div>
+      )}
+
+      {isOnChatPage && isTestMode && !userId && (
+        <div className="profile-modal-overlay">
+          <div className="profile-modal-content" onClick={(e) => e.stopPropagation()}>
+            <TestUserInitializer onInitialized={(id, displayName) => {
+              if (id) {
+                updateUserId(id);
+                if (displayName) updateUserDisplayName(displayName);
+                setShowUserProfile(true);
+              }
+            }} />
+          </div>
+        </div>
+      )}
+
+      {isOnChatPage && isTestMode && showUserProfile && userId && (
+        <div className="profile-modal-overlay" onClick={handleToggleUserProfile}>
+          <div className="profile-modal-content" onClick={(e) => e.stopPropagation()}>
+            <UserProfile 
+              userId={userId} 
+              onProfileUpdated={handleProfileUpdated} 
             />
           </div>
         </div>

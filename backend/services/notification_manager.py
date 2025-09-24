@@ -7,8 +7,10 @@ import asyncio
 import time
 from typing import Dict, Set, Optional
 from fastapi import WebSocket, WebSocketDisconnect
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from dependencies import profile_manager
+from services.email_service import email_service
+import config
 
 logger = logging.getLogger(__name__)
 
@@ -94,11 +96,46 @@ class NotificationService:
                 "topic_id": topic_id,
                 "result_id": result_id,
                 "topic_name": topic_name,
-                "timestamp": datetime.now(UTC).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
         }
         logger.info(f"📡 NotificationService: Sending new research notification to user {user_id}")
         await connection_manager.send_to_user(user_id, message)
+
+        # Also send email notification if the user has an email
+        try:
+            user_data = profile_manager.get_user(user_id)
+            email = (user_data or {}).get("metadata", {}).get("email")
+            if email:
+                subject = "New research finding available"
+                topic_part = f" on '{topic_name}'" if topic_name else ""
+                link = f"{config.FRONTEND_URL}/research-results?user={user_id}&topic={topic_id}"
+                text_body = (
+                    f"Hello,\n\nA new background research finding{topic_part} is available.\n"
+                    f"Finding ID: {result_id}\n"
+                    f"Open the app to review: {link}\n\n"
+                    f"— AI Research Assistant"
+                )
+                html_body = (
+                    f"<div style=\"font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #111827;\">"
+                    f"  <div style=\"max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden;\">"
+                    f"    <div style=\"padding: 20px 24px; background: linear-gradient(135deg,#f0f7ff,#eefdf5); border-bottom: 1px solid #e5e7eb;\">"
+                    f"      <h2 style=\"margin: 0; font-size: 18px; color: #111827;\">New research finding{topic_part}</h2>"
+                    f"      <p style=\"margin: 4px 0 0; color: #6b7280; font-size: 14px;\">Your background research just finished processing.</p>"
+                    f"    </div>"
+                    f"    <div style=\"padding: 20px 24px;\">"
+                    f"      <p style=\"margin: 0 0 12px;\"><strong>Finding ID:</strong> {result_id}</p>"
+                    f"      <a href=\"{link}\" style=\"display: inline-block; padding: 10px 14px; background: #4f46e5; color: white; text-decoration: none; border-radius: 8px;\">Open research</a>"
+                    f"    </div>"
+                    f"    <div style=\"padding: 12px 24px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;\">"
+                    f"      <p style=\"margin: 0;\">You received this because you initiated background research.</p>"
+                    f"    </div>"
+                    f"  </div>"
+                    f"</div>"
+                )
+                email_service.send_email(email, subject, text_body, html_body)
+        except Exception as exc:
+            logger.warning(f"📧 Skipping email notification for new research due to error: {exc}")
     
     @staticmethod
     async def notify_research_complete(user_id: str, topic_id: str, results_count: int, topic_name: str = None):
@@ -109,10 +146,45 @@ class NotificationService:
                 "topic_id": topic_id,
                 "results_count": results_count,
                 "topic_name": topic_name,
-                "timestamp": datetime.now(UTC).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
         }
         await connection_manager.send_to_user(user_id, message)
+
+        # Also send email notification if the user has an email
+        try:
+            user_data = profile_manager.get_user(user_id)
+            email = (user_data or {}).get("metadata", {}).get("email")
+            if email:
+                subject = "Research update completed"
+                topic_part = f" for '{topic_name}'" if topic_name else ""
+                link = f"{config.FRONTEND_URL}/research-results?user={user_id}"
+                text_body = (
+                    f"Hello,\n\nYour background research{topic_part} has completed.\n"
+                    f"New findings: {results_count}.\n"
+                    f"Open the app to review: {link}\n\n"
+                    f"— AI Research Assistant"
+                )
+                html_body = (
+                    f"<div style=\"font-family: -apple-system, Segoe UI, Roboto, Arial, sans-serif; color: #111827;\">"
+                    f"  <div style=\"max-width: 600px; margin: 0 auto; background: #ffffff; border-radius: 12px; border: 1px solid #e5e7eb; overflow: hidden;\">"
+                    f"    <div style=\"padding: 20px 24px; background: linear-gradient(135deg,#f0f7ff,#eefdf5); border-bottom: 1px solid #e5e7eb;\">"
+                    f"      <h2 style=\"margin: 0; font-size: 18px; color: #111827;\">Research completed{topic_part}</h2>"
+                    f"      <p style=\"margin: 4px 0 0; color: #6b7280; font-size: 14px;\">We saved your latest findings.</p>"
+                    f"    </div>"
+                    f"    <div style=\"padding: 20px 24px;\">"
+                    f"      <p style=\"margin: 0 0 12px;\"><strong>New findings:</strong> {results_count}</p>"
+                    f"      <a href=\"{link}\" style=\"display: inline-block; padding: 10px 14px; background: #4f46e5; color: white; text-decoration: none; border-radius: 8px;\">Open research</a>"
+                    f"    </div>"
+                    f"    <div style=\"padding: 12px 24px; border-top: 1px solid #e5e7eb; color: #6b7280; font-size: 12px;\">"
+                    f"      <p style=\"margin: 0;\">You received this because you initiated background research.</p>"
+                    f"    </div>"
+                    f"  </div>"
+                    f"</div>"
+                )
+                email_service.send_email(email, subject, text_body, html_body)
+        except Exception as exc:
+            logger.warning(f"📧 Skipping email notification due to error: {exc}")
     
     @staticmethod
     async def notify_system_status(status: str, details: dict = None):
@@ -122,7 +194,7 @@ class NotificationService:
             "data": {
                 "status": status,
                 "details": details or {},
-                "timestamp": datetime.now(UTC).isoformat()
+                "timestamp": datetime.now(timezone.utc).isoformat()
             }
         }
         await connection_manager.broadcast_to_all(message)
