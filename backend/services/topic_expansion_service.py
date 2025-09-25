@@ -38,19 +38,11 @@ class TopicExpansionService:
 
     async def generate_candidates(self, user_id: str, root_topic: Dict[str, Any]) -> List[ExpansionCandidate]:
         """Generate topic expansion candidates using Zep graph search with optional LLM selection and validation."""
-        # Build short query
+        # Use just the topic name as the query
         topic_name = (root_topic.get("topic_name") or "").strip()
-        description = (root_topic.get("description") or "").strip()
-
-        base = topic_name
-        if description:
-            # Append a compact descriptor; keep total <= 120 chars
-            extra = f" — {description}"
-            combined = (base + extra)[:120]
-        else:
-            combined = base[:120]
-
-        query = combined.strip()
+        description = (root_topic.get("description") or "").strip()  # Still needed for LLM prompt
+        
+        query = topic_name
         if not query:
             logger.debug("Empty root topic; no expansion candidates generated")
             return []
