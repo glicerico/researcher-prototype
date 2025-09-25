@@ -103,13 +103,13 @@ class ZepManager:
         reranker: Optional[str] = "cross_encoder",
         limit: int = 10,
     ) -> List[Dict[str, Any]]:
-        """Search Zep knowledge graph for nodes or edges.
+        """Search Zep knowledge graph for nodes or edges using v3 unified API.
 
         Args:
             user_id: The user ID
             query: The search query
-            scope: One of {"nodes", "edges"}
-            reranker: Optional reranker name
+            scope: One of {"nodes", "edges"} - used to filter unified results
+            reranker: Optional reranker name (ignored in v3 API)
             limit: Max results
 
         Returns:
@@ -126,15 +126,16 @@ class ZepManager:
         retries = getattr(config, "ZEP_SEARCH_RETRIES", 2)
         attempt = 0
         last_exc: Optional[Exception] = None
+        
         while attempt <= retries:
             try:
+                # Use v3 unified search API (no scope/reranker parameters)
                 results = await asyncio.wait_for(
                     self.client.graph.search(
                         query=query,
                         user_id=user_id,
-                        scope=scope,
-                        reranker=reranker,
                         limit=limit,
+                        # center_node_uuid can be added here if needed
                     ),
                     timeout=timeout,
                 )
@@ -147,7 +148,7 @@ class ZepManager:
                     logger.error(
                         f"Zep graph.search failed after {attempt} attempts (scope={scope}): {str(e)}"
                     )
-                    results = []
+                    results = None
                     break
                 # Jittered backoff
                 import random
@@ -157,98 +158,65 @@ class ZepManager:
                 )
                 await asyncio.sleep(wait_s)
 
-        # Post-search normalization
-        normalized: List[Dict[str, Any]] = []
-
-        def _extract_similarity(obj: Any) -> Optional[float]:
-            # Preserve any available similarity/score under a standard key
-            for key in ("similarity", "score", "relevance"):
-                # Support both dict-like and attribute access
-                if isinstance(obj, dict) and key in obj:
-                    try:
-                        return float(obj[key])  # type: ignore[return-value]
-                    except Exception:
-                        continue
-                if hasattr(obj, key):
-                    try:
-                        return float(getattr(obj, key))
-                    except Exception:
-                        continue
-            return None
-
         if not results:
             return []
 
-        for item in results:
-            sim = _extract_similarity(item)
-            # Convert SDK objects to dicts safely, tolerating missing attrs
-            if scope == "nodes":
-                # If result looks like an edge, skip (defensive in case backend returns mixed)
-                if (isinstance(item, dict) and (item.get("source_node_uuid") or item.get("target_node_uuid"))) or (
-                    hasattr(item, "source_node_uuid") or hasattr(item, "target_node_uuid")
-                ):
-                    continue
-                name = None
-                labels: List[str] = []
-                uuid_val = None
-                if isinstance(item, dict):
-                    name = item.get("name")
-                    labels = item.get("labels", []) or []
-                    uuid_val = item.get("uuid") or item.get("uuid_")
-                else:
-                    name = getattr(item, "name", None)
-                    labels = getattr(item, "labels", []) or []
-                    uuid_val = getattr(item, "uuid", None) or getattr(item, "uuid_", None)
+        # Extract nodes and edges from unified results
+        node_results = []
+        edge_results = []
+        
+        try:
+            for result_type, result_items in results:
+                if result_type == 'nodes' and result_items:
+                    node_results.extend(result_items)
+                elif result_type == 'edges' and result_items:
+                    edge_results.extend(result_items)
+        except Exception as e:
+            logger.error(f"Failed to parse Zep v3 search results: {str(e)}")
+            return []
 
-                normalized.append(
-                    {
+        # Filter and normalize based on requested scope
+        normalized: List[Dict[str, Any]] = []
+
+        if scope == "nodes":
+            for node_item in node_results:
+                try:
+                    name = getattr(node_item, 'name', None)
+                    labels = getattr(node_item, 'labels', []) or []
+                    uuid_val = getattr(node_item, 'uuid_', None) or getattr(node_item, 'uuid', None)
+                    similarity = getattr(node_item, 'score', None)
+                    
+                    normalized.append({
                         "name": name or (labels[0] if labels else None),
                         "labels": labels if isinstance(labels, list) else [],
                         "uuid": uuid_val,
-                        "similarity": sim,
-                    }
-                )
-            else:  # edges
-                # Ensure item has edge-like fields; otherwise skip
-                has_edge_fields = False
-                if isinstance(item, dict):
-                    has_edge_fields = bool(item.get("source_node_uuid") or item.get("target_node_uuid") or item.get("fact"))
-                else:
-                    has_edge_fields = bool(
-                        getattr(item, "source_node_uuid", None)
-                        or getattr(item, "target_node_uuid", None)
-                        or getattr(item, "fact", None)
-                    )
-                if not has_edge_fields:
+                        "similarity": similarity,
+                    })
+                except Exception as e:
+                    logger.debug(f"Failed to process node item: {str(e)}")
                     continue
-                fact = None
-                name = None
-                src = None
-                tgt = None
-                uuid_val = None
-                if isinstance(item, dict):
-                    fact = item.get("fact")
-                    name = item.get("name")
-                    src = item.get("source_node_uuid")
-                    tgt = item.get("target_node_uuid")
-                    uuid_val = item.get("uuid") or item.get("uuid_")
-                else:
-                    fact = getattr(item, "fact", None)
-                    name = getattr(item, "name", None)
-                    src = getattr(item, "source_node_uuid", None)
-                    tgt = getattr(item, "target_node_uuid", None)
-                    uuid_val = getattr(item, "uuid", None) or getattr(item, "uuid_", None)
-
-                normalized.append(
-                    {
+                    
+        elif scope == "edges":
+            for edge_item in edge_results:
+                try:
+                    fact = getattr(edge_item, 'fact', None)
+                    name = getattr(edge_item, 'name', None)
+                    source_uuid = getattr(edge_item, 'source_node_uuid', None)
+                    target_uuid = getattr(edge_item, 'target_node_uuid', None)
+                    uuid_val = getattr(edge_item, 'uuid_', None) or getattr(edge_item, 'uuid', None)
+                    similarity = getattr(edge_item, 'score', None)
+                    
+                    normalized.append({
                         "fact": fact,
                         "name": fact or name,
-                        "source_node_uuid": src,
-                        "target_node_uuid": tgt,
+                        "source_node_uuid": source_uuid,
+                        "target_node_uuid": target_uuid,
                         "uuid": uuid_val,
-                        "similarity": sim,
-                    }
-                )
+                        "similarity": similarity,
+                    })
+                except Exception as e:
+                    logger.debug(f"Failed to process edge item: {str(e)}")
+                    continue
 
         return [n for n in normalized if n.get("name")]
     

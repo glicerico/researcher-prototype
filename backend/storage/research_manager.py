@@ -1070,7 +1070,7 @@ class ResearchManager:
                     "is_custom": True,  # Flag to identify custom topics
                 }
 
-                # Merge optional metadata for expansions (Phase 4)
+                # Merge optional metadata for expansions
                 if extra and isinstance(extra, dict):
                     for k, v in extra.items():
                         new_topic[k] = v
