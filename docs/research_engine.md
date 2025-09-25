@@ -12,9 +12,10 @@ The **autonomous research engine** runs in the background, gathering high-qualit
 
 1. **Topic discovery** – after each chat message the `topic_extractor_node` suggests candidate topics.  
 2. **Subscription** – the UI lets you enable research per topic; selected topics are persisted in `storage_data/`.
-3. **Intelligent motivation model** – hierarchical system with global drives (boredom/curiosity/tiredness/satisfaction) that gate overall research activity, plus per-topic evaluation that prioritizes which specific topics to research based on staleness, user engagement, and success rates.
-4. **Graph workflow** – the research LangGraph (`research_graph_builder.py`) runs: initialization ➜ query generation ➜ source selection ➜ multi-source search coordination ➜ integration ➜ quality scoring ➜ deduplication ➜ storage.
-5. **Review** – findings appear in the sidebar with summary, quality bars & source links.
+3. **Topic expansion** – the system automatically discovers related topics using knowledge graph analysis and AI selection (requires Zep).
+4. **Intelligent motivation model** – hierarchical system with global drives (boredom/curiosity/tiredness/satisfaction) that gate overall research activity, plus per-topic evaluation that prioritizes which specific topics to research based on staleness, user engagement, and success rates.
+5. **Graph workflow** – the research LangGraph (`research_graph_builder.py`) runs: initialization ➜ query generation ➜ source selection ➜ multi-source search coordination ➜ integration ➜ quality scoring ➜ deduplication ➜ storage.
+6. **Review** – findings appear in the sidebar with summary, quality bars & source links.
 
 ## Multi-Source Search Architecture
 
@@ -191,12 +192,86 @@ MOTIVATION_THRESHOLD=3.0
 MOTIVATION_BOREDOM_RATE=0.0002
 ```
 
+## Topic Expansion System
+
+The autonomous research engine can automatically discover and research **related topics** based on your knowledge graph and conversation patterns. This creates a natural expansion of your research interests without manual intervention.
+
+### How Topic Expansion Works
+
+1. **Knowledge Graph Analysis** – Uses Zep's knowledge graph to find related nodes and edges connected to your existing topics
+2. **AI Selection** – An LLM analyzes candidates to filter and rank the most relevant expansion topics
+3. **Similarity Validation** – All candidates are validated against Zep's similarity scoring to ensure relevance
+4. **Automatic Research** – Selected expansion topics are added to your research queue and researched autonomously
+5. **Lifecycle Management** – Expansion topics are automatically managed based on engagement and quality metrics
+
+### Expansion Requirements & Dependencies
+
+**Critical Dependency:**
+* **Zep Memory System Required** – Topic expansion cannot function without Zep enabled
+* If `ZEP_ENABLED=false`, expansion generation is completely disabled
+* When Zep is unavailable, the system logs the limitation and continues with manual topic research only
+
+**Graceful Degradation:**
+* Core research functionality remains unaffected when expansion is unavailable
+* Existing topics continue to be researched normally
+* Users can still manually create related topics as needed
+
+### Expansion Configuration
+
+Key environment variables for topic expansion:
+
+```env
+# Enable/disable expansion generation
+EXPANSION_ENABLED=true
+ZEP_ENABLED=true  # Required for expansion to work
+
+# Expansion limits and quality
+EXPLORATION_PER_ROOT_MAX=2        # Max child topics per parent
+EXPANSION_MIN_SIMILARITY=0.35     # Minimum Zep similarity score
+EXPANSION_MAX_DEPTH=2             # Prevent infinite expansion chains
+
+# LLM selection (optional enhancement)
+EXPANSION_LLM_ENABLED=true
+EXPANSION_LLM_MODEL=gpt-4o-mini
+EXPANSION_LLM_SUGGESTION_LIMIT=6
+```
+
+### Expansion Lifecycle
+
+Expansion topics are automatically managed through these phases:
+
+1. **Active** – Newly created, actively researched
+2. **Paused** – Low engagement, research temporarily stopped  
+3. **Retired** – Poor quality or very low engagement, marked for cleanup
+
+**Engagement-based management:**
+* High engagement (>35% findings read) keeps topics active
+* Low engagement (<10% findings read) leads to retirement
+* Quality scores below threshold trigger automatic pausing
+
+### Troubleshooting Expansion
+
+**No expansion topics appearing:**
+* Verify `ZEP_ENABLED=true` in environment
+* Check that Zep API key is valid and service is accessible
+* Ensure you have conversation data in Zep (expansion needs existing knowledge graph)
+* Check similarity thresholds aren't too restrictive
+
+**Debug expansion generation:**
+```bash
+# Test expansion candidate generation
+curl -X POST "http://localhost:8000/api/research/debug/expand/your-user-id" \
+  -H "Content-Type: application/json" \
+  -d '{"root_topic": {"topic_name": "Your Topic"}}'
+```
+
 ### Best Practices
 
 * Begin with 1-2 focused topics (e.g. "GPT-4 performance benchmarks").
 * Lower `RESEARCH_QUALITY_THRESHOLD` if you prefer more-but-noisier findings.
 * Use the debug API (`/research/debug/motivation`) to monitor drive levels.
 * Periodically mark findings as read or delete old ones to keep the sidebar tidy.
+* Enable Zep if you want automatic topic expansion, or rely on manual topic creation if Zep isn't available.
 
 ## Configuration Reference
 
