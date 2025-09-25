@@ -30,7 +30,7 @@ const formatSessionId = (id) => {
 };
 
 const SessionHistory = () => {
-  const { sessionHistory, sessionId, switchSession, startNewSession } = useSession();
+  const { sessionHistory, sessionId, switchSession, startNewSession, sessionTitles } = useSession();
 
   return (
     <div className="session-history">
@@ -39,7 +39,7 @@ const SessionHistory = () => {
         {sessionHistory.map((id) => (
           <li key={id} className={id === sessionId ? 'active' : ''}>
             <button type="button" onClick={() => switchSession(id)}>
-              {formatSessionId(id)}
+              {sessionTitles?.[id] || formatSessionId(id)}
             </button>
           </li>
         ))}
