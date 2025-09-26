@@ -24,6 +24,17 @@ export const SessionProvider = ({ children }) => {
   const [userDisplayName, setUserDisplayName] = useState('');
   const [personality, setPersonality] = useState(null);
   const [conversationTopics, setConversationTopics] = useState([]);
+  // Session titles map with synchronous localStorage initialization to avoid flicker
+  const [sessionTitles, setSessionTitles] = useState(() => {
+    try {
+      const uid = localStorage.getItem('user_id') || '';
+      if (!uid) return {};
+      const raw = localStorage.getItem(`session_titles_${uid}`);
+      return raw ? JSON.parse(raw) : {};
+    } catch {
+      return {};
+    }
+  });
 
   // Load stored conversation and session when user changes
   useEffect(() => {
@@ -77,6 +88,20 @@ export const SessionProvider = ({ children }) => {
     }
   }, [userId]);
 
+  // Load session titles when user changes
+  useEffect(() => {
+    if (!userId) {
+      setSessionTitles({});
+      return;
+    }
+    try {
+      const raw = localStorage.getItem(`session_titles_${userId}`);
+      setSessionTitles(raw ? JSON.parse(raw) : {});
+    } catch {
+      setSessionTitles({});
+    }
+  }, [userId]);
+
   // Persist conversation to localStorage with better isolation
   useEffect(() => {
     // ✅ FIX: Add delay to prevent race conditions during user switching
@@ -105,6 +130,16 @@ export const SessionProvider = ({ children }) => {
       localStorage.setItem(`session_id_${userId}`, sessionId);
     }
   }, [sessionId, userId]);
+
+  // Persist session titles per user
+  useEffect(() => {
+    if (!userId) return;
+    try {
+      localStorage.setItem(`session_titles_${userId}`, JSON.stringify(sessionTitles || {}));
+    } catch {
+      // ignore
+    }
+  }, [userId, sessionTitles]);
 
   // Validate stored user ID on app startup; in dev default to guest if none
   useEffect(() => {
@@ -177,6 +212,7 @@ export const SessionProvider = ({ children }) => {
         setSessionHistory([]);
         setUserDisplayName('');
         setPersonality(null);
+        setSessionTitles({});
       }
       
       setUserId(newUserId);
@@ -308,7 +344,21 @@ export const SessionProvider = ({ children }) => {
       localStorage.setItem(`session_history_${userId}`, JSON.stringify(updated));
       return updated;
     });
+    // Clear any stale title for the new session id
+    setSessionTitles((prev) => {
+      const next = { ...prev };
+      delete next[newSessionId];
+      return next;
+    });
   }, [userId]);
+
+  const setSessionTitle = useCallback((sid, title) => {
+    if (!sid || !title) return;
+    setSessionTitles((prev) => {
+      if (prev[sid] === title) return prev;
+      return { ...prev, [sid]: title };
+    });
+  }, []);
 
   const value = {
     // State
@@ -319,6 +369,7 @@ export const SessionProvider = ({ children }) => {
     personality,
     conversationTopics,
     sessionHistory,
+    sessionTitles,
 
     // Actions
     updateUserId,
@@ -331,6 +382,7 @@ export const SessionProvider = ({ children }) => {
     resetSession,
     switchSession,
     startNewSession,
+    setSessionTitle,
   };
 
   return (

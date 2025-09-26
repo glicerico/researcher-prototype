@@ -18,6 +18,8 @@ const ChatPage = () => {
     updateSessionId,
     updateMessages,
     updateConversationTopics,
+    sessionTitles,
+    setSessionTitle,
   } = useSession();
 
   const { trackSessionContinuation } = useEngagementTracking();
@@ -119,7 +121,20 @@ const ChatPage = () => {
       
       // Store session ID for conversation continuity
       if (response.session_id) {
-        updateSessionId(response.session_id);
+        const newSid = response.session_id;
+        updateSessionId(newSid);
+        // Auto-name on first user message
+        try {
+          const existing = sessionTitles?.[newSid];
+          if (!existing) {
+            const firstUser = updatedMessages.find(m => m.role === 'user');
+            if (firstUser && firstUser.content) {
+              const raw = String(firstUser.content).trim();
+              const title = raw.length > 60 ? raw.slice(0, 57) + '…' : raw;
+              if (title) setSessionTitle(newSid, title);
+            }
+          }
+        } catch {}
       }
       
       // Combine routing_analysis (detailed metrics) with module_used (fallback)
