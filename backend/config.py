@@ -67,6 +67,11 @@ EXPANSION_LLM_SUGGESTION_LIMIT = 3          # Maximum topics to generate per exp
 # Expansion lifecycle and depth management
 EXPANSION_MAX_DEPTH = _clamp_int(int(os.getenv("EXPANSION_MAX_DEPTH", "2")), 1, 10)
 
+# Topic expansion breadth control - prevent topic explosion
+EXPANSION_MAX_TOTAL_TOPICS_PER_USER = _clamp_int(int(os.getenv("EXPANSION_MAX_TOTAL_TOPICS_PER_USER", "10")), 1, 100)
+EXPANSION_MAX_UNREVIEWED_TOPICS = _clamp_int(int(os.getenv("EXPANSION_MAX_UNREVIEWED_TOPICS", "5")), 1, 50)
+EXPANSION_REVIEW_ENGAGEMENT_THRESHOLD = _clamp_float(float(os.getenv("EXPANSION_REVIEW_ENGAGEMENT_THRESHOLD", "0.2")), 0.0, 1.0)
+
 # Internal expansion lifecycle constants (rarely changed)
 EXPANSION_ENGAGEMENT_WINDOW_DAYS = 7        # Days to look back for engagement scoring
 EXPANSION_PROMOTE_ENGAGEMENT = 0.35         # Engagement threshold to enable child expansions

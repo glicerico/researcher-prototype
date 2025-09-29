@@ -288,70 +288,74 @@ class AutonomousResearcher:
                                     f"🔬 Skipping child expansion for '{root_name}': {gating_reason}"
                                 )
                             else:
-                                # Generate candidates
-                                candidates = await self.topic_expansion_service.generate_candidates(user_id, topic)
-                                if not candidates:
-                                    logger.info(f"🔬 No expansion candidates generated for '{root_name}' (check Zep availability and similarity thresholds)")
-                                    logger.debug(
-                                        "🔬 Expansion diagnostics: ZEP_ENABLED=%s ZEP_SEARCH_LIMIT=%s EXPANSION_MIN_SIMILARITY=%s",
-                                        getattr(config, 'ZEP_ENABLED', None), getattr(config, 'ZEP_SEARCH_LIMIT', None), getattr(config, 'EXPANSION_MIN_SIMILARITY', None),
-                                    )
+                                # Check breadth control before generating candidates
+                                if not self._should_allow_expansion(user_id):
+                                    logger.info(f"🔬 Skipping expansion for '{root_name}': breadth limits reached")
                                 else:
-                                    logger.debug(f"🔬 Generated {len(candidates)} expansion candidates for '{root_name}'")
-                                if candidates:
-                                    k = min(config.EXPLORATION_PER_ROOT_MAX, len(candidates))
-                                    selected = candidates[:k]
-                                    logger.info(
-                                        f"🔬 Choosing {len(selected)}/{len(candidates)} expansions for '{root_name}'"
-                                    )
-                                    for cand in selected:
-                                        # Use description from LLM expansion selection (if available)
-                                        if cand.description:
-                                            desc = cand.description
-                                            logger.debug(f"🔬 Using LLM description for '{cand.name}': {desc[:100]}...")
-                                        else:
-                                            desc = f"Research into {cand.name.lower()} and its relationship to {root_name.lower()}"
-                                            logger.debug(f"🔬 Using fallback description for '{cand.name}'")
-                                        # Compute child depth
-                                        child_depth = min(depth + 1, config.EXPANSION_MAX_DEPTH)
-                                        extra_meta = {
-                                            "is_expansion": True,
-                                            "origin": {
-                                                "type": "expansion",
-                                                "parent_topic": root_name,
-                                                "method": cand.source,
-                                                "similarity": cand.similarity,
-                                                "rationale": cand.rationale,
-                                            },
-                                            "expansion_depth": child_depth,
-                                            "child_expansion_enabled": False,
-                                            "expansion_status": "active",
-                                            "last_evaluated_at": now_ts,
-                                        }
-                                        res = self.research_manager.add_custom_topic(
-                                            user_id=user_id,
-                                            topic_name=cand.name,
-                                            description=desc,
-                                            confidence_score=0.8,
-                                            enable_research=True,
-                                            extra=extra_meta,
+                                    # Generate candidates
+                                    candidates = await self.topic_expansion_service.generate_candidates(user_id, topic)
+                                    if not candidates:
+                                        logger.info(f"🔬 No expansion candidates generated for '{root_name}' (check Zep availability and similarity thresholds)")
+                                        logger.debug(
+                                            "🔬 Expansion diagnostics: ZEP_ENABLED=%s ZEP_SEARCH_LIMIT=%s EXPANSION_MIN_SIMILARITY=%s",
+                                            getattr(config, 'ZEP_ENABLED', None), getattr(config, 'ZEP_SEARCH_LIMIT', None), getattr(config, 'EXPANSION_MIN_SIMILARITY', None),
                                         )
-                                        if res and res.get('success'):
-                                            topic_obj = res.get('topic', {})
-                                            created_expansions.append({
-                                                "topic": topic_obj,
-                                                "candidate": cand,
-                                            })
-                                            sim_txt = (
-                                                f"{cand.similarity:.2f}" if isinstance(cand.similarity, (int, float)) else "n/a"
+                                    else:
+                                        logger.debug(f"🔬 Generated {len(candidates)} expansion candidates for '{root_name}'")
+                                    if candidates:
+                                        k = min(config.EXPLORATION_PER_ROOT_MAX, len(candidates))
+                                        selected = candidates[:k]
+                                        logger.info(
+                                            f"🔬 Choosing {len(selected)}/{len(candidates)} expansions for '{root_name}'"
+                                        )
+                                        for cand in selected:
+                                            # Use description from LLM expansion selection (if available)
+                                            if cand.description:
+                                                desc = cand.description
+                                                logger.debug(f"🔬 Using LLM description for '{cand.name}': {desc[:100]}...")
+                                            else:
+                                                desc = f"Research into {cand.name.lower()} and its relationship to {root_name.lower()}"
+                                                logger.debug(f"🔬 Using fallback description for '{cand.name}'")
+                                            # Compute child depth
+                                            child_depth = min(depth + 1, config.EXPANSION_MAX_DEPTH)
+                                            extra_meta = {
+                                                "is_expansion": True,
+                                                "origin": {
+                                                    "type": "expansion",
+                                                    "parent_topic": root_name,
+                                                    "method": cand.source,
+                                                    "similarity": cand.similarity,
+                                                    "rationale": cand.rationale,
+                                                },
+                                                "expansion_depth": child_depth,
+                                                "child_expansion_enabled": True,  # Start enabled for initial exploration
+                                                "expansion_status": "active",
+                                                "last_evaluated_at": now_ts,
+                                            }
+                                            res = self.research_manager.add_custom_topic(
+                                                user_id=user_id,
+                                                topic_name=cand.name,
+                                                description=desc,
+                                                confidence_score=0.8,
+                                                enable_research=True,
+                                                extra=extra_meta,
                                             )
-                                            logger.info(
-                                                f"🔬 Scheduled expansion: {cand.name} (source={cand.source}, sim={sim_txt}, depth={child_depth})"
-                                            )
-                                        else:
-                                            logger.debug(
-                                                f"🔬 Skipping expansion '{cand.name}' - duplicate or failed to persist"
-                                            )
+                                            if res and res.get('success'):
+                                                topic_obj = res.get('topic', {})
+                                                created_expansions.append({
+                                                    "topic": topic_obj,
+                                                    "candidate": cand,
+                                                })
+                                                sim_txt = (
+                                                    f"{cand.similarity:.2f}" if isinstance(cand.similarity, (int, float)) else "n/a"
+                                                )
+                                                logger.info(
+                                                    f"🔬 Scheduled expansion: {cand.name} (source={cand.source}, sim={sim_txt}, depth={child_depth})"
+                                                )
+                                            else:
+                                                logger.debug(
+                                                    f"🔬 Skipping expansion '{cand.name}' - duplicate or failed to persist"
+                                                )
                             
 
                             # Launch expansion research tasks (bounded by semaphore)
@@ -595,6 +599,49 @@ class AutonomousResearcher:
 
         except Exception as e:
             logger.error(f"Error updating expansion lifecycle for user {user_id}: {str(e)}")
+
+    def _should_allow_expansion(self, user_id: str) -> bool:
+        """Check if user has capacity for more expansion topics based on breadth control limits."""
+        try:
+            topics_data = self.research_manager.get_user_topics(user_id)
+            if not topics_data:
+                return True
+                
+            expansion_count = 0
+            unreviewed_count = 0
+            
+            for sid, session_topics in topics_data.get('sessions', {}).items():
+                for topic in session_topics:
+                    if topic.get('is_expansion', False):
+                        expansion_count += 1
+                        
+                        # Check if topic has been "reviewed" (engaged with)
+                        try:
+                            topic_name = topic.get('topic_name', '')
+                            engagement = self.motivation._get_topic_engagement_score(user_id, topic_name)
+                            if engagement < config.EXPANSION_REVIEW_ENGAGEMENT_THRESHOLD:
+                                unreviewed_count += 1
+                        except Exception as e:
+                            # If engagement calculation fails, assume unreviewed
+                            logger.debug(f"Failed to get engagement for {topic.get('topic_name')}: {e}")
+                            unreviewed_count += 1
+            
+            # Check breadth control limits
+            if expansion_count >= config.EXPANSION_MAX_TOTAL_TOPICS_PER_USER:
+                logger.info(f"🔬 Expansion blocked: {expansion_count} topics >= limit {config.EXPANSION_MAX_TOTAL_TOPICS_PER_USER}")
+                return False
+                
+            if unreviewed_count >= config.EXPANSION_MAX_UNREVIEWED_TOPICS:
+                logger.info(f"🔬 Expansion blocked: {unreviewed_count} unreviewed topics >= limit {config.EXPANSION_MAX_UNREVIEWED_TOPICS}")
+                return False
+            
+            logger.debug(f"🔬 Breadth control check passed: {expansion_count}/{config.EXPANSION_MAX_TOTAL_TOPICS_PER_USER} total, {unreviewed_count}/{config.EXPANSION_MAX_UNREVIEWED_TOPICS} unreviewed")
+            return True
+            
+        except Exception as e:
+            logger.error(f"Error checking expansion breadth control for user {user_id}: {str(e)}")
+            # Err on the side of caution - block expansion if check fails
+            return False
 
     async def trigger_research_for_user(self, user_id: str) -> Dict[str, Any]:
         """
