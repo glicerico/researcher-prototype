@@ -177,7 +177,7 @@ class AutonomousResearcher:
             except Exception as e:
                 logger.error(f"🔬 Error in research loop: {str(e)}", exc_info=True)
                 # Sleep for a shorter time on error to retry
-                await asyncio.sleep(300)  # 5 minutes
+                await asyncio.sleep(config.RESEARCH_CYCLE_SLEEP_INTERVAL)
 
     async def _conduct_research_cycle(self):
         """Conduct a complete research cycle for all users with active topics."""
@@ -382,7 +382,7 @@ class AutonomousResearcher:
                                     quality_scores.append(res.get("quality_score"))
 
                             # Small delay between topics to avoid overwhelming APIs
-                            await asyncio.sleep(1)
+                            await asyncio.sleep(config.RESEARCH_TOPIC_DELAY)
 
                         except Exception as e:
                             logger.error(
@@ -448,7 +448,7 @@ class AutonomousResearcher:
                 "messages": [],  # Will be populated by research_initializer_node
                 "model": config.RESEARCH_MODEL,
                 "temperature": 0.3,
-                "max_tokens": 2000,
+                "max_tokens": config.RESEARCH_MAX_TOKENS,
                 "personality": {"style": "research", "tone": "analytical"},
                 "current_module": None,
                 "module_results": {},
@@ -652,7 +652,7 @@ class AutonomousResearcher:
                     )
 
                     # Small delay between topics
-                    await asyncio.sleep(0.5)
+                    await asyncio.sleep(config.RESEARCH_MANUAL_DELAY)
 
                 except Exception as e:
                     logger.error(f"🔬 Error in manual LangGraph research for topic {topic.get('topic_name')}: {str(e)}")

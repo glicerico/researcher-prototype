@@ -1,10 +1,10 @@
 import asyncio
 from typing import Dict, AsyncGenerator
 import time
+from config import STATUS_MIN_INTERVAL
 
 _status_queues: Dict[str, asyncio.Queue] = {}
 _last_status_time: Dict[str, float] = {}
-_MIN_STATUS_INTERVAL = 0.3  # Minimum 300ms between status updates
 
 
 def _get_queue(thread_id: str) -> asyncio.Queue:
@@ -22,9 +22,9 @@ async def publish_status(thread_id: str, message: str) -> None:
     current_time = time.time()
     last_time = _last_status_time.get(thread_id, 0)
     
-    if current_time - last_time < _MIN_STATUS_INTERVAL:
+    if current_time - last_time < STATUS_MIN_INTERVAL:
         # Wait a bit to space out the status updates
-        await asyncio.sleep(_MIN_STATUS_INTERVAL - (current_time - last_time))
+        await asyncio.sleep(STATUS_MIN_INTERVAL - (current_time - last_time))
     
     _last_status_time[thread_id] = time.time()
     await queue.put(message)

@@ -60,6 +60,7 @@ EXPANSION_LLM_MODEL = os.getenv("EXPANSION_LLM_MODEL", "gpt-4o-mini")
 EXPANSION_LLM_MAX_TOKENS = _clamp_int(int(os.getenv("EXPANSION_LLM_MAX_TOKENS", "800")), 100, 4000)
 EXPANSION_LLM_TEMPERATURE = _clamp_float(float(os.getenv("EXPANSION_LLM_TEMPERATURE", "0.2")), 0.0, 1.0)
 EXPANSION_LLM_SUGGESTION_LIMIT = _clamp_int(int(os.getenv("EXPANSION_LLM_SUGGESTION_LIMIT", "3")), 1, 10)
+EXPANSION_LLM_CONFIDENCE_THRESHOLD = _clamp_float(float(os.getenv("EXPANSION_LLM_CONFIDENCE_THRESHOLD", "0.6")), 0.0, 1.0)
 # Optional timeout (seconds) for the single LLM call
 EXPANSION_LLM_TIMEOUT_SECONDS = _clamp_int(int(os.getenv("EXPANSION_LLM_TIMEOUT_SECONDS", "30")), 1, 120)
 
@@ -153,6 +154,28 @@ TOPIC_MOTIVATION_THRESHOLD = float(os.getenv("TOPIC_MOTIVATION_THRESHOLD", "0.5"
 TOPIC_ENGAGEMENT_WEIGHT = float(os.getenv("TOPIC_ENGAGEMENT_WEIGHT", "0.3"))
 TOPIC_QUALITY_WEIGHT = float(os.getenv("TOPIC_QUALITY_WEIGHT", "0.2"))
 TOPIC_STALENESS_SCALE = float(os.getenv("TOPIC_STALENESS_SCALE", "0.0001"))  # Scale factor for staleness time
+
+# Engagement scoring configuration
+ENGAGEMENT_RESEARCH_WEIGHT = float(os.getenv("ENGAGEMENT_RESEARCH_WEIGHT", "2.0"))  # Weight for research findings interaction
+ENGAGEMENT_ANALYTICS_WEIGHT = float(os.getenv("ENGAGEMENT_ANALYTICS_WEIGHT", "0.5"))  # Weight for general analytics
+ENGAGEMENT_RECENT_BONUS_RATE = float(os.getenv("ENGAGEMENT_RECENT_BONUS_RATE", "0.2"))  # Bonus per recent read
+ENGAGEMENT_RECENT_BONUS_MAX = float(os.getenv("ENGAGEMENT_RECENT_BONUS_MAX", "0.5"))  # Max recent bonus
+ENGAGEMENT_VOLUME_BONUS_RATE = float(os.getenv("ENGAGEMENT_VOLUME_BONUS_RATE", "0.1"))  # Bonus per total finding
+ENGAGEMENT_VOLUME_BONUS_MAX = float(os.getenv("ENGAGEMENT_VOLUME_BONUS_MAX", "0.3"))  # Max volume bonus
+ENGAGEMENT_BOOKMARK_BONUS_RATE = float(os.getenv("ENGAGEMENT_BOOKMARK_BONUS_RATE", "0.15"))  # Bonus per bookmark
+ENGAGEMENT_BOOKMARK_BONUS_MAX = float(os.getenv("ENGAGEMENT_BOOKMARK_BONUS_MAX", "0.45"))  # Max bookmark bonus
+ENGAGEMENT_INTEGRATION_BONUS_RATE = float(os.getenv("ENGAGEMENT_INTEGRATION_BONUS_RATE", "0.2"))  # Bonus per integration
+ENGAGEMENT_INTEGRATION_BONUS_MAX = float(os.getenv("ENGAGEMENT_INTEGRATION_BONUS_MAX", "0.6"))  # Max integration bonus
+ENGAGEMENT_SCORE_MAX = float(os.getenv("ENGAGEMENT_SCORE_MAX", "2.0"))  # Cap total engagement score
+
+# Research timing configuration
+RESEARCH_CYCLE_SLEEP_INTERVAL = int(os.getenv("RESEARCH_CYCLE_SLEEP_INTERVAL", "300"))  # Sleep between cycles (seconds)
+RESEARCH_TOPIC_DELAY = float(os.getenv("RESEARCH_TOPIC_DELAY", "1.0"))  # Delay between topics (seconds)
+RESEARCH_MANUAL_DELAY = float(os.getenv("RESEARCH_MANUAL_DELAY", "0.5"))  # Delay in manual research (seconds)
+RESEARCH_MAX_TOKENS = int(os.getenv("RESEARCH_MAX_TOKENS", "2000"))  # Max tokens for research LLM calls
+
+# Status update configuration
+STATUS_MIN_INTERVAL = float(os.getenv("STATUS_MIN_INTERVAL", "0.3"))  # Minimum seconds between status updates
 
 # Admin interface configuration
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")  # Change this in production!

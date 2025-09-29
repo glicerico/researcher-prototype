@@ -185,7 +185,7 @@ class TopicExpansionService:
             self.metrics["expansion_llm_accepted"] += len(all_topics)
             
             # Filter by confidence score programmatically  
-            min_confidence = 0.6  # Reasonable threshold for 1-3 high-quality topics
+            min_confidence = config.EXPANSION_LLM_CONFIDENCE_THRESHOLD
             confidence_filtered = [t for t in all_topics if (t.confidence or 0.5) >= min_confidence]
             
             logger.info(f"🧩 LLM generated {len(all_topics)} topics, {len(confidence_filtered)} passed confidence filter (≥{min_confidence})")
