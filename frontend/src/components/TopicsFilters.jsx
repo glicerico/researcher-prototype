@@ -72,6 +72,21 @@ const TopicsFilters = ({ filters, onFiltersChange, topicsCount }) => {
           </div>
         </div>
 
+        {/* Grouping */}
+        <div className="filter-group sort-group">
+          <label htmlFor="group-by">Group</label>
+          <div className="sort-controls">
+            <select
+              id="group-by"
+              value={filters.groupBy || 'none'}
+              onChange={(e) => handleFilterChange('groupBy', e.target.value)}
+            >
+              <option value="none">None</option>
+              <option value="parent">By Parent</option>
+            </select>
+          </div>
+        </div>
+
         {/* Auto expansions filter */}
         <div className="filter-group auto-group">
           <label htmlFor="auto-only">Auto expansions only</label>

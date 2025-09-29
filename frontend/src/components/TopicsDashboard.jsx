@@ -44,6 +44,7 @@ const TopicsDashboard = () => {
     sortBy: 'date',
     sortOrder: 'desc', // asc, desc
     autoOnly: false,
+    groupBy: 'parent', // none | parent
   });
   const [expandedTopics, setExpandedTopics] = useState(new Set());
 
@@ -160,7 +161,26 @@ const TopicsDashboard = () => {
     }
   };
 
-  // Filter and sort topics
+  // Helper: base sorter according to filters
+  const baseSorter = useCallback((a, b) => {
+    let comparison = 0;
+    switch (filters.sortBy) {
+      case 'confidence':
+        comparison = a.confidence_score - b.confidence_score;
+        break;
+      case 'date':
+        comparison = a.suggested_at - b.suggested_at;
+        break;
+      case 'name':
+        comparison = a.name.localeCompare(b.name);
+        break;
+      default:
+        comparison = 0;
+    }
+    return filters.sortOrder === 'desc' ? -comparison : comparison;
+  }, [filters.sortBy, filters.sortOrder]);
+
+  // Filter and sort topics (with optional parent grouping)
   const filteredAndSortedTopics = React.useMemo(() => {
     let filtered = topics.filter(topic => {
       // Search filter
@@ -179,29 +199,53 @@ const TopicsDashboard = () => {
       return true;
     });
 
-    // Sort topics
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      
-      switch (filters.sortBy) {
-        case 'confidence':
-          comparison = a.confidence_score - b.confidence_score;
-          break;
-        case 'date':
-          comparison = a.suggested_at - b.suggested_at;
-          break;
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        default:
-          comparison = 0;
-      }
-      
-      return filters.sortOrder === 'desc' ? -comparison : comparison;
-    });
+    // When grouping by parent, arrange topics so each parent is followed by its children
+    if (filters.groupBy === 'parent') {
+      // Map by name for quick lookup
+      const byName = new Map(filtered.map(t => [t.name, t]));
 
-    return filtered;
-  }, [topics, filters]);
+      // Build children adjacency map
+      const childrenMap = new Map();
+      filtered.forEach(t => {
+        const parentName = (t && t.is_expansion && t.origin && t.origin.parent_topic) ? t.origin.parent_topic : null;
+        if (parentName) {
+          const arr = childrenMap.get(parentName) || [];
+          arr.push(t);
+          childrenMap.set(parentName, arr);
+        }
+      });
+
+      // Sort children lists using the base sorter
+      childrenMap.forEach(arr => arr.sort(baseSorter));
+
+      // Identify roots: items that are not expansions or whose parent is not present
+      const roots = filtered.filter(t => !t.is_expansion || !byName.has(t.origin?.parent_topic));
+      roots.sort(baseSorter);
+
+      const ordered = [];
+      const pushed = new Set();
+      const visit = (node) => {
+        if (!node) return;
+        if (!pushed.has(node.topic_id)) {
+          ordered.push(node);
+          pushed.add(node.topic_id);
+        }
+        const children = childrenMap.get(node.name) || [];
+        children.forEach(visit);
+      };
+      roots.forEach(visit);
+
+      // Append any orphans not visited (cycles or missing roots)
+      filtered.sort(baseSorter).forEach(t => {
+        if (!pushed.has(t.topic_id)) ordered.push(t);
+      });
+
+      return ordered;
+    }
+
+    // Default flat sorting
+    return filtered.sort(baseSorter);
+  }, [topics, filters, baseSorter]);
 
   // Handle topic selection
   const handleTopicSelect = (sessionId, topicIndex, selected) => {
@@ -498,9 +542,14 @@ const TopicsDashboard = () => {
               const topicKey = `${topic.session_id}-${index}`;
               const isSelected = selectedTopics.has(topicKey);
               const isExpanded = expandedTopics.has(topicKey);
+              const depth = topic && topic.is_expansion ? (parseInt(topic.expansion_depth || 1, 10) || 1) : 0;
               
               return (
-                <div key={topicKey} className={`topic-item ${isSelected ? 'selected' : ''} ${topic.is_active_research ? 'active-research' : ''}`}>
+                <div 
+                  key={topicKey} 
+                  className={`topic-item ${isSelected ? 'selected' : ''} ${topic.is_active_research ? 'active-research' : ''} ${depth > 0 ? 'child-topic' : 'root-topic'} depth-${depth}`}
+                  style={{ ['--depth-indent']: `${Math.min(depth, 6) * 16}px` }}
+                >
                   <div 
                     className="topic-header"
                     onClick={() => toggleTopic(topicKey)}

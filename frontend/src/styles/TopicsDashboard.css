@@ -120,6 +120,14 @@
   overflow: hidden;
 }
 
+/* Visual hierarchy for grouped parent/child topics */
+.topic-item.child-topic .topic-header {
+  padding-left: calc(1.25rem + var(--depth-indent, 0px));
+}
+.topic-item.root-topic .topic-header {
+  padding-left: 1.25rem;
+}
+
 .topic-item:hover {
   box-shadow: var(--shadow-md);
   transform: translateY(-1px);
