@@ -165,16 +165,9 @@ const AddTopicForm = ({ isOpen, onClose, onTopicAdded }) => {
 
         <form onSubmit={handleSubmit} className="add-topic-form">
           {errors.general && (
-            <div className="error-message general-error">
+            <div className="form-error-banner">
+              <span className="error-icon">⚠️</span>
               <p>{errors.general}</p>
-              <button 
-                type="button"
-                className="dismiss-error-btn"
-                onClick={() => setErrors(prev => ({ ...prev, general: '' }))}
-                aria-label="Dismiss error"
-              >
-                ×
-              </button>
             </div>
           )}
 

@@ -5,6 +5,7 @@ import TopicsFilters from './TopicsFilters';
 import MotivationStats from './MotivationStats';
 import EngineSettings from './EngineSettings';
 import AddTopicForm from './AddTopicForm';
+import ErrorModal from './ErrorModal';
 import { 
   getAllTopicSuggestions,
   getTopicStatistics,
@@ -527,15 +528,11 @@ const TopicsDashboard = () => {
         onAddCustomTopic={handleShowAddTopicForm}
       />
       
-      {error && (
-        <div className="error-message">
-          <p>{error}</p>
-          <div className="error-actions">
-            <button onClick={() => setError(null)} className="dismiss-btn">Dismiss</button>
-            <button onClick={loadData} className="retry-btn">Retry</button>
-          </div>
-        </div>
-      )}
+      <ErrorModal 
+        isOpen={!!error}
+        message={error}
+        onClose={() => setError(null)}
+      />
       
       <TopicsFilters 
         filters={filters}

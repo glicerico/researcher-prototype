@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { getSessionTopicSuggestions, deleteTopicById, enableTopicResearchById, disableTopicResearchById } from '../services/api';
 import { trackEngagement } from '../utils/engagementTracker';
 import TopicSidebarItem from './TopicSidebarItem';
+import ErrorModal from './ErrorModal';
 import '../styles/ConversationTopics.css';
 
 const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicUpdate }) => {
@@ -204,14 +205,13 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
         </div>
       </div>
 
+      <ErrorModal 
+        isOpen={!!error}
+        message={error}
+        onClose={handleDismissError}
+      />
+
       <div className="topics-content">
-        {error && (
-          <div className="error-state">
-            <p>{error}</p>
-            <button onClick={handleDismissError}>Dismiss</button>
-          </div>
-        )}
-        
         {loading && topics.length === 0 ? (
           <div className="loading-state">
             <div className="loading-spinner"></div>
