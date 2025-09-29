@@ -145,6 +145,9 @@ RESEARCH_QUALITY_THRESHOLD = float(os.getenv("RESEARCH_QUALITY_THRESHOLD", "0.6"
 RESEARCH_MAX_TOPICS_PER_USER = int(os.getenv("RESEARCH_MAX_TOPICS_PER_USER", "3"))
 RESEARCH_FINDINGS_RETENTION_DAYS = int(os.getenv("RESEARCH_FINDINGS_RETENTION_DAYS", "30"))
 
+# Maximum active research topics per user (includes both manual and expansion topics)
+MAX_ACTIVE_RESEARCH_TOPICS_PER_USER = _clamp_int(int(os.getenv("MAX_ACTIVE_RESEARCH_TOPICS_PER_USER", "10")), 1, 50)
+
 # Search Results Configuration
 SEARCH_RESULTS_LIMIT = 10  # Standard limit for all search API calls
 

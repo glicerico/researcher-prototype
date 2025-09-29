@@ -431,6 +431,16 @@ async def create_custom_topic(request: CustomTopicRequest, user_id: str = Depend
                 raise HTTPException(status_code=409, detail=result["error"])
             elif "required" in result["error"]:
                 raise HTTPException(status_code=400, detail=result["error"])
+            elif "maximum limit" in result["error"] or "limit" in result["error"]:
+                # Return limit information for frontend to display proper message
+                raise HTTPException(
+                    status_code=400, 
+                    detail={
+                        "error": result["error"],
+                        "current_count": result.get("current_count"),
+                        "limit": result.get("limit")
+                    }
+                )
             else:
                 raise HTTPException(status_code=500, detail=result["error"])
 

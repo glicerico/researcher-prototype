@@ -792,6 +792,16 @@ async def enable_disable_research_by_topic_id(
             # Map specific errors to appropriate HTTP status codes
             if "not found" in result["error"]:
                 raise HTTPException(status_code=404, detail=result["error"])
+            elif "maximum limit" in result["error"] or "limit" in result["error"]:
+                # Return limit information for frontend to display proper message
+                raise HTTPException(
+                    status_code=400, 
+                    detail={
+                        "error": result["error"],
+                        "current_count": result.get("current_count"),
+                        "limit": result.get("limit")
+                    }
+                )
             else:
                 raise HTTPException(status_code=500, detail=result["error"])
 

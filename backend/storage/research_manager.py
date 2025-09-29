@@ -235,6 +235,60 @@ class ResearchManager:
 
         return active_topics
 
+    def count_active_research_topics(self, user_id: str) -> int:
+        """Count the number of active research topics for a user."""
+        try:
+            active_topics = self.get_active_research_topics(user_id)
+            return len(active_topics)
+        except Exception as e:
+            logger.error(f"Error counting active research topics for user {user_id}: {str(e)}")
+            return 0
+
+    def check_active_topics_limit(self, user_id: str, enabling_new: bool = True) -> Dict[str, Any]:
+        """
+        Check if user would exceed the maximum number of active research topics.
+        
+        Args:
+            user_id: User ID to check
+            enabling_new: True if enabling a new topic, False if just checking current count
+            
+        Returns:
+            Dict with 'allowed' boolean and optional 'message' for explanation
+        """
+        from config import MAX_ACTIVE_RESEARCH_TOPICS_PER_USER
+        
+        try:
+            current_count = self.count_active_research_topics(user_id)
+            limit = MAX_ACTIVE_RESEARCH_TOPICS_PER_USER
+            
+            if enabling_new:
+                # Check if enabling one more would exceed limit
+                if current_count >= limit:
+                    return {
+                        "allowed": False,
+                        "message": f"You have reached the maximum limit of {limit} active research topics. Please disable some existing topics before adding new ones.",
+                        "current_count": current_count,
+                        "limit": limit
+                    }
+                else:
+                    return {
+                        "allowed": True,
+                        "current_count": current_count,
+                        "limit": limit
+                    }
+            else:
+                # Just checking current status
+                return {
+                    "allowed": current_count <= limit,
+                    "current_count": current_count,
+                    "limit": limit
+                }
+                
+        except Exception as e:
+            logger.error(f"Error checking active topics limit for user {user_id}: {str(e)}")
+            # Default to allowing if check fails
+            return {"allowed": True, "error": str(e)}
+
     def update_topic_last_researched(
         self, user_id: str, topic_name: str, research_time: Optional[float] = None
     ) -> bool:
@@ -285,6 +339,18 @@ class ResearchManager:
             try:
                 # Ensure migration from profile.json if needed
                 self.migrate_topics_from_profile(user_id)
+
+                # Check active topics limit before enabling research
+                if enable:
+                    limit_check = self.check_active_topics_limit(user_id, enabling_new=True)
+                    if not limit_check["allowed"]:
+                        logger.warning(f"Research activation blocked for topic {topic_id}, user {user_id}: {limit_check['message']}")
+                        return {
+                            "success": False,
+                            "error": limit_check["message"],
+                            "current_count": limit_check["current_count"],
+                            "limit": limit_check["limit"]
+                        }
 
                 # Load topics data
                 topics_data = self.get_user_topics(user_id)
@@ -1041,6 +1107,18 @@ class ResearchManager:
 
                 # Ensure migration from profile.json if needed
                 self.migrate_topics_from_profile(user_id)
+
+                # Check active topics limit if enabling research
+                if enable_research:
+                    limit_check = self.check_active_topics_limit(user_id, enabling_new=True)
+                    if not limit_check["allowed"]:
+                        logger.warning(f"Custom topic creation blocked for user {user_id}: {limit_check['message']}")
+                        return {
+                            "success": False,
+                            "error": limit_check["message"],
+                            "current_count": limit_check["current_count"],
+                            "limit": limit_check["limit"]
+                        }
 
                 # Load topics data
                 topics_data = self.get_user_topics(user_id)
