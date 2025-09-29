@@ -67,7 +67,13 @@ The assistant learns your preferences and adapts its responses while keeping all
 👤 **User Experience**: Three-tab interface (Personality, Preferences, What I've Learned) gives you complete control over how the AI adapts to your needs.
 
 ### 🔬 Multi-Source Research Engine  
-Motivation-driven background research that continuously learns about topics you're interested in. Features intelligent multi-source search that combines web, academic, social (Hacker News), and medical sources for comprehensive responses. Create custom research topics or let the system suggest them based on your conversations.
+Motivation-driven background research that continuously learns about topics you're interested in. Features intelligent multi-source search that combines web, academic, social (Hacker News), and medical sources for comprehensive responses. 
+
+**Key Features:**
+* **Autonomous Topic Expansion** - System automatically discovers related topics using knowledge graph analysis and AI
+* **Smart Limits** - Enforces maximum active topics (default: 10) to prevent overwhelming users
+* **Graceful Handling** - When at capacity, expansion topics are created as inactive suggestions for manual review
+* **Manual Control** - Create custom research topics or choose from AI-suggested expansions
 
 ### 📊 Knowledge Graph Visualization
 Visual representation of research findings and topic relationships powered by Zep memory.

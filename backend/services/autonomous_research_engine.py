@@ -332,12 +332,23 @@ class AutonomousResearcher:
                                                 "expansion_status": "active",
                                                 "last_evaluated_at": now_ts,
                                             }
+                                            
+                                            # Check if we can auto-activate this expansion topic
+                                            # If at limit, create as inactive so user can manually choose
+                                            limit_check = self.research_manager.check_active_topics_limit(user_id, enabling_new=True)
+                                            enable_research = limit_check.get("allowed", False)
+                                            
+                                            if not enable_research:
+                                                logger.info(
+                                                    f"🔬 Creating expansion '{cand.name}' as inactive (limit reached: {limit_check.get('current_count')}/{limit_check.get('limit')})"
+                                                )
+                                            
                                             res = self.research_manager.add_custom_topic(
                                                 user_id=user_id,
                                                 topic_name=cand.name,
                                                 description=desc,
                                                 confidence_score=0.8,
-                                                enable_research=True,
+                                                enable_research=enable_research,
                                                 extra=extra_meta,
                                             )
                                             if res and res.get('success'):
@@ -349,21 +360,40 @@ class AutonomousResearcher:
                                                 sim_txt = (
                                                     f"{cand.similarity:.2f}" if isinstance(cand.similarity, (int, float)) else "n/a"
                                                 )
+                                                status_txt = "active" if enable_research else "inactive (awaiting activation)"
                                                 logger.info(
-                                                    f"🔬 Scheduled expansion: {cand.name} (source={cand.source}, sim={sim_txt}, depth={child_depth})"
+                                                    f"🔬 Created expansion: {cand.name} ({status_txt}, source={cand.source}, sim={sim_txt}, depth={child_depth})"
                                                 )
                                             else:
+                                                error_msg = res.get('error', 'unknown error') if res else 'no response'
                                                 logger.debug(
-                                                    f"🔬 Skipping expansion '{cand.name}' - duplicate or failed to persist"
+                                                    f"🔬 Skipping expansion '{cand.name}' - {error_msg}"
                                                 )
                             
 
                             # Launch expansion research tasks (bounded by semaphore)
+                            # Only schedule research for expansions that were activated
+                            active_expansions = [
+                                item for item in created_expansions 
+                                if item["topic"].get("is_active_research", False)
+                            ]
+                            inactive_expansions = [
+                                item for item in created_expansions 
+                                if not item["topic"].get("is_active_research", False)
+                            ]
+                            
                             logger.info(
-                                "🔬 Prepared %d research task(s) for user %s on '%s' (root=1, expansions=%d)",
-                                1 + len(created_expansions), user_id, root_name, len(created_expansions),
+                                "🔬 Prepared %d research task(s) for user %s on '%s' (root=1, active_expansions=%d, inactive_expansions=%d)",
+                                1 + len(active_expansions), user_id, root_name, len(active_expansions), len(inactive_expansions),
                             )
-                            for item in created_expansions:
+                            
+                            if inactive_expansions:
+                                inactive_names = [item["topic"].get("topic_name") for item in inactive_expansions]
+                                logger.info(
+                                    f"🔬 Created {len(inactive_expansions)} inactive expansion(s) awaiting manual activation: {', '.join(inactive_names)}"
+                                )
+                            
+                            for item in active_expansions:
                                 exp_topic = item["topic"]
                                 async def _run_expansion(t=exp_topic) -> Optional[Dict[str, Any]]:
                                     async with self._expansion_semaphore:
