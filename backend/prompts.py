@@ -450,7 +450,7 @@ REMEMBER: The user's LATEST MESSAGE is the primary source. Use research interest
 # Adjacent topic selector (expansion) prompt
 ADJACENT_TOPIC_SELECTOR_PROMPT = """
 Current date and time: {current_time}.
-You help expand a user's research topic by selecting directly adjacent topics from Zep graph hits and proposing a few novel but strongly justified adjacent topics.
+You are a research topic generator. Your job is to generate high-quality adjacent research topics that complement the root topic.
 
 ROOT TOPIC:
 - name: {root_topic_name}
@@ -465,22 +465,37 @@ ZEP GRAPH NODE HITS (top):
 ZEP GRAPH EDGE HITS (top):
 {zep_edges}
 
+TASK:
+Generate 1-3 research-worthy topics that are CLOSELY RELATED to the root topic but explore different aspects, methods, or implications.
+
+ADJACENCY EXAMPLES:
+- For "AI Benchmarking Challenges" → "AI Performance Metrics", "Benchmark Dataset Quality", "Ethics in AI Evaluation"
+- For "Crowdsourcing in AI Development" → "AI Evaluation Methods", "Human-AI Collaboration", "Distributed AI Training"  
+- For "Extremophile Organisms" → "Deep Sea Biology", "Astrobiology Research", "Extreme Environment Adaptation"
+
 INSTRUCTIONS:
-- Normalize names and deduplicate against CURRENT USER TOPICS and among candidates.
-- Keep only topics DIRECTLY adjacent to the root (no generic or remote ideas).
-- Evaluate Zep candidates: drop noisy/low-quality items; prefer those with clear relevance.
-- You may propose a few NEW adjacent topics only if strongly justified by evidence from Zep (label them with source='llm').
-- Keep the output concise and traceable; include a short rationale for every accepted item.
-- Enforce: 0 < len(accepted) ≤ {suggestion_limit}.
-- Return STRICT JSON only, no commentary.
+Generate 1-3 potential research topics that explore different facets: technical, ethical, methodological, practical applications.
+
+- When Zep data is available: Use and refine the most relevant candidates
+- When Zep data is empty/sparse: Generate new adjacent topics from your knowledge
+- Avoid duplicates against CURRENT USER TOPICS
+- Topic names should be concise and specific (2-10 words)
+- For each topic, provide a research-focused description (1-2 sentences) explaining research scope
+
+CONFIDENCE SCORING:
+Rate each topic's research value (0.0-1.0):
+- 0.9-1.0: Excellent research topic, highly adjacent, clear evolving field
+- 0.7-0.8: Good research topic, clearly adjacent, some evolving aspects  
+- 0.5-0.6: Decent topic, somewhat adjacent, limited research potential
+- 0.3-0.4: Weak topic, loosely related, minimal research value
+- 0.0-0.2: Poor topic, not research-worthy or too distant
+
+Generate all potential topics - don't self-filter. Let confidence scores guide selection.
 
 JSON SCHEMA:
 {{
-  "accepted": [
-    {{"name": "string", "source": "zep_node|zep_edge|llm", "rationale": "string", "similarity_if_available": 0.0, "confidence": 0.0}}
-  ],
-  "rejected": [
-    {{"name": "string", "reason": "string"}}
+  "topics": [
+    {{"name": "string", "source": "zep_node|zep_edge|llm", "rationale": "string", "description": "string", "similarity_if_available": 0.0, "confidence": 0.0}}
   ]
 }}
 """

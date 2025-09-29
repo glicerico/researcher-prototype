@@ -37,7 +37,7 @@ ZEP_ENABLED = os.getenv("ZEP_ENABLED", "false").lower() == "true"
 EXPANSION_ENABLED = os.getenv("EXPANSION_ENABLED", "false").lower() == "true"
 ZEP_SEARCH_LIMIT = int(os.getenv("ZEP_SEARCH_LIMIT", "10"))
 ZEP_SEARCH_RERANKER = os.getenv("ZEP_SEARCH_RERANKER", "cross_encoder")
-EXPLORATION_PER_ROOT_MAX = int(os.getenv("EXPLORATION_PER_ROOT_MAX", "2"))
+EXPLORATION_PER_ROOT_MAX = int(os.getenv("EXPLORATION_PER_ROOT_MAX", "2"))  # Keep at 2 since LLM now generates fewer, higher quality topics
 EXPANSION_MIN_SIMILARITY = float(os.getenv("EXPANSION_MIN_SIMILARITY", "0.35"))
 def _clamp_float(v: float, lo: float = 0.0, hi: float = 1.0) -> float:
     try:
@@ -59,9 +59,9 @@ EXPANSION_LLM_ENABLED = os.getenv("EXPANSION_LLM_ENABLED", "true").lower() == "t
 EXPANSION_LLM_MODEL = os.getenv("EXPANSION_LLM_MODEL", "gpt-4o-mini")
 EXPANSION_LLM_MAX_TOKENS = _clamp_int(int(os.getenv("EXPANSION_LLM_MAX_TOKENS", "800")), 100, 4000)
 EXPANSION_LLM_TEMPERATURE = _clamp_float(float(os.getenv("EXPANSION_LLM_TEMPERATURE", "0.2")), 0.0, 1.0)
-EXPANSION_LLM_SUGGESTION_LIMIT = _clamp_int(int(os.getenv("EXPANSION_LLM_SUGGESTION_LIMIT", "6")), 1, 20)
+EXPANSION_LLM_SUGGESTION_LIMIT = _clamp_int(int(os.getenv("EXPANSION_LLM_SUGGESTION_LIMIT", "3")), 1, 10)
 # Optional timeout (seconds) for the single LLM call
-EXPANSION_LLM_TIMEOUT_SECONDS = _clamp_int(int(os.getenv("EXPANSION_LLM_TIMEOUT_SECONDS", "12")), 1, 120)
+EXPANSION_LLM_TIMEOUT_SECONDS = _clamp_int(int(os.getenv("EXPANSION_LLM_TIMEOUT_SECONDS", "30")), 1, 120)
 
 # Expansion lifecycle and depth management
 EXPANSION_MAX_DEPTH = _clamp_int(int(os.getenv("EXPANSION_MAX_DEPTH", "2")), 1, 10)
@@ -143,7 +143,7 @@ SEARCH_RESULTS_LIMIT = 10  # Standard limit for all search API calls
 # Motivation system configuration
 MOTIVATION_CHECK_INTERVAL = int(os.getenv("MOTIVATION_CHECK_INTERVAL", "60"))
 MOTIVATION_THRESHOLD = float(os.getenv("MOTIVATION_THRESHOLD", "2.0"))  # Conservative default
-MOTIVATION_BOREDOM_RATE = float(os.getenv("MOTIVATION_BOREDOM_RATE", "0.0005"))
+MOTIVATION_BOREDOM_RATE = float(os.getenv("MOTIVATION_BOREDOM_RATE", "0.0002"))
 MOTIVATION_CURIOSITY_DECAY = float(os.getenv("MOTIVATION_CURIOSITY_DECAY", "0.0002"))
 MOTIVATION_TIREDNESS_DECAY = float(os.getenv("MOTIVATION_TIREDNESS_DECAY", "0.0002"))
 MOTIVATION_SATISFACTION_DECAY = float(os.getenv("MOTIVATION_SATISFACTION_DECAY", "0.0002"))

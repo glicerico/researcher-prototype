@@ -20,9 +20,11 @@ logger = get_logger(__name__)
 @dataclass
 class ExpansionCandidate:
     name: str
-    source: str  # 'zep_node' | 'zep_edge'
+    source: str  # 'zep_node' | 'zep_edge' | 'llm'
     similarity: Optional[float] = None
     rationale: Optional[str] = None  # e.g., 'related KG node' | 'related KG fact'
+    description: Optional[str] = None  # LLM-generated research-focused description
+    confidence: Optional[float] = None  # LLM confidence score for research-worthiness
 
 
 class TopicExpansionService:
@@ -169,36 +171,37 @@ class TopicExpansionService:
             )
             structured = llm.with_structured_output(ExpansionSelection)
             messages = [SystemMessage(content=prompt)]
-            # Run the single call with a timeout to avoid blocking
-            llm_timeout = config.EXPANSION_LLM_TIMEOUT_SECONDS
-            selection: ExpansionSelection = await asyncio.wait_for(
-                asyncio.to_thread(structured.invoke, messages),
-                timeout=llm_timeout,
-            )
+            logger.debug("🧩 About to invoke structured LLM for expansion")
+            
+            try:
+                # Use direct async call instead of to_thread for better performance
+                selection: ExpansionSelection = await structured.ainvoke(messages)
+                logger.debug(f"🧩 LLM returned {len(selection.topics)} topics")
+            except Exception as parse_error:
+                logger.error(f"🧩 LLM structured output failed: {str(parse_error)}", exc_info=True)
+                raise
 
-            accepted = selection.accepted or []
-            rejected = selection.rejected or []
-            self.metrics["expansion_llm_accepted"] += len(accepted)
-            self.metrics["expansion_llm_rejected"] += len(rejected)
-            if rejected:
-                logger.debug(
-                    "LLM rejected items: "
-                    + ", ".join([f"{r.name}: {r.reason}" for r in rejected if r and getattr(r, "name", None)])
-                )
+            all_topics = selection.topics or []
+            self.metrics["expansion_llm_accepted"] += len(all_topics)
+            
+            # Filter by confidence score programmatically  
+            min_confidence = 0.6  # Reasonable threshold for 1-3 high-quality topics
+            confidence_filtered = [t for t in all_topics if (t.confidence or 0.5) >= min_confidence]
+            
+            logger.info(f"🧩 LLM generated {len(all_topics)} topics, {len(confidence_filtered)} passed confidence filter (≥{min_confidence})")
+            
+            # Process filtered suggestions  
+            final = await self._process_llm_suggestions(user_id, confidence_filtered, existing_norms, norm_name)
 
-            # Validate and consolidate LLM suggestions with Zep data
-            final = await self._process_llm_suggestions(user_id, accepted, existing_norms, norm_name)
-
-            # Enforce suggestion limit
-            limit_out = config.EXPANSION_LLM_SUGGESTION_LIMIT
+            # Enforce suggestion limit (now expecting 1-3 high-quality topics)
+            limit_out = config.EXPANSION_LLM_SUGGESTION_LIMIT  # Default 3
             if len(final) > limit_out:
                 final = final[:limit_out]
 
-            # Fallback to Zep-only ranking if LLM returned nothing usable
+            # If LLM returned nothing usable, return empty list (no bad fallbacks)
             if not final:
-                logger.warning("Expansion LLM returned no usable items; falling back to Zep-only ranking.")
-                self.metrics["expansion_fallbacks"] += 1
-                return _rank_zep_candidates()
+                logger.info("Expansion LLM returned no usable items; skipping expansion for this topic.")
+                return []
 
             # Sort candidates by relevance
             final = self._sort_candidates(final)
@@ -208,27 +211,13 @@ class TopicExpansionService:
             return final
 
         except Exception as e:
-            logger.warning(f"Expansion LLM failed or invalid JSON; fallback to Zep-only ranking. Error: {str(e)}")
-            self.metrics["expansion_fallbacks"] += 1
-            return _rank_zep_candidates()
+            logger.error(f"Expansion LLM failed or invalid JSON; skipping expansion. Error: {str(e)}", exc_info=True)
+            return []
 
     async def _process_llm_suggestions(self, user_id: str, accepted: List[Any], existing_norms: set, norm_name) -> List[ExpansionCandidate]:
-        """Process and validate LLM suggestions against Zep data."""
+        """Process LLM suggestions into ExpansionCandidate objects."""
         final: List[ExpansionCandidate] = []
         seen_final: set = set()
-        min_sim = config.EXPANSION_MIN_SIMILARITY
-
-        async def validate_with_zep(name: str) -> Optional[float]:
-            """Validate LLM suggestion via Zep search to get similarity score."""
-            try:
-                res = await self.zep.search_graph(user_id, name, scope="nodes", reranker=config.ZEP_SEARCH_RERANKER, limit=3)
-                if not res:
-                    return None
-                best = max([r for r in res if r.get("similarity") is not None], key=lambda x: x.get("similarity"), default=None)
-                return best.get("similarity") if best else None
-            except Exception as e:
-                logger.debug(f"Zep validation error for '{name}': {str(e)}")
-                return None
 
         for item in accepted:
             try:
@@ -242,31 +231,26 @@ class TopicExpansionService:
 
             source = (item.source or "llm").lower()
             similarity = getattr(item, "similarity_if_available", None)
-            
-            # Validate LLM-only suggestions via Zep
-            if source == "llm":
-                similarity = await validate_with_zep(name)
-                if similarity is None or similarity < min_sim:
-                    continue
-            elif similarity is not None and similarity < min_sim:
-                # Zep-derived item below threshold
-                continue
 
             seen_final.add(key)
             validated_source = source if source in ("zep_node", "zep_edge", "llm") else "llm"
             rationale = getattr(item, "rationale", None)
+            description = getattr(item, "description", None)
+            confidence = getattr(item, "confidence", None)
             
             final.append(ExpansionCandidate(
                 name=name, 
                 source=validated_source, 
                 similarity=similarity, 
-                rationale=rationale
+                rationale=rationale,
+                description=description,
+                confidence=confidence
             ))
 
         return self._sort_candidates(final)
     
     def _filter_and_dedupe_candidates(self, candidates: List[ExpansionCandidate], existing_norms: set, norm_name) -> List[ExpansionCandidate]:
-        """Deduplicate and filter candidates by similarity threshold."""
+        """Deduplicate candidates against existing user topics."""
         seen: set = set()
         deduped: List[ExpansionCandidate] = []
         
@@ -277,18 +261,14 @@ class TopicExpansionService:
             seen.add(key)
             deduped.append(candidate)
 
-        # Filter by similarity threshold
-        min_sim = config.EXPANSION_MIN_SIMILARITY
-        filtered = [c for c in deduped if c.similarity is None or c.similarity >= min_sim]
-        
-        return self._sort_candidates(filtered)
+        # Only deduplication needed - confidence filtering done earlier
+        return self._sort_candidates(deduped)
     
     def _sort_candidates(self, candidates: List[ExpansionCandidate]) -> List[ExpansionCandidate]:
-        """Sort candidates by similarity (desc), source preference (Zep before LLM), then name."""
+        """Sort candidates by confidence (desc), then by name for consistency."""
         def sort_key(c: ExpansionCandidate):
-            sim_key = c.similarity if c.similarity is not None else -1.0
-            src_pref = 2 if c.source.startswith("zep_") else 1
-            return (sim_key, src_pref, c.name)
+            confidence_key = c.confidence or 0.5  # Use default from Pydantic model
+            return (confidence_key, c.name)
 
         candidates.sort(key=sort_key, reverse=True)
         return candidates

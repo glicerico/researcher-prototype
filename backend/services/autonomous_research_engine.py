@@ -159,7 +159,16 @@ class AutonomousResearcher:
                 if self.motivation.should_research():
                     logger.info("🔬 Motivation threshold reached - starting research cycle")
                     result = await self._conduct_research_cycle()
-                    self.motivation.on_research_completed(result.get("average_quality", 0.0))
+                    
+                    # Only update motivation if research was actually performed
+                    topics_researched = result.get("topics_researched", 0)
+                    if topics_researched > 0:
+                        avg_quality = result.get("average_quality", 0.0)
+                        self.motivation.on_research_completed(avg_quality)
+                        logger.info(f"🔬 Research cycle completed with {topics_researched} topics and quality {avg_quality:.2f}")
+                    else:
+                        logger.info("🔬 Research cycle completed with no qualified topics - motivation unchanged")
+                    
                     logger.info("🔬 LangGraph research cycle completed.")
 
             except asyncio.CancelledError:
@@ -296,7 +305,13 @@ class AutonomousResearcher:
                                             f"🔬 Choosing {len(selected)}/{len(candidates)} expansions for '{root_name}'"
                                         )
                                         for cand in selected:
-                                            desc = f"Auto expansion of {root_name}"
+                                            # Use description from LLM expansion selection (if available)
+                                            if cand.description:
+                                                desc = cand.description
+                                                logger.debug(f"🔬 Using LLM description for '{cand.name}': {desc[:100]}...")
+                                            else:
+                                                desc = f"Research into {cand.name.lower()} and its relationship to {root_name.lower()}"
+                                                logger.debug(f"🔬 Using fallback description for '{cand.name}'")
                                             # Compute child depth
                                             child_depth = min(depth + 1, config.EXPANSION_MAX_DEPTH)
                                             extra_meta = {
