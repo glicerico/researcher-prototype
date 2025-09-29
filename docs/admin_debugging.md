@@ -28,16 +28,16 @@ After logging in the JWT is stored in `localStorage`; subsequent requests add `A
 | **Flow Visualiser** | Fetches generated PNG/SVG diagrams of the LangGraph and research flow |
 | **Status Panel** | Quick health checks (OpenAI key, Zep memory, research engine status) |
 
-+#### Prompt version control
-+
-+Every time you press **Save** in the Prompt Editor the server writes a timestamped backup of the previous content to `backend/storage_data/prompts/`.  These backups are **not** part of the Git repo, so you can experiment freely.  Use the *History* button in the UI to compare, restore or download earlier versions.
-+
-+Restoring a version simply copies it over the active prompt – older backups remain intact.
+#### Prompt version control
 
-To regenerate diagrams on-demand:
+Every time you press **Save** in the Prompt Editor the server writes a timestamped backup of the previous content to `backend/storage_data/prompts/`.  These backups are **not** part of the Git repo, so you can experiment freely.  Use the *History* button in the UI to compare, restore or download earlier versions.
+
+Restoring a version simply copies it over the active prompt – older backups remain intact.
+
+To regenerate diagrams on-demand (saved to `backend/static/diagrams/`):
 
 ```
-POST /admin/flows/diagrams/generate  # add ?force_regenerate=true to ignore cache
+POST /admin/flows/diagrams/generate?force_regenerate=true  # regenerate even if cached
 ```
 
 ## 2. Debug Endpoints (Research)
@@ -49,9 +49,7 @@ All routes live under `/research/debug/*` and do **not** require admin auth – 
 * `POST /research/debug/update-config` – JSON body with any of: `threshold`, `boredom_rate`, `curiosity_decay`, `tiredness_decay`, `satisfaction_decay`
 * `POST /research/debug/active-topics` – list active topics for all users
 
-## 2.5. Knowledge Graph Debug Endpoints
-
-Routes for debugging the Knowledge Graph feature:
+## 3. Knowledge Graph Debug
 
 * `POST /api/graph/fetch` – fetch graph data for a user
   - Request body: `{"type": "user", "id": "user-id"}`
@@ -60,14 +58,13 @@ Routes for debugging the Knowledge Graph feature:
 Common issues:
 - Empty graphs: User needs conversations to populate Zep
 - "Zep service unavailable": Check `ZEP_API_KEY` and `ZEP_ENABLED=true`
-- API errors: Check Zep Cloud service status
 
-## 3. Logging & Tracing
+## 4. Logging & Tracing
 
-* **Logging** – configurable via `logging_config.py`; emojis mark graph stages.  Use `configure_logging(level=logging.DEBUG)` for verbose output.
-* **LangSmith Tracing** – enable by setting `LANGCHAIN_TRACING_V2=true` and API key.  Links to each trace appear in the log output.
+* **Logging** – configurable via `logging_config.py`. Use `configure_logging(level=logging.DEBUG)` for verbose output.
+* **LangSmith Tracing** – enable by setting `LANGCHAIN_TRACING_V2=true` and API key.
 
-## 2.5. Router Diagnostics in the Chat UI
+## 5. Router Diagnostics in Chat UI
 
 Every assistant message now includes a **Show Routing Info** link. Clicking it reveals a mini panel with:
 
@@ -80,12 +77,12 @@ Every assistant message now includes a **Show Routing Info** link. Clicking it
 
 This is invaluable when troubleshooting unexpected behaviour – you can instantly verify whether a message was routed to the correct module and why.
 
-## 4. Visualising Graphs Locally
+## 6. Visualising Graphs Locally
 
 ```bash
 cd backend && source venv/bin/activate
-python graph_builder.py              # creates graph.png
-python research_graph_builder.py     # creates research_graph.png
+python graph_builder.py              # creates static/diagrams/main_chat_flow.png
+python research_graph_builder.py     # creates static/diagrams/research_flow.png
 ```
 
 Graphviz must be installed (`sudo apt-get install graphviz`). 

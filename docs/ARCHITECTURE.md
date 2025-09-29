@@ -2,12 +2,12 @@
 
 ## Multi-Source Search System
 
-The researcher-prototype uses an intelligent multi-source search architecture that replaced the previous single-choice router system.
+The researcher-prototype uses an intelligent multi-source search architecture for comprehensive information gathering.
 
 ### Core Components
 
 #### 1. Multi-Source Analyzer (`multi_source_analyzer_node.py`)
-- **Purpose**: Replaces the old router with intelligent intent classification
+- **Purpose**: Intelligent intent classification and source selection
 - **Intents**: 
   - `chat`: General conversation, greetings, simple questions
   - `search`: Information gathering requiring external sources
@@ -19,7 +19,7 @@ The researcher-prototype uses an intelligent multi-source search architecture th
 - **Pattern**: LangGraph fan-out/fan-in for concurrent API calls
 - **Sources Available**:
   - **Web Search** (`search`): Perplexity API for current information
-  - **Academic Search** (`academic_search`): Semantic Scholar for research papers
+  - **Academic Search** (`academic_search`): OpenAlex for research papers
   - **Social Search** (`social_search`): Hacker News API for community discussions
   - **Medical Search** (`medical_search`): PubMed for medical literature
 
@@ -55,10 +55,10 @@ graph TD
     M --> N[Response Renderer] --> O[Final Response]
 ```
 
-### Key Improvements Over Router System
+### Key Architecture Benefits
 
-1. **Parallel Execution**: Multiple sources queried simultaneously instead of single source selection
-2. **Intent-Driven**: Three distinct pathways (chat/search/analysis) instead of binary routing
+1. **Parallel Execution**: Multiple sources queried simultaneously for comprehensive results
+2. **Intent-Driven**: Three distinct pathways (chat/search/analysis) for optimal processing
 3. **Graceful Degradation**: System continues working even if individual sources fail
 4. **Source Diversity**: Combines different types of information (web, academic, social, medical)
 5. **No Artificial Weights**: Relies on source type awareness instead of arbitrary confidence scores
@@ -66,7 +66,7 @@ graph TD
 ### API Integration
 
 - **Perplexity**: Web search with recency control
-- **Semantic Scholar**: Academic paper search with citation data  
+- **OpenAlex**: Academic paper search with citation data (free, no API key required)
 - **Hacker News (Algolia)**: Social/tech community discussions
 - **PubMed**: Medical and life science literature
 
@@ -76,7 +76,7 @@ Source selection logic is embedded in the multi-source analyzer's prompt system.
 
 ## Research Graph Multi-Source Integration
 
-The autonomous research engine (`research_graph_builder.py`) now uses the same multi-source architecture:
+The autonomous research engine (`research_graph_builder.py`) uses the same multi-source architecture:
 
 ### Research-Specific Enhancements
 - **Research Source Selector**: Topic-aware source selection for autonomous research
@@ -104,4 +104,4 @@ graph TD
     I --> J[Quality Assessor] --> K[Deduplication] --> L[Storage]
 ```
 
-This ensures autonomous research benefits from the same comprehensive source coverage as interactive chat sessions.
+The autonomous research system provides comprehensive source coverage for background research tasks.

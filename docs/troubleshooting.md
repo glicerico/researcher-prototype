@@ -15,16 +15,16 @@
 
 * Is it enabled? `GET /research/status` should return `"enabled": true`.
 * Drives may be below threshold – inspect via `GET /research/debug/motivation`.
-* Force a run: `POST /research/trigger/<userId>`.
+* Force a run: `POST /research/trigger/{user_id}`.
 
 ## User settings not persisting
 
-User profiles are stored under `backend/storage_data/`.  Verify the process has write permission, or delete the directory to reset state.
+User profiles are stored under `backend/storage_data/users/`.  Verify the process has write permissions, or delete the directory to reset state.
 
 ## Graph visualisation fails
 
 * Install Graphviz (`dot --version` should work).
-* On some systems you may need `pip install pygraphviz` and uncomment it in `requirements.txt`.
+* Note: `pygraphviz` is commented out in `requirements.txt` as it's not required for basic graph generation.
 
 ## Knowledge Graph issues
 

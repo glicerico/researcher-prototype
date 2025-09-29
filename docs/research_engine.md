@@ -19,7 +19,7 @@ The **autonomous research engine** runs in the background, gathering high-qualit
 
 ## Multi-Source Search Architecture
 
-The system uses an intelligent multi-source analyzer that replaces the previous single-choice router:
+The system uses an intelligent multi-source analyzer for comprehensive information gathering:
 
 ### Intent Classification
 The `multi_source_analyzer_node` classifies user queries into three intents:
@@ -30,7 +30,7 @@ The `multi_source_analyzer_node` classifies user queries into three intents:
 ### Source Selection (Search Intent)
 For search queries, the system automatically selects up to 3 relevant sources:
 - **Web Search** (`search`): Current information, news, general topics
-- **Academic Search** (`academic_search`): Scholarly articles via Semantic Scholar
+- **Academic Search** (`academic_search`): Scholarly articles via OpenAlex
 - **Social Search** (`social_search`): Community discussions via Hacker News API
 - **Medical Search** (`medical_search`): Medical literature via PubMed
 
@@ -39,7 +39,7 @@ The `source_coordinator_node` executes selected search sources concurrently usin
 
 ## Autonomous Research Multi-Source Flow
 
-The autonomous research engine now leverages the same multi-source capabilities as the chat system:
+The autonomous research engine leverages the same multi-source capabilities as the chat system:
 
 ### Research-Specific Source Selection
 1. **Research Source Selector** (`research_source_selector_node`): Analyzes research topics to select the most appropriate sources

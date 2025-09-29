@@ -5,7 +5,9 @@ import {
   getPersonalityPresets,
   getUserPreferences,
   updateUserPreferences,
-  getUserPersonalizationData 
+  getUserPersonalizationData,
+  updateUserDisplayName,
+  updateUserEmail
 } from '../services/api';
 import PersonalizationDashboard from './PersonalizationDashboard';
 import '../styles/UserProfile.css';
@@ -21,6 +23,7 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
   const [editedStyle, setEditedStyle] = useState('');
   const [editedTone, setEditedTone] = useState('');
   const [editedPreferences, setEditedPreferences] = useState(null);
+  const [editedEmail, setEditedEmail] = useState('');
 
   useEffect(() => {
     const loadData = async () => {
@@ -44,6 +47,7 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
         setEditedStyle(userData.personality.style);
         setEditedTone(userData.personality.tone);
         setEditedPreferences(preferencesData);
+        setEditedEmail(userData.metadata?.email || '');
       } catch (error) {
         console.error('👤 UserProfile: ❌ Error loading user profile:', error);
         console.error('👤 UserProfile: ❌ Failed to load data for user:', userId);
@@ -83,12 +87,22 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
       
       await updateUserPersonality(updatedPersonality);
       
+      // Update email if changed
+      if (editedEmail !== (profile.metadata?.email || '')) {
+        console.log('👤 UserProfile: Updating email for user:', userId);
+        await updateUserEmail(editedEmail);
+      }
+      
       console.log('👤 UserProfile: ✅ Successfully saved personality changes for user:', userId);
       
       // Update local state
       setProfile({
         ...profile,
-        personality: updatedPersonality
+        personality: updatedPersonality,
+        metadata: {
+          ...profile.metadata,
+          email: editedEmail
+        }
       });
       
       setIsEditing(false);
@@ -167,8 +181,28 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
 
   const renderPersonalityTab = () => (
     <div className="tab-content">
+      <div className="profile-info-item">
+        <span className="profile-info-label">Username:</span>
+        <span className="profile-info-value">{profile.display_name || profile.user_id}</span>
+      </div>
+      
+      <div className="profile-info-item">
+        <span className="profile-info-label">Email:</span>
+        <span className="profile-info-value">{profile.metadata?.email || 'Not provided'}</span>
+      </div>
+      
       {isEditing && activeTab === 'personality' ? (
         <div className="profile-edit-form">
+          <div className="form-group">
+            <label>Email:</label>
+            <input
+              type="email"
+              value={editedEmail}
+              onChange={(e) => setEditedEmail(e.target.value)}
+              placeholder="Enter email (optional)"
+            />
+          </div>
+          
           <div className="form-group">
             <label>Communication Style:</label>
             <select 

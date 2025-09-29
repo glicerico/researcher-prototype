@@ -190,3 +190,15 @@ ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")  # Change this in produ
 ADMIN_JWT_SECRET = os.getenv("ADMIN_JWT_SECRET", "your-secret-key-change-in-production")
 ADMIN_JWT_ALGORITHM = os.getenv("ADMIN_JWT_ALGORITHM", "HS256")
 ADMIN_JWT_EXPIRE_MINUTES = int(os.getenv("ADMIN_JWT_EXPIRE_MINUTES", "480"))  # 8 hours
+
+# SMTP configuration (used if user has an email)
+SMTP_HOST = os.getenv("SMTP_HOST", "localhost")
+SMTP_PORT = int(os.getenv("SMTP_PORT", "587"))
+SMTP_USER = os.getenv("SMTP_USER", "")
+SMTP_PASSWORD = os.getenv("SMTP_PASSWORD", "")
+SMTP_USE_TLS = os.getenv("SMTP_USE_TLS", "true").lower() == "true"
+SMTP_USE_SSL = os.getenv("SMTP_USE_SSL", "false").lower() == "true"
+EMAIL_FROM = os.getenv("EMAIL_FROM", "no-reply@researcher.local")
+
+# Frontend URL for deep-links in emails
+FRONTEND_URL = os.getenv("FRONTEND_URL", "http://localhost:3000")

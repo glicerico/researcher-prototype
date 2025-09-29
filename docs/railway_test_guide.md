@@ -30,7 +30,7 @@ Welcome!  This short guide explains how to access and test the **Researcher-Prot
 
 Railway starts the backend with the autonomous researcher disabled to conserve CPU.
 
-1. Click the **Topics** button in the top bar to open the *Topics Dashboard*.
+1. Click **📊 Dashboards** in the top bar, then select **🔍 Research Topics** to open the Topics Dashboard.
 2. At the top you'll see **Research Engine: Inactive** with a grey dot.
 3. Press the **Enable Engine ▶️** button.  The dot turns green and status switches to *Active*.
 4. The engine stays on as long as the container is running; you can pause it with the same button.
@@ -57,7 +57,7 @@ The system models four internal "drives":
 | **Tiredness**    | Each research run | Time / rest |
 | **Satisfaction** | High-quality findings | Time / rest |
 
-Research is launched when **boredom + curiosity ≥ threshold** (default 1.0).
+Research is launched when **boredom + curiosity ≥ threshold** (default 2.0).
 
 You can inspect and tweak these in real time:
 
@@ -79,7 +79,7 @@ Preset buttons (*Balanced*, *Conservative*, *Very Patient*) apply sensible combo
 
 The deployment includes an admin interface for deeper inspection.
 
-1. Click on the red Admin button in the top panel.
+1. Click on the **Admin** button in the top navigation bar.
 2. Enter the password **admin123** when prompted.
 3. Explore:
    * **Prompt Editor** – view & tweak system prompts.
