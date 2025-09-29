@@ -217,7 +217,7 @@ class MotivationSystem:
         """
         try:
             # Get user profile data which contains engagement analytics
-            profile = self.personalization_manager.profile_manager.get_user_profile(user_id)
+            profile = self.personalization_manager.profile_manager.get_user(user_id)
             if not profile:
                 return 0.0
                 
@@ -266,7 +266,7 @@ class MotivationSystem:
             return 0.5  # Default neutral success rate
             
         try:
-            profile = self.personalization_manager.profile_manager.get_user_profile(user_id)
+            profile = self.personalization_manager.profile_manager.get_user(user_id)
             if not profile:
                 return 0.5
                 
@@ -293,22 +293,25 @@ class MotivationSystem:
         topic_motivation = self._calculate_topic_motivation(user_id, topic)
         should_research = topic_motivation >= self.drives.topic_threshold
         
+        topic_name = topic.get('topic_name', 'Unknown')
         if should_research:
-            topic_name = topic.get('topic_name', 'Unknown')
             logger.info(f"Topic research triggered for '{topic_name}' - motivation: {topic_motivation:.2f} >= threshold: {self.drives.topic_threshold:.2f}")
+        else:
+            logger.debug(f"Topic research blocked for '{topic_name}' - motivation: {topic_motivation:.2f} < threshold: {self.drives.topic_threshold:.2f}")
         
         return should_research
 
     def _calculate_topic_motivation(self, user_id: str, topic: Dict[str, Any]) -> float:
         """Calculate topic-specific motivation score."""
-        # Staleness pressure based on time since last research
         last_researched = topic.get('last_researched', 0)
+        
+        # NEW TOPICS GET PRIORITY: Never researched topics should be researched immediately
         if last_researched == 0:
-            # Never researched - give immediate moderate pressure
-            staleness_time = 3600  # Equivalent to 1 hour
-        else:
-            staleness_time = time.time() - last_researched
-            
+            # Give new topics high motivation to ensure they get researched
+            return 1.0  # Always above any reasonable threshold
+        
+        # For previously researched topics, use engagement-based scoring
+        staleness_time = time.time() - last_researched
         staleness_coefficient = topic.get('staleness_coefficient', 1.0)
         staleness_pressure = staleness_time * staleness_coefficient * self.drives.staleness_scale
         

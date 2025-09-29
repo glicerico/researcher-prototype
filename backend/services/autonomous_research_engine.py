@@ -212,11 +212,28 @@ class AutonomousResearcher:
                             root_name = topic['topic_name']
                             logger.info(f"🔬 Researching topic: {root_name} for user {user_id}")
 
+                            # Log key topic flags to understand scheduling decisions
+                            try:
+                                _now = time.time()
+                                _is_active = bool(topic.get('is_active_research', False))
+                                _is_expansion_flag = bool(topic.get('is_expansion', False))
+                                _depth_flag = int(topic.get('expansion_depth', 0) or 0)
+                                _child_enabled_flag = bool(topic.get('child_expansion_enabled', False))
+                                _backoff_until_flag = float(topic.get('last_backoff_until', 0) or 0)
+                                _backoff_ok_flag = _backoff_until_flag <= _now
+                                logger.debug(
+                                    "🔬 Topic flags: name=%s active=%s expansion=%s depth=%s child_enabled=%s backoff_ok=%s",
+                                    root_name, _is_active, _is_expansion_flag, _depth_flag, _child_enabled_flag, _backoff_ok_flag,
+                                )
+                            except Exception:
+                                pass
+
                             tasks = []
 
                             async def _run_root() -> Optional[Dict[str, Any]]:
                                 return await self._research_topic_with_langgraph(user_id, topic)
 
+                            logger.debug(f"🔬 Scheduling root research task for '{root_name}'")
                             tasks.append(asyncio.create_task(_run_root()))
 
                             # Schedule expansions with lifecycle gating
@@ -237,6 +254,12 @@ class AutonomousResearcher:
                                     max_depth = config.EXPANSION_MAX_DEPTH
                                     depth_ok = depth < max_depth
                                     backoff_ok = backoff_until <= now_ts
+
+                                    # Debug the raw gating flags
+                                    logger.debug(
+                                        "🔬 Expansion gating for '%s': child_enabled=%s depth=%s/%s depth_ok=%s backoff_ok=%s backoff_until=%.0f now=%.0f",
+                                        root_name, child_enabled, depth, max_depth, depth_ok, backoff_ok, backoff_until, now_ts,
+                                    )
                                     
                                     allowed_for_children = child_enabled and depth_ok and backoff_ok
                                     
@@ -260,6 +283,10 @@ class AutonomousResearcher:
                                     candidates = await self.topic_expansion_service.generate_candidates(user_id, topic)
                                     if not candidates:
                                         logger.info(f"🔬 No expansion candidates generated for '{root_name}' (check Zep availability and similarity thresholds)")
+                                        logger.debug(
+                                            "🔬 Expansion diagnostics: ZEP_ENABLED=%s ZEP_SEARCH_LIMIT=%s EXPANSION_MIN_SIMILARITY=%s EXPANSION_LLM_ENABLED=%s",
+                                            getattr(config, 'ZEP_ENABLED', None), getattr(config, 'ZEP_SEARCH_LIMIT', None), getattr(config, 'EXPANSION_MIN_SIMILARITY', None), getattr(config, 'EXPANSION_LLM_ENABLED', None),
+                                        )
                                     else:
                                         logger.debug(f"🔬 Generated {len(candidates)} expansion candidates for '{root_name}'")
                                     if candidates:
@@ -315,6 +342,10 @@ class AutonomousResearcher:
                             
 
                             # Launch expansion research tasks (bounded by semaphore)
+                            logger.info(
+                                "🔬 Prepared %d research task(s) for user %s on '%s' (root=1, expansions=%d)",
+                                1 + len(created_expansions), user_id, root_name, len(created_expansions),
+                            )
                             for item in created_expansions:
                                 exp_topic = item["topic"]
                                 async def _run_expansion(t=exp_topic) -> Optional[Dict[str, Any]]:
@@ -323,6 +354,7 @@ class AutonomousResearcher:
                                 tasks.append(asyncio.create_task(_run_expansion()))
 
                             results = await asyncio.gather(*tasks, return_exceptions=True)
+                            logger.info("🔬 Executed %d research task(s) for user %s on '%s'", len(results), user_id, root_name)
 
                             for res in results:
                                 if isinstance(res, Exception):
@@ -423,6 +455,13 @@ class AutonomousResearcher:
             # Run the research workflow through LangGraph
             logger.debug(f"🔬 Invoking research graph for topic: {topic_name}")
             research_result = await self.research_graph.ainvoke(research_state)
+            try:
+                # Best-effort: capture thread id if created by initializer node
+                thread_id = research_result.get("thread_id") or research_result.get("module_results", {}).get("research_initializer", {}).get("thread_id")
+                if thread_id:
+                    logger.debug(f"🔬 Research workflow thread_id: {thread_id}")
+            except Exception:
+                pass
 
             # Extract results from the workflow
             storage_results = research_result.get("module_results", {}).get("research_storage", {})
