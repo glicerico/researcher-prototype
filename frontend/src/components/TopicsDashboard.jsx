@@ -5,6 +5,7 @@ import TopicsFilters from './TopicsFilters';
 import MotivationStats from './MotivationStats';
 import EngineSettings from './EngineSettings';
 import AddTopicForm from './AddTopicForm';
+import ErrorModal from './ErrorModal';
 import { 
   getAllTopicSuggestions,
   getTopicStatistics,
@@ -41,7 +42,9 @@ const TopicsDashboard = () => {
     confidenceFilter: 'all',
     researchStatus: 'all',
     sortBy: 'date',
-    sortOrder: 'desc' // asc, desc
+    sortOrder: 'desc', // asc, desc
+    autoOnly: false,
+    groupBy: 'parent', // none | parent
   });
   const [expandedTopics, setExpandedTopics] = useState(new Set());
 
@@ -62,10 +65,12 @@ const TopicsDashboard = () => {
   };
 
   // Load topics and stats
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (preserveError = false) => {
     try {
       setLoading(true);
-      setError(null);
+      if (!preserveError) {
+        setError(null);
+      }
       
       const [topicsResponse, statsResponse, engineStatus] = await Promise.all([
         getAllTopicSuggestions(),
@@ -98,7 +103,7 @@ const TopicsDashboard = () => {
     if (!userId) return;
 
     const interval = setInterval(() => {
-      loadData();
+      loadData(true); // Preserve error during auto-refresh
     }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval);
@@ -158,7 +163,26 @@ const TopicsDashboard = () => {
     }
   };
 
-  // Filter and sort topics
+  // Helper: base sorter according to filters
+  const baseSorter = useCallback((a, b) => {
+    let comparison = 0;
+    switch (filters.sortBy) {
+      case 'confidence':
+        comparison = a.confidence_score - b.confidence_score;
+        break;
+      case 'date':
+        comparison = a.suggested_at - b.suggested_at;
+        break;
+      case 'name':
+        comparison = a.name.localeCompare(b.name);
+        break;
+      default:
+        comparison = 0;
+    }
+    return filters.sortOrder === 'desc' ? -comparison : comparison;
+  }, [filters.sortBy, filters.sortOrder]);
+
+  // Filter and sort topics (with optional parent grouping)
   const filteredAndSortedTopics = React.useMemo(() => {
     let filtered = topics.filter(topic => {
       // Search filter
@@ -169,33 +193,61 @@ const TopicsDashboard = () => {
           return false;
         }
       }
+      // Auto expansions only filter
+      if (filters.autoOnly && !topic.is_expansion) {
+        return false;
+      }
       
       return true;
     });
 
-    // Sort topics
-    filtered.sort((a, b) => {
-      let comparison = 0;
-      
-      switch (filters.sortBy) {
-        case 'confidence':
-          comparison = a.confidence_score - b.confidence_score;
-          break;
-        case 'date':
-          comparison = a.suggested_at - b.suggested_at;
-          break;
-        case 'name':
-          comparison = a.name.localeCompare(b.name);
-          break;
-        default:
-          comparison = 0;
-      }
-      
-      return filters.sortOrder === 'desc' ? -comparison : comparison;
-    });
+    // When grouping by parent, arrange topics so each parent is followed by its children
+    if (filters.groupBy === 'parent') {
+      // Map by name for quick lookup
+      const byName = new Map(filtered.map(t => [t.name, t]));
 
-    return filtered;
-  }, [topics, filters]);
+      // Build children adjacency map
+      const childrenMap = new Map();
+      filtered.forEach(t => {
+        const parentName = (t && t.is_expansion && t.origin && t.origin.parent_topic) ? t.origin.parent_topic : null;
+        if (parentName) {
+          const arr = childrenMap.get(parentName) || [];
+          arr.push(t);
+          childrenMap.set(parentName, arr);
+        }
+      });
+
+      // Sort children lists using the base sorter
+      childrenMap.forEach(arr => arr.sort(baseSorter));
+
+      // Identify roots: items that are not expansions or whose parent is not present
+      const roots = filtered.filter(t => !t.is_expansion || !byName.has(t.origin?.parent_topic));
+      roots.sort(baseSorter);
+
+      const ordered = [];
+      const pushed = new Set();
+      const visit = (node) => {
+        if (!node) return;
+        if (!pushed.has(node.topic_id)) {
+          ordered.push(node);
+          pushed.add(node.topic_id);
+        }
+        const children = childrenMap.get(node.name) || [];
+        children.forEach(visit);
+      };
+      roots.forEach(visit);
+
+      // Append any orphans not visited (cycles or missing roots)
+      filtered.sort(baseSorter).forEach(t => {
+        if (!pushed.has(t.topic_id)) ordered.push(t);
+      });
+
+      return ordered;
+    }
+
+    // Default flat sorting
+    return filtered.sort(baseSorter);
+  }, [topics, filters, baseSorter]);
 
   // Handle topic selection
   const handleTopicSelect = (sessionId, topicIndex, selected) => {
@@ -388,9 +440,23 @@ const TopicsDashboard = () => {
       setActiveTopicsCount(prev => prev + 1);
     } catch (error) {
       console.error('Error enabling research:', error);
-      setError('Failed to enable research. Please try again.');
-      // Refresh topics to get correct state
-      loadData();
+      
+      let errorMessage = 'Failed to enable research. Please try again.';
+      
+      // Extract error message from response
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (typeof detail === 'object' && detail.error) {
+          errorMessage = detail.error;
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+      }
+      
+      setError(errorMessage);
+      
+      // Don't refresh immediately so user can see the error message
+      // loadData() will be called by the retry button or auto-refresh
     }
   };
 
@@ -461,12 +527,11 @@ const TopicsDashboard = () => {
         onAddCustomTopic={handleShowAddTopicForm}
       />
       
-      {error && (
-        <div className="error-message">
-          <p>{error}</p>
-          <button onClick={loadData}>Retry</button>
-        </div>
-      )}
+      <ErrorModal 
+        isOpen={!!error}
+        message={error}
+        onClose={() => setError(null)}
+      />
       
       <TopicsFilters 
         filters={filters}
@@ -492,9 +557,14 @@ const TopicsDashboard = () => {
               const topicKey = `${topic.session_id}-${index}`;
               const isSelected = selectedTopics.has(topicKey);
               const isExpanded = expandedTopics.has(topicKey);
+              const depth = topic && topic.is_expansion ? (parseInt(topic.expansion_depth || 1, 10) || 1) : 0;
               
               return (
-                <div key={topicKey} className={`topic-item ${isSelected ? 'selected' : ''} ${topic.is_active_research ? 'active-research' : ''}`}>
+                <div 
+                  key={topicKey} 
+                  className={`topic-item ${isSelected ? 'selected' : ''} ${topic.is_active_research ? 'active-research' : ''} ${depth > 0 ? 'child-topic' : 'root-topic'} depth-${depth}`}
+                  style={{ ['--depth-indent']: `${Math.min(depth, 6) * 16}px` }}
+                >
                   <div 
                     className="topic-header"
                     onClick={() => toggleTopic(topicKey)}
@@ -511,11 +581,20 @@ const TopicsDashboard = () => {
                           className="topic-checkbox"
                         />
                         <h3 className="topic-name">{topic.name}</h3>
+                        {topic.is_expansion && (
+                          <span className="auto-badge" aria-label="Auto expansion">Auto</span>
+                        )}
                         {topic.is_active_research && (
                           <span className="research-status-badge">
                             <span className="badge-icon">🔬</span>
                             <span className="badge-text">RESEARCHING</span>
                           </span>
+                        )}
+                        {topic.expansion_status === 'paused' && (
+                          <span className="expansion-status paused" aria-label="Expansion status: Paused">Paused</span>
+                        )}
+                        {topic.expansion_status === 'retired' && (
+                          <span className="expansion-status retired" aria-label="Expansion status: Retired">Retired</span>
                         )}
                       </div>
                       <div className="topic-stats">
@@ -528,6 +607,16 @@ const TopicsDashboard = () => {
                         {topic.session_id && (
                           <span className="session-info">
                             Session: {topic.session_id.substring(0, 8)}...
+                          </span>
+                        )}
+                        {topic.is_expansion && topic.origin && topic.origin.parent_topic && (
+                          <span className="parent-tag" aria-label={"Parent topic: " + topic.origin.parent_topic}>
+                            Parent: {topic.origin.parent_topic}
+                          </span>
+                        )}
+                        {topic.is_expansion && topic.origin && (
+                          <span className="expansion-hint">
+                            {topic.origin.method}{topic.origin.similarity != null ? ' · ' + Number(topic.origin.similarity).toFixed(2) : ''}
                           </span>
                         )}
                       </div>
@@ -545,6 +634,14 @@ const TopicsDashboard = () => {
                         <h4>Description</h4>
                         <p>{topic.description}</p>
                       </div>
+                      {topic.is_expansion && topic.origin && topic.origin.parent_topic && (
+                        <div className="parent-line">
+                          Expanded from: <strong>{topic.origin.parent_topic}</strong> (depth {topic.expansion_depth})
+                          {topic.origin.rationale && (
+                            <p className="expansion-hint">{topic.origin.rationale}</p>
+                          )}
+                        </div>
+                      )}
                       
                       {topic.conversation_context && (
                         <div className="topic-context">

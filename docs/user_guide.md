@@ -100,6 +100,30 @@ In addition to system-suggested topics, you can create your own custom research 
 - "Recent advances in quantum error correction algorithms" 
 - "Impact of remote work on team collaboration tools"
 
+### Topic Expansion
+
+The system can automatically discover and research **related topics** based on your interests and conversation history. When enabled, expansion topics appear with a special indicator showing their relationship to the original topic.
+
+**How it works:**
+1. **Automatic Discovery** – The system analyzes your knowledge graph to find related concepts
+2. **Smart Selection** – Uses AI to filter and rank the most relevant expansion candidates
+3. **Autonomous Research** – Expansion topics are researched automatically like regular topics
+4. **Depth Management** – Prevents infinite expansion by limiting how many levels deep topics can expand
+
+**Expansion topics show:**
+* 🔗 **Parent relationship** – "Expanded from: [Original Topic]"
+* **Depth indicator** – Shows how many levels deep the expansion goes
+* **Status badges** – Active, paused, or retired based on engagement
+
+**Requirements:**
+* **Zep Memory System** – Topic expansion requires Zep to be enabled for knowledge graph analysis
+* If Zep is disabled, expansion topics cannot be generated, but existing topics continue to work normally
+
+**Managing expansions:**
+* Expansion topics can be managed like regular topics (enable/disable research, delete, etc.)
+* Low-engagement expansion topics may be automatically paused or retired
+* You can manually create related topics if automatic expansion isn't available
+
 ### Reviewing Findings
 
 Click **📊 Dashboards** then **📊 Research Results** to open a full dashboard where findings appear underneath each topic with:

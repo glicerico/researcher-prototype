@@ -100,7 +100,6 @@
 }
 
 .loading-state,
-.error-state,
 .empty-state {
   flex: 1;
   display: flex;
@@ -110,6 +109,25 @@
   padding: 2rem;
   text-align: center;
   color: var(--text-secondary-color);
+}
+
+.conversation-topics .error-state {
+  background: rgba(220, 53, 69, 0.1) !important;
+  border: 1px solid #dc3545 !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  margin: 0.5rem !important;
+  color: #dc3545 !important;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1) !important;
+  flex-shrink: 0 !important;
+  display: block !important;
+}
+
+.conversation-topics .error-state p {
+  margin: 0 0 0.75rem 0 !important;
+  font-weight: 500 !important;
+  text-align: left !important;
+  color: #dc3545 !important;
 }
 
 .loading-spinner {
@@ -128,19 +146,20 @@
   }
 }
 
-.error-state button {
-  margin-top: 1rem;
-  padding: 0.5rem 1rem;
-  background: var(--primary-color);
-  color: var(--button-text-color);
-  border: none;
-  border-radius: 0.375rem;
-  cursor: pointer;
-  font-size: 0.875rem;
+.conversation-topics .error-state button {
+  padding: 0.5rem 1rem !important;
+  background: #6b7280 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 0.375rem !important;
+  cursor: pointer !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  transition: background 0.2s ease !important;
 }
 
-.error-state button:hover {
-  background: var(--primary-hover-color);
+.conversation-topics .error-state button:hover {
+  background: #4b5563 !important;
 }
 
 .empty-state small {

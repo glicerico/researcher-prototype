@@ -32,34 +32,56 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Error Message */
-.error-message {
-  background: rgba(220, 53, 69, 0.1);
-  border: 1px solid var(--color-danger);
-  border-radius: 8px;
-  padding: 1rem;
-  margin: 1rem 0;
-  color: var(--color-danger);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1);
+/* Error Message - High specificity to override other styles */
+.topics-dashboard .error-message {
+  background: rgba(220, 53, 69, 0.1) !important;
+  border: 1px solid #dc3545 !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  margin: 1rem 0 !important;
+  color: #dc3545 !important;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1) !important;
+  display: block !important;
 }
 
-.error-message button {
-  background: var(--danger-color);
-  color: var(--button-text-color);
-  border: none;
-  border-radius: 6px;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background 0.2s ease;
+.topics-dashboard .error-message p {
+  margin: 0 0 0.75rem 0 !important;
+  font-weight: 500 !important;
+  color: #dc3545 !important;
 }
 
-.error-message button:hover {
-  background: var(--danger-hover-color);
+.topics-dashboard .error-message .error-actions {
+  display: flex !important;
+  gap: 0.5rem !important;
+  justify-content: flex-end !important;
+}
+
+.topics-dashboard .error-message button,
+.topics-dashboard .error-message .dismiss-btn,
+.topics-dashboard .error-message .retry-btn {
+  background: #dc3545 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 0.5rem 1rem !important;
+  cursor: pointer !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  transition: background 0.2s ease !important;
+}
+
+.topics-dashboard .error-message button:hover,
+.topics-dashboard .error-message .dismiss-btn:hover,
+.topics-dashboard .error-message .retry-btn:hover {
+  background: #c82333 !important;
+}
+
+.topics-dashboard .error-message .dismiss-btn {
+  background: #6b7280 !important;
+}
+
+.topics-dashboard .error-message .dismiss-btn:hover {
+  background: #4b5563 !important;
 }
 
 /* Topics Content */
@@ -118,6 +140,14 @@
   box-shadow: var(--shadow-sm);
   transition: all 0.2s ease;
   overflow: hidden;
+}
+
+/* Visual hierarchy for grouped parent/child topics */
+.topic-item.child-topic .topic-header {
+  padding-left: calc(1.25rem + var(--depth-indent, 0px));
+}
+.topic-item.root-topic .topic-header {
+  padding-left: 1.25rem;
 }
 
 .topic-item:hover {
@@ -222,6 +252,57 @@
   gap: 0.75rem;
   font-size: 0.875rem;
   color: var(--text-secondary-color);
+}
+
+/* Expansion badges and tags */
+.auto-badge {
+  background: #eef;
+  color: #334;
+  border-radius: 10px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  font-size: 12px;
+  display: inline-flex;
+  align-items: center;
+}
+
+.parent-tag {
+  background: #f6f7fb;
+  color: #566;
+  border-radius: 6px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.expansion-status.paused {
+  background: #fff7db;
+  color: #7a5;
+  border-radius: 10px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.expansion-status.retired {
+  background: #fde8e8;
+  color: #a55;
+  border-radius: 10px;
+  padding: 2px 6px;
+  margin-left: 8px;
+  font-size: 12px;
+}
+
+.expansion-hint {
+  color: #889;
+  margin-left: 6px;
+  font-size: 12px;
+}
+
+.parent-line {
+  margin-top: 8px;
+  color: #556;
+  font-size: 13px;
 }
 
 .confidence-score {

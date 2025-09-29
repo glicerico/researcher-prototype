@@ -192,6 +192,26 @@ class ResearchManager:
         """
         return self.storage.write(self._get_topics_path(user_id), topics_data)
 
+    def update_topic_fields_by_name(self, user_id: str, topic_name: str, updates: Dict[str, Any]) -> bool:
+        """Update arbitrary fields on a topic identified by name across sessions.
+
+        Backward-compatible: if fields are missing they will be added.
+        """
+        try:
+            topics_data = self.get_user_topics(user_id)
+            updated = False
+            for session_id, session_topics in topics_data.get("sessions", {}).items():
+                for topic in session_topics:
+                    if topic.get("topic_name") == topic_name:
+                        topic.update(updates)
+                        updated = True
+            if updated:
+                return self.save_user_topics(user_id, topics_data)
+            return False
+        except Exception as e:
+            logger.error(f"Error updating topic '{topic_name}' for user {user_id}: {str(e)}")
+            return False
+
     def get_active_research_topics(self, user_id: str) -> List[Dict[str, Any]]:
         """
         Get all active research topics for a user.
@@ -214,6 +234,62 @@ class ResearchManager:
                     active_topics.append(topic_copy)
 
         return active_topics
+
+    def count_active_research_topics(self, user_id: str) -> int:
+        """Count the number of active research topics for a user."""
+        try:
+            active_topics = self.get_active_research_topics(user_id)
+            return len(active_topics)
+        except Exception as e:
+            logger.error(f"Error counting active research topics for user {user_id}: {str(e)}")
+            return 0
+
+    def check_active_topics_limit(self, user_id: str, enabling_new: bool = True) -> Dict[str, Any]:
+        """
+        Check if user would exceed the maximum number of active research topics.
+        
+        Args:
+            user_id: User ID to check
+            enabling_new: True if enabling a new topic, False if just checking current count
+            
+        Returns:
+            Dict with 'allowed' boolean and optional 'message' for explanation
+        """
+        from config import MAX_ACTIVE_RESEARCH_TOPICS_PER_USER
+        
+        try:
+            current_count = self.count_active_research_topics(user_id)
+            limit = MAX_ACTIVE_RESEARCH_TOPICS_PER_USER
+            
+            
+            if enabling_new:
+                # Check if enabling one more would exceed limit
+                if current_count >= limit:
+                    logger.warning(f"Active topics limit reached for user {user_id}: {current_count}/{limit}")
+                    return {
+                        "allowed": False,
+                        "message": f"You have reached the maximum limit of {limit} active research topics. Please disable some existing topics before adding new ones.",
+                        "current_count": current_count,
+                        "limit": limit
+                    }
+                else:
+                    return {
+                        "allowed": True,
+                        "current_count": current_count,
+                        "limit": limit
+                    }
+            else:
+                # Just checking current status
+                return {
+                    "allowed": current_count <= limit,
+                    "current_count": current_count,
+                    "limit": limit
+                }
+                
+        except Exception as e:
+            logger.error(f"Error checking active topics limit for user {user_id}: {str(e)}")
+            # Default to allowing if check fails
+            return {"allowed": True, "error": str(e)}
 
     def update_topic_last_researched(
         self, user_id: str, topic_name: str, research_time: Optional[float] = None
@@ -265,6 +341,18 @@ class ResearchManager:
             try:
                 # Ensure migration from profile.json if needed
                 self.migrate_topics_from_profile(user_id)
+
+                # Check active topics limit before enabling research
+                if enable:
+                    limit_check = self.check_active_topics_limit(user_id, enabling_new=True)
+                    if not limit_check["allowed"]:
+                        logger.warning(f"Research activation blocked for topic {topic_id}, user {user_id}: {limit_check['message']}")
+                        return {
+                            "success": False,
+                            "error": limit_check["message"],
+                            "current_count": limit_check["current_count"],
+                            "limit": limit_check["limit"]
+                        }
 
                 # Load topics data
                 topics_data = self.get_user_topics(user_id)
@@ -993,7 +1081,7 @@ class ResearchManager:
                     "sessions_affected": 0,
                 }
 
-    def add_custom_topic(self, user_id: str, topic_name: str, description: str, confidence_score: float = 0.8, enable_research: bool = False) -> Dict[str, Any]:
+    def add_custom_topic(self, user_id: str, topic_name: str, description: str, confidence_score: float = 0.8, enable_research: bool = False, extra: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
         """
         Add a custom research topic for a user.
 
@@ -1022,6 +1110,18 @@ class ResearchManager:
                 # Ensure migration from profile.json if needed
                 self.migrate_topics_from_profile(user_id)
 
+                # Check active topics limit if enabling research
+                if enable_research:
+                    limit_check = self.check_active_topics_limit(user_id, enabling_new=True)
+                    if not limit_check["allowed"]:
+                        logger.warning(f"Custom topic creation blocked for user {user_id}: {limit_check['message']}")
+                        return {
+                            "success": False,
+                            "error": limit_check["message"],
+                            "current_count": limit_check["current_count"],
+                            "limit": limit_check["limit"]
+                        }
+
                 # Load topics data
                 topics_data = self.get_user_topics(user_id)
 
@@ -1049,6 +1149,11 @@ class ResearchManager:
                     "research_count": 0,
                     "is_custom": True,  # Flag to identify custom topics
                 }
+
+                # Merge optional metadata for expansions
+                if extra and isinstance(extra, dict):
+                    for k, v in extra.items():
+                        new_topic[k] = v
 
                 if enable_research:
                     new_topic["research_enabled_at"] = current_time

@@ -447,3 +447,55 @@ AVOID topics that are:
 
 REMEMBER: The user's LATEST MESSAGE is the primary source. Use research interests only to suggest more sophisticated angles on the current topic."""
 
+# Adjacent topic selector (expansion) prompt
+ADJACENT_TOPIC_SELECTOR_PROMPT = """
+Current date and time: {current_time}.
+You are a research topic generator. Your job is to generate high-quality adjacent research topics that complement the root topic.
+
+ROOT TOPIC:
+- name: {root_topic_name}
+- description: {root_topic_description}
+
+CURRENT USER TOPICS (avoid duplicates/near-duplicates):
+{current_topics}
+
+ZEP GRAPH NODE HITS (top):
+{zep_nodes}
+
+ZEP GRAPH EDGE HITS (top):
+{zep_edges}
+
+TASK:
+Generate 1-3 research-worthy topics that are CLOSELY RELATED to the root topic but explore different aspects, methods, or implications.
+
+ADJACENCY EXAMPLES:
+- For "AI Benchmarking Challenges" → "AI Performance Metrics", "Benchmark Dataset Quality", "Ethics in AI Evaluation"
+- For "Crowdsourcing in AI Development" → "AI Evaluation Methods", "Human-AI Collaboration", "Distributed AI Training"  
+- For "Extremophile Organisms" → "Deep Sea Biology", "Astrobiology Research", "Extreme Environment Adaptation"
+
+INSTRUCTIONS:
+Generate 1-3 potential research topics that explore different facets: technical, ethical, methodological, practical applications.
+
+- When Zep data is available: Use and refine the most relevant candidates
+- When Zep data is empty/sparse: Generate new adjacent topics from your knowledge
+- Avoid duplicates against CURRENT USER TOPICS
+- Topic names should be concise and specific (2-10 words)
+- For each topic, provide a research-focused description (1-2 sentences) explaining research scope
+
+CONFIDENCE SCORING:
+Rate each topic's research value (0.0-1.0):
+- 0.9-1.0: Excellent research topic, highly adjacent, clear evolving field
+- 0.7-0.8: Good research topic, clearly adjacent, some evolving aspects  
+- 0.5-0.6: Decent topic, somewhat adjacent, limited research potential
+- 0.3-0.4: Weak topic, loosely related, minimal research value
+- 0.0-0.2: Poor topic, not research-worthy or too distant
+
+Generate all potential topics - don't self-filter. Let confidence scores guide selection.
+
+JSON SCHEMA:
+{{
+  "topics": [
+    {{"name": "string", "source": "zep_node|zep_edge|llm", "rationale": "string", "description": "string", "similarity_if_available": 0.0, "confidence": 0.0}}
+  ]
+}}
+"""

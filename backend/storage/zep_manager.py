@@ -3,6 +3,7 @@ Zep Memory Manager for storing chat interactions in knowledge graph.
 """
 
 import uuid
+import asyncio
 from typing import Optional, List, Dict, Any
 from zep_cloud.client import AsyncZep
 from zep_cloud import Message
@@ -65,7 +66,7 @@ class ZepManager:
         """
         if not self.is_enabled():
             return False
-        
+
         try:
             # Parse display name or generate from user_id
             first_name, last_name = self._parse_user_name(user_id, display_name)
@@ -93,6 +94,131 @@ class ZepManager:
         except Exception as e:
             logger.error(f"Failed to create ZEP user {user_id}: {str(e)}")
             return False
+
+    async def search_graph(
+        self,
+        user_id: str,
+        query: str,
+        scope: str,
+        reranker: Optional[str] = "cross_encoder",
+        limit: int = 10,
+    ) -> List[Dict[str, Any]]:
+        """Search Zep knowledge graph for nodes or edges using v3 unified API.
+
+        Args:
+            user_id: The user ID
+            query: The search query
+            scope: One of {"nodes", "edges"} - used to filter unified results
+            reranker: Optional reranker name (ignored in v3 API)
+            limit: Max results
+
+        Returns:
+            Normalized list of dictionaries with key fields and similarity if provided.
+        """
+        if not self.is_enabled():
+            return []
+
+        if scope not in {"nodes", "edges"}:
+            logger.error(f"Invalid graph search scope: {scope}")
+            return []
+
+        timeout = getattr(config, "ZEP_SEARCH_TIMEOUT_SECONDS", 5)
+        retries = getattr(config, "ZEP_SEARCH_RETRIES", 2)
+        attempt = 0
+        last_exc: Optional[Exception] = None
+        
+        while attempt <= retries:
+            try:
+                # Use v3 unified search API (no scope/reranker parameters)
+                results = await asyncio.wait_for(
+                    self.client.graph.search(
+                        query=query,
+                        user_id=user_id,
+                        limit=limit,
+                        # center_node_uuid can be added here if needed
+                    ),
+                    timeout=timeout,
+                )
+                last_exc = None
+                break
+            except Exception as e:
+                last_exc = e
+                attempt += 1
+                if attempt > retries:
+                    logger.error(
+                        f"Zep graph.search failed after {attempt} attempts (scope={scope}): {str(e)}"
+                    )
+                    results = None
+                    break
+                # Jittered backoff
+                import random
+                wait_s = 0.1 + random.random() * 0.3
+                logger.debug(
+                    f"Zep graph.search attempt {attempt} failed (scope={scope}): {str(e)}; retrying in {wait_s:.2f}s"
+                )
+                await asyncio.sleep(wait_s)
+
+        if not results:
+            return []
+
+        # Extract nodes and edges from unified results
+        node_results = []
+        edge_results = []
+        
+        try:
+            for result_type, result_items in results:
+                if result_type == 'nodes' and result_items:
+                    node_results.extend(result_items)
+                elif result_type == 'edges' and result_items:
+                    edge_results.extend(result_items)
+        except Exception as e:
+            logger.error(f"Failed to parse Zep v3 search results: {str(e)}")
+            return []
+
+        # Filter and normalize based on requested scope
+        normalized: List[Dict[str, Any]] = []
+
+        if scope == "nodes":
+            for node_item in node_results:
+                try:
+                    name = getattr(node_item, 'name', None)
+                    labels = getattr(node_item, 'labels', []) or []
+                    uuid_val = getattr(node_item, 'uuid_', None) or getattr(node_item, 'uuid', None)
+                    similarity = getattr(node_item, 'score', None)
+                    
+                    normalized.append({
+                        "name": name or (labels[0] if labels else None),
+                        "labels": labels if isinstance(labels, list) else [],
+                        "uuid": uuid_val,
+                        "similarity": similarity,
+                    })
+                except Exception as e:
+                    logger.debug(f"Failed to process node item: {str(e)}")
+                    continue
+                    
+        elif scope == "edges":
+            for edge_item in edge_results:
+                try:
+                    fact = getattr(edge_item, 'fact', None)
+                    name = getattr(edge_item, 'name', None)
+                    source_uuid = getattr(edge_item, 'source_node_uuid', None)
+                    target_uuid = getattr(edge_item, 'target_node_uuid', None)
+                    uuid_val = getattr(edge_item, 'uuid_', None) or getattr(edge_item, 'uuid', None)
+                    similarity = getattr(edge_item, 'score', None)
+                    
+                    normalized.append({
+                        "fact": fact,
+                        "name": fact or name,
+                        "source_node_uuid": source_uuid,
+                        "target_node_uuid": target_uuid,
+                        "uuid": uuid_val,
+                        "similarity": similarity,
+                    })
+                except Exception as e:
+                    logger.debug(f"Failed to process edge item: {str(e)}")
+                    continue
+
+        return [n for n in normalized if n.get("name")]
     
     async def create_thread(self, thread_id: str, user_id: str) -> bool:
         """

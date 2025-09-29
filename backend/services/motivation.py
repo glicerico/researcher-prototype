@@ -138,11 +138,11 @@ class MotivationSystem:
             
             # PRIMARY SIGNAL: Research findings interaction (HEAVILY WEIGHTED)
             research_findings_score = self._get_research_findings_engagement(user_id, topic_name)
-            engagement_score += research_findings_score * 2.0  # Heavy weight for actual research interaction
+            engagement_score += research_findings_score * config.ENGAGEMENT_RESEARCH_WEIGHT
             
             # SECONDARY SIGNAL: General engagement analytics (if available)
             analytics_score = self._get_analytics_engagement(user_id, topic_name)  
-            engagement_score += analytics_score * 0.5  # Lower weight for general analytics
+            engagement_score += analytics_score * config.ENGAGEMENT_ANALYTICS_WEIGHT
             
             # Normalize to 0-1 range but allow research findings to dominate
             return min(engagement_score / 3.0, 1.0)
@@ -184,15 +184,15 @@ class MotivationSystem:
                              if f.get('read', False) and 
                              f.get('created_at', 0) > recent_threshold)
             
-            recent_bonus = min(recent_reads * 0.2, 0.5)  # Up to 0.5 bonus for recent engagement
+            recent_bonus = min(recent_reads * config.ENGAGEMENT_RECENT_BONUS_RATE, config.ENGAGEMENT_RECENT_BONUS_MAX)
             
             # Total findings bonus (more findings = more research value demonstrated)
-            volume_bonus = min(total_findings * 0.1, 0.3)  # Up to 0.3 bonus for research volume
+            volume_bonus = min(total_findings * config.ENGAGEMENT_VOLUME_BONUS_RATE, config.ENGAGEMENT_VOLUME_BONUS_MAX)
             
             # Bookmarks indicate strong interest in a topic
-            bookmark_bonus = min(bookmarked_findings * 0.15, 0.45)  # up to 0.45
+            bookmark_bonus = min(bookmarked_findings * config.ENGAGEMENT_BOOKMARK_BONUS_RATE, config.ENGAGEMENT_BOOKMARK_BONUS_MAX)
             # Integrations are a strong signal of value
-            integration_bonus = min(integrated_findings * 0.2, 0.6)  # up to 0.6
+            integration_bonus = min(integrated_findings * config.ENGAGEMENT_INTEGRATION_BONUS_RATE, config.ENGAGEMENT_INTEGRATION_BONUS_MAX)
 
             total_score = read_percentage + recent_bonus + volume_bonus + bookmark_bonus + integration_bonus
             
@@ -202,7 +202,7 @@ class MotivationSystem:
                         f"bookmark_bonus: {bookmark_bonus:.2f}, integration_bonus: {integration_bonus:.2f}, "
                         f"total: {total_score:.2f}")
             
-            return min(total_score, 2.0)  # Cap at 2.0 to allow for heavy weighting
+            return min(total_score, config.ENGAGEMENT_SCORE_MAX)
             
         except Exception as e:
             logger.debug(f"Error calculating research findings engagement for {topic_name}: {str(e)}")
@@ -217,7 +217,7 @@ class MotivationSystem:
         """
         try:
             # Get user profile data which contains engagement analytics
-            profile = self.personalization_manager.profile_manager.get_user_profile(user_id)
+            profile = self.personalization_manager.profile_manager.get_user(user_id)
             if not profile:
                 return 0.0
                 
@@ -266,7 +266,7 @@ class MotivationSystem:
             return 0.5  # Default neutral success rate
             
         try:
-            profile = self.personalization_manager.profile_manager.get_user_profile(user_id)
+            profile = self.personalization_manager.profile_manager.get_user(user_id)
             if not profile:
                 return 0.5
                 
@@ -277,7 +277,7 @@ class MotivationSystem:
             
             # Use engagement as proxy for success rate
             # Higher engagement = more successful research
-            success_rate = 0.3 + (engagement_score * 0.4)  # Range: 0.3-0.7
+            success_rate = 0.3 + (engagement_score * 0.4)  # Range: 0.3-0.7 (keep this formula as is)
             
             return success_rate
             
@@ -293,22 +293,25 @@ class MotivationSystem:
         topic_motivation = self._calculate_topic_motivation(user_id, topic)
         should_research = topic_motivation >= self.drives.topic_threshold
         
+        topic_name = topic.get('topic_name', 'Unknown')
         if should_research:
-            topic_name = topic.get('topic_name', 'Unknown')
             logger.info(f"Topic research triggered for '{topic_name}' - motivation: {topic_motivation:.2f} >= threshold: {self.drives.topic_threshold:.2f}")
+        else:
+            logger.debug(f"Topic research blocked for '{topic_name}' - motivation: {topic_motivation:.2f} < threshold: {self.drives.topic_threshold:.2f}")
         
         return should_research
 
     def _calculate_topic_motivation(self, user_id: str, topic: Dict[str, Any]) -> float:
         """Calculate topic-specific motivation score."""
-        # Staleness pressure based on time since last research
         last_researched = topic.get('last_researched', 0)
+        
+        # NEW TOPICS GET PRIORITY: Never researched topics should be researched immediately
         if last_researched == 0:
-            # Never researched - give immediate moderate pressure
-            staleness_time = 3600  # Equivalent to 1 hour
-        else:
-            staleness_time = time.time() - last_researched
-            
+            # Give new topics high motivation to ensure they get researched
+            return 1.0  # Always above any reasonable threshold
+        
+        # For previously researched topics, use engagement-based scoring
+        staleness_time = time.time() - last_researched
         staleness_coefficient = topic.get('staleness_coefficient', 1.0)
         staleness_pressure = staleness_time * staleness_coefficient * self.drives.staleness_scale
         

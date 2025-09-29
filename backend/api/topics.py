@@ -37,6 +37,13 @@ async def get_topic_suggestions(session_id: str, user_id: str = Depends(get_or_c
                 "suggested_at": topic.get("suggested_at", 0),
                 "conversation_context": topic.get("conversation_context", ""),
                 "is_active_research": topic.get("is_active_research", False),
+                # Include expansion data
+                "is_expansion": topic.get("is_expansion", False),
+                "origin": topic.get("origin"),
+                "expansion_depth": topic.get("expansion_depth", 0),
+                "child_expansion_enabled": topic.get("child_expansion_enabled", False),
+                "expansion_status": topic.get("expansion_status"),
+                "last_evaluated_at": topic.get("last_evaluated_at"),
             }
 
             # Add topic ID if missing (for backward compatibility)
@@ -82,6 +89,13 @@ async def get_all_topic_suggestions(user_id: str = Depends(get_or_create_user_id
                         "suggested_at": topic.get("suggested_at", 0),
                         "conversation_context": topic.get("conversation_context", ""),
                         "is_active_research": topic.get("is_active_research", False),
+                        # Include expansion data
+                        "is_expansion": topic.get("is_expansion", False),
+                        "origin": topic.get("origin"),
+                        "expansion_depth": topic.get("expansion_depth", 0),
+                        "child_expansion_enabled": topic.get("child_expansion_enabled", False),
+                        "expansion_status": topic.get("expansion_status"),
+                        "last_evaluated_at": topic.get("last_evaluated_at"),
                     }
                 )
 
@@ -292,6 +306,13 @@ async def get_top_session_topics(
                 "suggested_at": topic.get("suggested_at", 0),
                 "conversation_context": topic.get("conversation_context", ""),
                 "is_active_research": topic.get("is_active_research", False),
+                # Include expansion data
+                "is_expansion": topic.get("is_expansion", False),
+                "origin": topic.get("origin"),
+                "expansion_depth": topic.get("expansion_depth", 0),
+                "child_expansion_enabled": topic.get("child_expansion_enabled", False),
+                "expansion_status": topic.get("expansion_status"),
+                "last_evaluated_at": topic.get("last_evaluated_at"),
             }
 
             # Add topic ID if missing (for backward compatibility)
@@ -410,6 +431,16 @@ async def create_custom_topic(request: CustomTopicRequest, user_id: str = Depend
                 raise HTTPException(status_code=409, detail=result["error"])
             elif "required" in result["error"]:
                 raise HTTPException(status_code=400, detail=result["error"])
+            elif "maximum limit" in result["error"] or "limit" in result["error"]:
+                # Return limit information for frontend to display proper message
+                raise HTTPException(
+                    status_code=400, 
+                    detail={
+                        "error": result["error"],
+                        "current_count": result.get("current_count"),
+                        "limit": result.get("limit")
+                    }
+                )
             else:
                 raise HTTPException(status_code=500, detail=result["error"])
 

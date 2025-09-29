@@ -12,9 +12,10 @@ The **autonomous research engine** runs in the background, gathering high-qualit
 
 1. **Topic discovery** – after each chat message the `topic_extractor_node` suggests candidate topics.  
 2. **Subscription** – the UI lets you enable research per topic; selected topics are persisted in `storage_data/`.
-3. **Intelligent motivation model** – hierarchical system with global drives (boredom/curiosity/tiredness/satisfaction) that gate overall research activity, plus per-topic evaluation that prioritizes which specific topics to research based on staleness, user engagement, and success rates.
-4. **Graph workflow** – the research LangGraph (`research_graph_builder.py`) runs: initialization ➜ query generation ➜ source selection ➜ multi-source search coordination ➜ integration ➜ quality scoring ➜ deduplication ➜ storage.
-5. **Review** – findings appear in the sidebar with summary, quality bars & source links.
+3. **Topic expansion** – the system automatically discovers related topics using knowledge graph analysis and AI selection (requires Zep).
+4. **Intelligent motivation model** – hierarchical system with global drives (boredom/curiosity/tiredness/satisfaction) that gate overall research activity, plus per-topic evaluation that prioritizes which specific topics to research based on staleness, user engagement, and success rates.
+5. **Graph workflow** – the research LangGraph (`research_graph_builder.py`) runs: initialization ➜ query generation ➜ source selection ➜ multi-source search coordination ➜ integration ➜ quality scoring ➜ deduplication ➜ storage.
+6. **Review** – findings appear in the sidebar with summary, quality bars & source links.
 
 ## Multi-Source Search Architecture
 
@@ -191,12 +192,126 @@ MOTIVATION_THRESHOLD=3.0
 MOTIVATION_BOREDOM_RATE=0.0002
 ```
 
+## Active Research Topics Limit
+
+To prevent overwhelming users, the system enforces a **maximum number of topics that can be actively researched simultaneously**:
+
+* **Default Limit**: 10 active research topics per user (configurable via `MAX_ACTIVE_RESEARCH_TOPICS_PER_USER`)
+* **Applies To**: All topics (manual + autonomous expansions)
+
+### Limit Behavior
+
+**When User Tries to Activate 11th Topic:**
+* Manual activation blocked with modal popup explaining the limit
+* User must deactivate existing topics before activating new ones
+* UI shows current count (e.g. "10/10 active topics")
+
+**When Autonomous System Finds New Expansions:**
+* If below limit: Expansion topics created with research **enabled** (auto-researched)
+* If at limit: Expansion topics created as **inactive** (awaiting manual activation)
+* User can review suggested expansions and manually choose which to activate
+
+### Configuration
+
+```env
+# Range: 1-50, Default: 10
+MAX_ACTIVE_RESEARCH_TOPICS_PER_USER=5
+```
+
+## Topic Expansion System
+
+The autonomous research engine automatically discovers **related topics** based on your knowledge graph and conversation patterns. This creates a natural expansion of your research interests without manual intervention.
+
+### How Topic Expansion Works
+
+1. **Knowledge Graph Analysis** – Zep's knowledge graph finds related nodes and edges connected to your existing topics
+2. **LLM Selection** – An LLM analyzes, filters, and ranks the most relevant expansion topics
+3. **Similarity Validation** – All candidates validated against Zep's similarity scoring to ensure relevance
+4. **Limit Check** – System checks if `MAX_ACTIVE_RESEARCH_TOPICS_PER_USER` would be exceeded
+5. **Topic Creation**:
+   - **Below limit**: Expansion topics created with research **active** (auto-researched)
+   - **At limit**: Expansion topics created as **inactive** (awaiting manual activation)
+6. **Lifecycle Management** – Expansion topics automatically managed based on engagement and quality metrics
+7. **Concurrent Research** – Active expansions researched in parallel within configured limits
+
+### Expansion Requirements & Dependencies
+
+**Critical Dependency:**
+* **Zep Memory System Required** – Topic expansion cannot function without Zep enabled
+* If `ZEP_ENABLED=false`, expansion generation is completely disabled
+* When Zep is unavailable, the system logs the limitation and continues with manual topic research only
+
+**Graceful Degradation:**
+* Core research functionality remains unaffected when expansion is unavailable
+* Existing topics continue to be researched normally
+* Users can still manually create related topics as needed
+
+### Expansion Configuration
+
+#### LLM Configuration
+```env
+EXPANSION_LLM_MODEL=gpt-4o-mini                      # LLM model for topic generation
+EXPANSION_LLM_CONFIDENCE_THRESHOLD=0.6               # Min confidence for accepting topics (0.0-1.0)
+EXPANSION_LLM_TIMEOUT_SECONDS=30                     # Timeout for LLM calls (1-120)
+```
+
+#### Depth & Breadth Control
+```env
+EXPANSION_MAX_DEPTH=2                                # Max expansion chain depth (1-10)
+EXPANSION_MAX_PARALLEL=2                             # Max concurrent expansion tasks (1-64)
+EXPANSION_MAX_TOTAL_TOPICS_PER_USER=10               # Max total expansion topics per user (1-100)
+EXPANSION_MAX_UNREVIEWED_TOPICS=5                    # Max unreviewed before pausing (1-50)
+EXPANSION_REVIEW_ENGAGEMENT_THRESHOLD=0.2            # Engagement threshold for "reviewed" (0.0-1.0)
+```
+
+#### Zep Search Configuration
+```env
+EXPANSION_MIN_SIMILARITY=0.35                        # Min similarity score for candidates (0.0-1.0)
+```
+
+### Expansion Lifecycle
+
+Expansion topics are automatically managed through these phases:
+
+1. **Active** – Actively researched (either auto-enabled or manually activated by user)
+2. **Inactive** – Created but not researched (awaiting manual activation when limit is reached)
+3. **Paused** – Low engagement, research temporarily stopped  
+4. **Retired** – Poor quality or very low engagement, marked for cleanup
+
+**Engagement-based management:**
+* High engagement (>35% findings read) enables child expansions
+* Low engagement (<10% findings read) leads to retirement
+* Quality scores below 0.6 threshold trigger automatic backoff
+
+### Troubleshooting Expansion
+
+**No expansion topics appearing:**
+* Verify `ZEP_ENABLED=true` in environment
+* Check that Zep API key is valid and service is accessible
+* Ensure you have conversation data in Zep (expansion needs existing knowledge graph)
+* Check similarity thresholds aren't too restrictive
+
+**Expansion topics created but not researched:**
+* Check if you've reached the active topics limit (10 by default)
+* Expansion topics will be created as **inactive** when at limit
+* Look for topics with "Auto" badge but no "RESEARCHING" status
+* Manually activate them after deactivating other topics
+
+**Debug expansion generation:**
+```bash
+# Test expansion candidate generation
+curl -X POST "http://localhost:8000/api/research/debug/expand/your-user-id" \
+  -H "Content-Type: application/json" \
+  -d '{"root_topic": {"topic_name": "Your Topic"}}'
+```
+
 ### Best Practices
 
 * Begin with 1-2 focused topics (e.g. "GPT-4 performance benchmarks").
 * Lower `RESEARCH_QUALITY_THRESHOLD` if you prefer more-but-noisier findings.
 * Use the debug API (`/research/debug/motivation`) to monitor drive levels.
 * Periodically mark findings as read or delete old ones to keep the sidebar tidy.
+* Enable Zep if you want automatic topic expansion, or rely on manual topic creation if Zep isn't available.
 
 ## Configuration Reference
 
@@ -209,6 +324,9 @@ RESEARCH_MODEL=gpt-4o-mini
 RESEARCH_QUALITY_THRESHOLD=0.6
 RESEARCH_MAX_TOPICS_PER_USER=3
 
+# Active Topics Limit
+MAX_ACTIVE_RESEARCH_TOPICS_PER_USER=5  # Max simultaneously active topics (manual + expansion)
+
 # Global Motivation Drives
 MOTIVATION_THRESHOLD=2.0
 MOTIVATION_BOREDOM_RATE=0.0005
@@ -216,11 +334,18 @@ MOTIVATION_CURIOSITY_DECAY=0.0002
 MOTIVATION_TIREDNESS_DECAY=0.0002
 MOTIVATION_SATISFACTION_DECAY=0.0002
 
-# Per-Topic Motivation (NEW)
+# Per-Topic Motivation
 TOPIC_MOTIVATION_THRESHOLD=0.5      # Minimum score for individual topic research
 TOPIC_ENGAGEMENT_WEIGHT=0.3         # Weight of user engagement in topic scoring
 TOPIC_QUALITY_WEIGHT=0.2           # Weight of research success rate in scoring  
 TOPIC_STALENESS_SCALE=0.0001       # Scale factor converting time to staleness pressure
+
+# Topic Expansion
+EXPANSION_LLM_MODEL=gpt-4o-mini
+EXPANSION_LLM_CONFIDENCE_THRESHOLD=0.6
+EXPANSION_MAX_DEPTH=2
+EXPANSION_MAX_PARALLEL=2
+EXPANSION_MIN_SIMILARITY=0.35
 ```
 
 ### Staleness Coefficient Guidelines

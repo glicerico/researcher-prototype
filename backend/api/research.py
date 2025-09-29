@@ -1,11 +1,19 @@
 from pydantic import BaseModel
 from fastapi import APIRouter, Depends, HTTPException, Query, Request
-from typing import Optional
+from typing import Optional, List, Dict, Any
 import time
 
-from dependencies import get_or_create_user_id, profile_manager, research_manager, zep_manager, _motivation_config_override
+from dependencies import (
+    get_or_create_user_id,
+    profile_manager,
+    research_manager,
+    zep_manager,
+    _motivation_config_override,
+)
 from services.autonomous_research_engine import initialize_autonomous_researcher
 from services.logging_config import get_logger
+from services.topic_expansion_service import TopicExpansionService, ExpansionCandidate
+import config
 
 router = APIRouter()
 logger = get_logger(__name__)
@@ -236,6 +244,86 @@ async def get_research_engine_status(request: Request):
     except Exception as e:
         logger.error(f"Error getting research engine status: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error getting research status: {str(e)}")
+
+
+class ExpansionRequest(BaseModel):
+    root_topic: Dict[str, Any]
+    create_topics: Optional[bool] = False
+    enable_research: Optional[bool] = False
+    limit: Optional[int] = None
+
+
+@router.post("/research/debug/expand/{user_id}")
+async def debug_expand_topics(user_id: str, req: ExpansionRequest):
+    """Debug-only: Generate (and optionally persist) topic expansion candidates from Zep."""
+    try:
+        if not config.ZEP_ENABLED or not zep_manager.is_enabled():
+            return {"success": False, "error": "Zep disabled"}
+
+        # Validate input
+        root = req.root_topic or {}
+        name = (root.get("topic_name") or "").strip()
+        if not name:
+            return {"success": False, "error": "Invalid root_topic.topic_name"}
+
+        # Generate candidates
+        svc = TopicExpansionService(zep_manager, research_manager)
+        candidates: List[ExpansionCandidate] = await svc.generate_candidates(user_id, req.root_topic)
+
+        # Transform for response
+        cand_dicts: List[Dict[str, Any]] = [
+            {
+                "name": c.name,
+                "source": c.source,
+                "similarity": c.similarity,
+                "rationale": c.rationale,
+            }
+            for c in candidates
+        ]
+
+        created: List[Dict[str, Any]] = []
+        skipped_duplicates: List[str] = []
+
+        # Optional persistence path (bounded)
+        limit = req.limit if isinstance(req.limit, int) and req.limit > 0 else config.EXPLORATION_PER_ROOT_MAX
+        if req.create_topics:
+            to_create = min(limit, len(candidates))
+            root_name = (req.root_topic.get("topic_name") or "").strip()
+            base_desc = (req.root_topic.get("description") or "").strip()
+            for cand in candidates[:to_create]:
+                desc = base_desc or f"Expanded from '{root_name}' via Zep ({cand.source})"
+                # TODO: Extend topic schema to capture is_expansion + origin metadata
+                result = research_manager.add_custom_topic(
+                    user_id=user_id,
+                    topic_name=cand.name,
+                    description=desc,
+                    confidence_score=0.8,
+                    enable_research=bool(req.enable_research),
+                )
+                if result.get("success"):
+                    topic = result.get("topic", {})
+                    created.append({"topic_id": topic.get("topic_id"), "name": topic.get("topic_name")})
+                else:
+                    # Likely duplicate
+                    skipped_duplicates.append(cand.name)
+
+        logger.info(
+            f"Expansion preview for user {user_id}: {len(cand_dicts)} candidates, created {len(created)}"
+        )
+
+        return {
+            "success": True,
+            "root_topic": req.root_topic.get("topic_name"),
+            "candidates": cand_dicts,
+            "created_topics": created,
+            "skipped_duplicates": skipped_duplicates,
+            "limit": (req.limit if req.limit is not None else config.EXPLORATION_PER_ROOT_MAX),
+            "metrics": getattr(svc, "metrics", {}),
+        }
+
+    except Exception as e:
+        logger.error(f"Error expanding topics for user {user_id}: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Expansion error: {str(e)}")
 
 
 @router.get("/research/debug/active-topics")
@@ -704,6 +792,16 @@ async def enable_disable_research_by_topic_id(
             # Map specific errors to appropriate HTTP status codes
             if "not found" in result["error"]:
                 raise HTTPException(status_code=404, detail=result["error"])
+            elif "maximum limit" in result["error"] or "limit" in result["error"]:
+                # Return limit information for frontend to display proper message
+                raise HTTPException(
+                    status_code=400, 
+                    detail={
+                        "error": result["error"],
+                        "current_count": result.get("current_count"),
+                        "limit": result.get("limit")
+                    }
+                )
             else:
                 raise HTTPException(status_code=500, detail=result["error"])
 
