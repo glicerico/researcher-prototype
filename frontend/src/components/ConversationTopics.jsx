@@ -11,7 +11,7 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
   const [lastUpdate, setLastUpdate] = useState(null);
 
   // Fetch topics for the current session
-  const fetchTopics = useCallback(async () => {
+  const fetchTopics = useCallback(async (preserveError = false) => {
     if (!sessionId) {
       setTopics([]);
       return;
@@ -19,7 +19,9 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
 
     try {
       setLoading(true);
-      setError(null);
+      if (!preserveError) {
+        setError(null);
+      }
       
       const response = await getSessionTopicSuggestions(sessionId);
       const allTopics = response.topic_suggestions || [];
@@ -66,7 +68,7 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
     if (!sessionId) return;
 
     const interval = setInterval(() => {
-      fetchTopics();
+      fetchTopics(true); // Preserve error during auto-refresh
     }, 15000); // Refresh every 15 seconds
 
     return () => clearInterval(interval);
@@ -98,8 +100,23 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
       );
     } catch (error) {
       console.error('Error enabling research:', error);
-      // Refresh topics to get correct state
-      fetchTopics();
+      
+      let errorMessage = 'Failed to enable research. Please try again.';
+      
+      // Extract error message from response
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (typeof detail === 'object' && detail.error) {
+          errorMessage = detail.error;
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+      }
+      
+      setError(errorMessage);
+      
+      // Don't refresh immediately so user can see the error message
+      // fetchTopics() will be called by the retry button or auto-refresh
     }
   };
 
@@ -145,6 +162,11 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
     fetchTopics();
   };
 
+  // Dismiss error message
+  const handleDismissError = () => {
+    setError(null);
+  };
+
   if (isCollapsed) {
     return (
       <div className="conversation-topics collapsed">
@@ -183,15 +205,17 @@ const ConversationTopics = ({ sessionId, isCollapsed, onToggleCollapse, onTopicU
       </div>
 
       <div className="topics-content">
+        {error && (
+          <div className="error-state">
+            <p>{error}</p>
+            <button onClick={handleDismissError}>Dismiss</button>
+          </div>
+        )}
+        
         {loading && topics.length === 0 ? (
           <div className="loading-state">
             <div className="loading-spinner"></div>
             <p>Loading topics...</p>
-          </div>
-        ) : error ? (
-          <div className="error-state">
-            <p>{error}</p>
-            <button onClick={handleRefresh}>Retry</button>
           </div>
         ) : topics.length === 0 ? (
           <div className="empty-state">

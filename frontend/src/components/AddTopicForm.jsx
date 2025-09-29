@@ -116,7 +116,14 @@ const AddTopicForm = ({ isOpen, onClose, onTopicAdded }) => {
       if (error.response?.status === 409) {
         setErrors({ name: 'A topic with this name already exists' });
       } else if (error.response?.status === 400) {
-        setErrors({ general: error.response.data.detail || 'Invalid input data' });
+        const errorDetail = error.response.data.detail;
+        if (typeof errorDetail === 'object' && errorDetail.error) {
+          // Handle structured error object (e.g., active topics limit)
+          setErrors({ general: errorDetail.error });
+        } else {
+          // Handle simple string error
+          setErrors({ general: errorDetail || 'Invalid input data' });
+        }
       } else {
         setErrors({ general: 'Failed to create topic. Please try again.' });
       }
@@ -159,7 +166,15 @@ const AddTopicForm = ({ isOpen, onClose, onTopicAdded }) => {
         <form onSubmit={handleSubmit} className="add-topic-form">
           {errors.general && (
             <div className="error-message general-error">
-              {errors.general}
+              <p>{errors.general}</p>
+              <button 
+                type="button"
+                className="dismiss-error-btn"
+                onClick={() => setErrors(prev => ({ ...prev, general: '' }))}
+                aria-label="Dismiss error"
+              >
+                ×
+              </button>
             </div>
           )}
 

@@ -261,9 +261,11 @@ class ResearchManager:
             current_count = self.count_active_research_topics(user_id)
             limit = MAX_ACTIVE_RESEARCH_TOPICS_PER_USER
             
+            
             if enabling_new:
                 # Check if enabling one more would exceed limit
                 if current_count >= limit:
+                    logger.warning(f"Active topics limit reached for user {user_id}: {current_count}/{limit}")
                     return {
                         "allowed": False,
                         "message": f"You have reached the maximum limit of {limit} active research topics. Please disable some existing topics before adding new ones.",

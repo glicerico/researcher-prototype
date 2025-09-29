@@ -65,10 +65,12 @@ const TopicsDashboard = () => {
   };
 
   // Load topics and stats
-  const loadData = useCallback(async () => {
+  const loadData = useCallback(async (preserveError = false) => {
     try {
       setLoading(true);
-      setError(null);
+      if (!preserveError) {
+        setError(null);
+      }
       
       const [topicsResponse, statsResponse, engineStatus] = await Promise.all([
         getAllTopicSuggestions(),
@@ -101,7 +103,7 @@ const TopicsDashboard = () => {
     if (!userId) return;
 
     const interval = setInterval(() => {
-      loadData();
+      loadData(true); // Preserve error during auto-refresh
     }, 10000); // Refresh every 10 seconds
 
     return () => clearInterval(interval);
@@ -438,9 +440,23 @@ const TopicsDashboard = () => {
       setActiveTopicsCount(prev => prev + 1);
     } catch (error) {
       console.error('Error enabling research:', error);
-      setError('Failed to enable research. Please try again.');
-      // Refresh topics to get correct state
-      loadData();
+      
+      let errorMessage = 'Failed to enable research. Please try again.';
+      
+      // Extract error message from response
+      if (error.response?.data?.detail) {
+        const detail = error.response.data.detail;
+        if (typeof detail === 'object' && detail.error) {
+          errorMessage = detail.error;
+        } else if (typeof detail === 'string') {
+          errorMessage = detail;
+        }
+      }
+      
+      setError(errorMessage);
+      
+      // Don't refresh immediately so user can see the error message
+      // loadData() will be called by the retry button or auto-refresh
     }
   };
 
@@ -514,7 +530,10 @@ const TopicsDashboard = () => {
       {error && (
         <div className="error-message">
           <p>{error}</p>
-          <button onClick={loadData}>Retry</button>
+          <div className="error-actions">
+            <button onClick={() => setError(null)} className="dismiss-btn">Dismiss</button>
+            <button onClick={loadData} className="retry-btn">Retry</button>
+          </div>
         </div>
       )}
       

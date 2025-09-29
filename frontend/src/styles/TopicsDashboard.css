@@ -32,34 +32,56 @@
   100% { transform: rotate(360deg); }
 }
 
-/* Error Message */
-.error-message {
-  background: rgba(220, 53, 69, 0.1);
-  border: 1px solid var(--color-danger);
-  border-radius: 8px;
-  padding: 1rem;
-  margin: 1rem 0;
-  color: var(--color-danger);
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1);
+/* Error Message - High specificity to override other styles */
+.topics-dashboard .error-message {
+  background: rgba(220, 53, 69, 0.1) !important;
+  border: 1px solid #dc3545 !important;
+  border-radius: 8px !important;
+  padding: 1rem !important;
+  margin: 1rem 0 !important;
+  color: #dc3545 !important;
+  box-shadow: 0 1px 3px rgba(220, 38, 38, 0.1) !important;
+  display: block !important;
 }
 
-.error-message button {
-  background: var(--danger-color);
-  color: var(--button-text-color);
-  border: none;
-  border-radius: 6px;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
-  font-size: 0.875rem;
-  font-weight: 500;
-  transition: background 0.2s ease;
+.topics-dashboard .error-message p {
+  margin: 0 0 0.75rem 0 !important;
+  font-weight: 500 !important;
+  color: #dc3545 !important;
 }
 
-.error-message button:hover {
-  background: var(--danger-hover-color);
+.topics-dashboard .error-message .error-actions {
+  display: flex !important;
+  gap: 0.5rem !important;
+  justify-content: flex-end !important;
+}
+
+.topics-dashboard .error-message button,
+.topics-dashboard .error-message .dismiss-btn,
+.topics-dashboard .error-message .retry-btn {
+  background: #dc3545 !important;
+  color: white !important;
+  border: none !important;
+  border-radius: 6px !important;
+  padding: 0.5rem 1rem !important;
+  cursor: pointer !important;
+  font-size: 0.875rem !important;
+  font-weight: 500 !important;
+  transition: background 0.2s ease !important;
+}
+
+.topics-dashboard .error-message button:hover,
+.topics-dashboard .error-message .dismiss-btn:hover,
+.topics-dashboard .error-message .retry-btn:hover {
+  background: #c82333 !important;
+}
+
+.topics-dashboard .error-message .dismiss-btn {
+  background: #6b7280 !important;
+}
+
+.topics-dashboard .error-message .dismiss-btn:hover {
+  background: #4b5563 !important;
 }
 
 /* Topics Content */
