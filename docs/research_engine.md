@@ -215,7 +215,7 @@ To prevent overwhelming users, the system enforces a **maximum number of topics 
 
 ```env
 # Range: 1-50, Default: 10
-MAX_ACTIVE_RESEARCH_TOPICS_PER_USER=10
+MAX_ACTIVE_RESEARCH_TOPICS_PER_USER=5
 ```
 
 ## Topic Expansion System
@@ -325,7 +325,7 @@ RESEARCH_QUALITY_THRESHOLD=0.6
 RESEARCH_MAX_TOPICS_PER_USER=3
 
 # Active Topics Limit
-MAX_ACTIVE_RESEARCH_TOPICS_PER_USER=10  # Max simultaneously active topics (manual + expansion)
+MAX_ACTIVE_RESEARCH_TOPICS_PER_USER=5  # Max simultaneously active topics (manual + expansion)
 
 # Global Motivation Drives
 MOTIVATION_THRESHOLD=2.0

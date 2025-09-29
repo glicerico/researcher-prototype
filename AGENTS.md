@@ -153,7 +153,7 @@ The React app reads `frontend/.env.*` – `REACT_APP_API_URL` should point to th
 ### Active Research Topics Limit
 The system enforces a limit on how many topics can be actively researched simultaneously per user:
 
-- `MAX_ACTIVE_RESEARCH_TOPICS_PER_USER` (default 10, range 1-50): Maximum active research topics
+- `MAX_ACTIVE_RESEARCH_TOPICS_PER_USER` (default 5, range 1-50): Maximum active research topics
   - Applies to ALL topics (manual + autonomous expansions)
   - **User behavior**: Cannot manually activate more topics when at limit; must deactivate existing topics first
   - **Autonomous behavior**: Expansion topics are created as **INACTIVE** when limit is reached (awaiting manual activation)
