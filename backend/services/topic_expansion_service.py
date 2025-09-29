@@ -146,9 +146,7 @@ class TopicExpansionService:
             )
             return filtered_local
 
-        # If LLM disabled, use Zep-only ranking
-        if not config.EXPANSION_LLM_ENABLED:
-            return _rank_zep_candidates()
+        # LLM processing is always enabled for quality topic expansion
 
         # Build LLM prompt
         try:

@@ -34,7 +34,6 @@ ZEP_API_KEY = os.getenv("ZEP_API_KEY")
 ZEP_ENABLED = os.getenv("ZEP_ENABLED", "false").lower() == "true"
 
 # Topic Expansion Pipeline configuration
-EXPANSION_ENABLED = os.getenv("EXPANSION_ENABLED", "false").lower() == "true"
 ZEP_SEARCH_LIMIT = int(os.getenv("ZEP_SEARCH_LIMIT", "10"))
 ZEP_SEARCH_RERANKER = os.getenv("ZEP_SEARCH_RERANKER", "cross_encoder")
 EXPLORATION_PER_ROOT_MAX = int(os.getenv("EXPLORATION_PER_ROOT_MAX", "2"))  # Keep at 2 since LLM now generates fewer, higher quality topics
@@ -54,28 +53,31 @@ def _clamp_int(v: int, lo: int = 0, hi: int = 1_000_000) -> int:
 
 EXPANSION_MAX_PARALLEL = _clamp_int(int(os.getenv("EXPANSION_MAX_PARALLEL", "2")), 1, 64)
 
-# Expansion LLM selection and augmentation
-EXPANSION_LLM_ENABLED = os.getenv("EXPANSION_LLM_ENABLED", "true").lower() == "true"
+# Expansion LLM selection and augmentation - always enabled for quality
+# EXPANSION_LLM_ENABLED removed - LLM is always used for topic expansion
 EXPANSION_LLM_MODEL = os.getenv("EXPANSION_LLM_MODEL", "gpt-4o-mini")
-EXPANSION_LLM_MAX_TOKENS = _clamp_int(int(os.getenv("EXPANSION_LLM_MAX_TOKENS", "800")), 100, 4000)
-EXPANSION_LLM_TEMPERATURE = _clamp_float(float(os.getenv("EXPANSION_LLM_TEMPERATURE", "0.2")), 0.0, 1.0)
-EXPANSION_LLM_SUGGESTION_LIMIT = _clamp_int(int(os.getenv("EXPANSION_LLM_SUGGESTION_LIMIT", "3")), 1, 10)
 EXPANSION_LLM_CONFIDENCE_THRESHOLD = _clamp_float(float(os.getenv("EXPANSION_LLM_CONFIDENCE_THRESHOLD", "0.6")), 0.0, 1.0)
-# Optional timeout (seconds) for the single LLM call
 EXPANSION_LLM_TIMEOUT_SECONDS = _clamp_int(int(os.getenv("EXPANSION_LLM_TIMEOUT_SECONDS", "30")), 1, 120)
+
+# LLM hyperparameters - internal model tuning constants
+EXPANSION_LLM_MAX_TOKENS = 800              # Token limit for expansion LLM calls
+EXPANSION_LLM_TEMPERATURE = 0.2             # Temperature for expansion LLM calls
+EXPANSION_LLM_SUGGESTION_LIMIT = 3          # Maximum topics to generate per expansion
 
 # Expansion lifecycle and depth management
 EXPANSION_MAX_DEPTH = _clamp_int(int(os.getenv("EXPANSION_MAX_DEPTH", "2")), 1, 10)
-EXPANSION_ENGAGEMENT_WINDOW_DAYS = _clamp_int(int(os.getenv("EXPANSION_ENGAGEMENT_WINDOW_DAYS", "7")), 1, 90)
-EXPANSION_PROMOTE_ENGAGEMENT = _clamp_float(float(os.getenv("EXPANSION_PROMOTE_ENGAGEMENT", "0.35")))
-EXPANSION_RETIRE_ENGAGEMENT = _clamp_float(float(os.getenv("EXPANSION_RETIRE_ENGAGEMENT", "0.1")))
-EXPANSION_MIN_QUALITY = _clamp_float(float(os.getenv("EXPANSION_MIN_QUALITY", "0.6")))
-EXPANSION_BACKOFF_DAYS = _clamp_int(int(os.getenv("EXPANSION_BACKOFF_DAYS", "7")), 1, 365)
-EXPANSION_RETIRE_TTL_DAYS = _clamp_int(int(os.getenv("EXPANSION_RETIRE_TTL_DAYS", "30")), 1, 365)
 
-# Zep search hardening
-ZEP_SEARCH_TIMEOUT_SECONDS = _clamp_int(int(os.getenv("ZEP_SEARCH_TIMEOUT_SECONDS", "5")), 1, 60)
-ZEP_SEARCH_RETRIES = _clamp_int(int(os.getenv("ZEP_SEARCH_RETRIES", "2")), 0, 5)
+# Internal expansion lifecycle constants (rarely changed)
+EXPANSION_ENGAGEMENT_WINDOW_DAYS = 7        # Days to look back for engagement scoring
+EXPANSION_PROMOTE_ENGAGEMENT = 0.35         # Engagement threshold to enable child expansions
+EXPANSION_RETIRE_ENGAGEMENT = 0.1           # Engagement threshold to retire topics
+EXPANSION_MIN_QUALITY = 0.6                 # Minimum quality threshold for promotion
+EXPANSION_BACKOFF_DAYS = 7                  # Days to back off after low engagement
+EXPANSION_RETIRE_TTL_DAYS = 30              # Days before retiring inactive expansions
+
+# Zep search configuration - operational defaults
+ZEP_SEARCH_TIMEOUT_SECONDS = 5              # Timeout for Zep API calls
+ZEP_SEARCH_RETRIES = 2                      # Number of retries for failed calls
 
 # Clamp similarity threshold
 EXPANSION_MIN_SIMILARITY = _clamp_float(EXPANSION_MIN_SIMILARITY, 0.0, 1.0)
@@ -155,27 +157,25 @@ TOPIC_ENGAGEMENT_WEIGHT = float(os.getenv("TOPIC_ENGAGEMENT_WEIGHT", "0.3"))
 TOPIC_QUALITY_WEIGHT = float(os.getenv("TOPIC_QUALITY_WEIGHT", "0.2"))
 TOPIC_STALENESS_SCALE = float(os.getenv("TOPIC_STALENESS_SCALE", "0.0001"))  # Scale factor for staleness time
 
-# Engagement scoring configuration
-ENGAGEMENT_RESEARCH_WEIGHT = float(os.getenv("ENGAGEMENT_RESEARCH_WEIGHT", "2.0"))  # Weight for research findings interaction
-ENGAGEMENT_ANALYTICS_WEIGHT = float(os.getenv("ENGAGEMENT_ANALYTICS_WEIGHT", "0.5"))  # Weight for general analytics
-ENGAGEMENT_RECENT_BONUS_RATE = float(os.getenv("ENGAGEMENT_RECENT_BONUS_RATE", "0.2"))  # Bonus per recent read
-ENGAGEMENT_RECENT_BONUS_MAX = float(os.getenv("ENGAGEMENT_RECENT_BONUS_MAX", "0.5"))  # Max recent bonus
-ENGAGEMENT_VOLUME_BONUS_RATE = float(os.getenv("ENGAGEMENT_VOLUME_BONUS_RATE", "0.1"))  # Bonus per total finding
-ENGAGEMENT_VOLUME_BONUS_MAX = float(os.getenv("ENGAGEMENT_VOLUME_BONUS_MAX", "0.3"))  # Max volume bonus
-ENGAGEMENT_BOOKMARK_BONUS_RATE = float(os.getenv("ENGAGEMENT_BOOKMARK_BONUS_RATE", "0.15"))  # Bonus per bookmark
-ENGAGEMENT_BOOKMARK_BONUS_MAX = float(os.getenv("ENGAGEMENT_BOOKMARK_BONUS_MAX", "0.45"))  # Max bookmark bonus
-ENGAGEMENT_INTEGRATION_BONUS_RATE = float(os.getenv("ENGAGEMENT_INTEGRATION_BONUS_RATE", "0.2"))  # Bonus per integration
-ENGAGEMENT_INTEGRATION_BONUS_MAX = float(os.getenv("ENGAGEMENT_INTEGRATION_BONUS_MAX", "0.6"))  # Max integration bonus
-ENGAGEMENT_SCORE_MAX = float(os.getenv("ENGAGEMENT_SCORE_MAX", "2.0"))  # Cap total engagement score
+# Engagement scoring constants - internal algorithm tuning
+ENGAGEMENT_RESEARCH_WEIGHT = 2.0           # Weight for research findings interaction
+ENGAGEMENT_ANALYTICS_WEIGHT = 0.5          # Weight for general analytics  
+ENGAGEMENT_RECENT_BONUS_RATE = 0.2         # Bonus per recent read
+ENGAGEMENT_RECENT_BONUS_MAX = 0.5          # Max recent bonus
+ENGAGEMENT_VOLUME_BONUS_RATE = 0.1         # Bonus per total finding
+ENGAGEMENT_VOLUME_BONUS_MAX = 0.3          # Max volume bonus
+ENGAGEMENT_BOOKMARK_BONUS_RATE = 0.15      # Bonus per bookmark
+ENGAGEMENT_BOOKMARK_BONUS_MAX = 0.45       # Max bookmark bonus
+ENGAGEMENT_INTEGRATION_BONUS_RATE = 0.2    # Bonus per integration
+ENGAGEMENT_INTEGRATION_BONUS_MAX = 0.6     # Max integration bonus
+ENGAGEMENT_SCORE_MAX = 2.0                 # Cap total engagement score
 
-# Research timing configuration
-RESEARCH_CYCLE_SLEEP_INTERVAL = int(os.getenv("RESEARCH_CYCLE_SLEEP_INTERVAL", "300"))  # Sleep between cycles (seconds)
-RESEARCH_TOPIC_DELAY = float(os.getenv("RESEARCH_TOPIC_DELAY", "1.0"))  # Delay between topics (seconds)
-RESEARCH_MANUAL_DELAY = float(os.getenv("RESEARCH_MANUAL_DELAY", "0.5"))  # Delay in manual research (seconds)
-RESEARCH_MAX_TOKENS = int(os.getenv("RESEARCH_MAX_TOKENS", "2000"))  # Max tokens for research LLM calls
-
-# Status update configuration
-STATUS_MIN_INTERVAL = float(os.getenv("STATUS_MIN_INTERVAL", "0.3"))  # Minimum seconds between status updates
+# Research timing constants - operational defaults
+RESEARCH_CYCLE_SLEEP_INTERVAL = 300        # Sleep between research cycles (seconds)
+RESEARCH_TOPIC_DELAY = 1.0                 # Delay between topics (seconds)  
+RESEARCH_MANUAL_DELAY = 0.5                # Delay in manual research (seconds)
+RESEARCH_MAX_TOKENS = 2000                 # Max tokens for research LLM calls
+STATUS_MIN_INTERVAL = 0.3                  # Minimum seconds between status updates
 
 # Admin interface configuration
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")  # Change this in production!
