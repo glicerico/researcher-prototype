@@ -23,7 +23,7 @@ const TopicsHeader = ({
 
 
   // Determine immediate research button state
-  const isResearchEngineRunning = researchEngineStatus?.running || false;
+  const isResearchEngineRunning = true;
   const hasActiveTopics = activeTopicsCount > 0;
   const isImmediateResearchDisabled = immediateResearchLoading || loading || !isResearchEngineRunning || !hasActiveTopics;
   
@@ -69,79 +69,7 @@ const TopicsHeader = ({
         </div>
       </div>
 
-      {/* Research Engine Status */}
-      {researchEngineStatus && (
-        <div className="research-engine-status">
-          <div className="status-indicator">
-            <div className={`status-dot ${researchEngineStatus.running ? 'active' : 'inactive'}`}></div>
-            <span className="status-text">
-              Research Engine: {researchEngineStatus.running ? 'Active' : 'Inactive'}
-            </span>
-          </div>
-          <div className="engine-controls">
-            <button 
-              className={`engine-toggle-btn ${researchEngineStatus.running ? 'stop' : 'start'}`}
-              onClick={onToggleGlobalResearch}
-              disabled={researchEngineLoading || loading}
-            >
-              <span className="btn-icon">
-                {researchEngineStatus.running ? '⏹️' : '▶️'}
-              </span>
-              <span className="btn-text">
-                {researchEngineLoading ? (
-                  researchEngineStatus.running ? 'Stopping...' : 'Starting...'
-                ) : (
-                  researchEngineStatus.running ? (
-                    <>Stop<br />Engine</>
-                  ) : (
-                    <>Enable<br />Engine</>
-                  )
-                )}
-              </span>
-            </button>
-            
-            <button 
-              className="immediate-research-button"
-              onClick={onImmediateResearch}
-              disabled={isImmediateResearchDisabled}
-              title={getImmediateResearchTooltip()}
-            >
-              <span className="btn-icon">
-                {immediateResearchLoading ? '🔄' : '🚀'}
-              </span>
-              <span className="btn-text">
-                {immediateResearchLoading ? (
-                  <>Searching...</>
-                ) : (
-                  <>Run<br />Now</>
-                )}
-              </span>
-            </button>
-            
-            <button
-              className="motivation-button"
-              onClick={onShowMotivation}
-              title="View motivation drives and research impetus"
-            >
-              <span className="btn-icon">💡</span>
-              <span className="btn-text">
-                View<br />Drives
-              </span>
-            </button>
-            
-            <button
-              className="help-button"
-              onClick={onShowEngineSettings}
-              title="Configure research timing and frequency presets"
-            >
-              <span className="btn-icon">⏰</span>
-              <span className="btn-text">
-                Research<br />Timing
-              </span>
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Global engine status removed; per-user autonomy handles scheduling */}
 
       {/* Action Controls */}
       <div className="action-controls">

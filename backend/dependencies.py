@@ -38,6 +38,7 @@ def ensure_guest_user_exists() -> None:
             "created_at": 0,  # Use 0 to indicate it's the system default
             "metadata": metadata,
             "personality": {"style": "helpful", "tone": "friendly", "additional_traits": {}},
+            "autonomous_enabled": False,
         }
         
         # Save the profile using storage manager directly

@@ -154,6 +154,7 @@ class ProfileManager:
             "created_at": time.time(),
             "metadata": metadata or {},
             "personality": {"style": "helpful", "tone": "friendly", "additional_traits": {}},
+            "autonomous_enabled": False,
         }
 
         # Save the profile
@@ -205,6 +206,37 @@ class ProfileManager:
 
         # Save the updated profile
         return self.storage.write(self._get_profile_path(user_id), profile)
+
+    def is_autonomous_enabled(self, user_id: str) -> bool:
+        """
+        Return whether autonomous research is enabled for the user.
+
+        Args:
+            user_id: The ID of the user
+
+        Returns:
+            True if enabled, otherwise False
+        """
+        profile = self.get_user(user_id)
+        if not profile:
+            return False
+        try:
+            return bool(profile.get("autonomous_enabled", False))
+        except Exception:
+            return False
+
+    def set_autonomous_enabled(self, user_id: str, enabled: bool) -> bool:
+        """
+        Enable or disable autonomous research for the user.
+
+        Args:
+            user_id: The ID of the user
+            enabled: Desired enabled state
+
+        Returns:
+            True if the update succeeded, False otherwise
+        """
+        return self.update_user(user_id, {"autonomous_enabled": bool(enabled)})
 
     def delete_user(self, user_id: str) -> bool:
         """

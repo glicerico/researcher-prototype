@@ -1,5 +1,5 @@
 from typing import Optional, List
-from fastapi import APIRouter, Depends, HTTPException
+from fastapi import APIRouter, Depends, HTTPException, Request
 
 from models import (
     PersonalityConfig, UserSummary, UserProfile, PreferencesConfig,
@@ -12,6 +12,7 @@ from dependencies import (
     generate_display_name_from_user_id,
 )
 from services.personalization_manager import PersonalizationManager
+from services.per_user_scheduler import PerUserScheduler
 from services.logging_config import get_logger
 
 router = APIRouter()
@@ -19,6 +20,7 @@ logger = get_logger(__name__)
 
 # Initialize PersonalizationManager (will be injected via dependencies later)
 personalization_manager = None
+per_user_scheduler: PerUserScheduler | None = None
 
 def get_personalization_manager():
     """Get or create PersonalizationManager instance."""
@@ -27,6 +29,70 @@ def get_personalization_manager():
         from dependencies import storage_manager
         personalization_manager = PersonalizationManager(storage_manager, profile_manager)
     return personalization_manager
+
+
+def get_per_user_scheduler(request=None) -> PerUserScheduler:
+    global per_user_scheduler
+    if per_user_scheduler is not None:
+        return per_user_scheduler
+    # Prefer app state if available (during requests)
+    try:
+        if request is not None and hasattr(request.app.state, "per_user_scheduler") and request.app.state.per_user_scheduler:
+            per_user_scheduler = request.app.state.per_user_scheduler
+            return per_user_scheduler
+    except Exception:
+        pass
+    # Fallback: construct a local instance using dependencies
+    try:
+        from dependencies import profile_manager as _pm
+        per_user_scheduler = PerUserScheduler(_pm, None)
+    except Exception:
+        from dependencies import profile_manager as _pm
+        per_user_scheduler = PerUserScheduler(_pm, None)
+    return per_user_scheduler
+
+
+@router.get("/user/autonomy")
+async def get_user_autonomy_status(user_id: str = Depends(get_or_create_user_id)):
+    enabled = profile_manager.is_autonomous_enabled(user_id)
+    try:
+        sched = get_per_user_scheduler()
+        next_run = sched.next_run_at(user_id) if sched else None
+        running = sched.is_running(user_id) if sched else False
+    except Exception:
+        next_run = None
+        running = False
+    return {"enabled": enabled, "running": running, "next_run_at": next_run}
+
+
+@router.post("/user/autonomy")
+async def set_user_autonomy(enabled: bool, user_id: str = Depends(get_or_create_user_id)):
+    ok = profile_manager.set_autonomous_enabled(user_id, enabled)
+    if not ok:
+        raise HTTPException(status_code=500, detail="Failed to update autonomy flag")
+    sched = get_per_user_scheduler()
+    if not sched:
+        raise HTTPException(status_code=503, detail="Scheduler unavailable")
+    if enabled:
+        started = sched.start_for_user(user_id)
+        return {"success": started, "enabled": True}
+    else:
+        await sched.stop_for_user(user_id)
+        return {"success": True, "enabled": False}
+
+
+@router.post("/user/autonomy/run-now")
+async def run_now(request: Request, user_id: str = Depends(get_or_create_user_id)):
+    try:
+        researcher = getattr(request.app.state, "autonomous_researcher", None) if hasattr(request, "app") else None
+        if not researcher:
+            raise HTTPException(status_code=503, detail="Researcher unavailable")
+        result = await researcher.trigger_research_for_user(user_id)
+        return {"success": True, **result}
+    except HTTPException:
+        raise
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=str(e))
 
 
 @router.get("/user", response_model=UserProfile)

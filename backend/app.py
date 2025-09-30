@@ -37,9 +37,8 @@ from dependencies import (
     get_or_create_user_id,
     _motivation_config_override,
 )
-from services.autonomous_research_engine import initialize_autonomous_researcher
-
-# Global motivation config override (persists across reinitializations)
+from services.autonomous_research_engine import AutonomousResearcher
+from services.per_user_scheduler import PerUserScheduler
 
 
 @asynccontextmanager
@@ -48,33 +47,39 @@ async def lifespan(app: FastAPI):
     # Startup
     logger.info("🚀 Starting AI Chatbot API...")
 
-    # Initialize and start the autonomous researcher
+    # Initialize the autonomous researcher
     try:
         logger.info("🔬 Initializing Autonomous Research Engine...")
         logger.info(f"App startup - Config override: {_motivation_config_override}")
-        app.state.autonomous_researcher = initialize_autonomous_researcher(
+        app.state.autonomous_researcher = AutonomousResearcher(
             profile_manager, research_manager, _motivation_config_override
         )
-        await app.state.autonomous_researcher.start()
-        logger.info("🔬 Autonomous Research Engine initialized successfully")
+        logger.info("🔬 Autonomous Research Engine initialized")
     except Exception as e:
-        logger.error(f"🔬 Failed to start Autonomous Research Engine: {str(e)}", exc_info=True)
-        # Don't fail the app startup if research engine fails
+        logger.error(f"🔬 Failed to initialize Autonomous Research Engine: {str(e)}", exc_info=True)
         app.state.autonomous_researcher = None
+
+    # Create per-user scheduler
+    try:
+        app.state.per_user_scheduler = PerUserScheduler(profile_manager, app.state.autonomous_researcher)
+        logger.info("⏱️ Per-user scheduler initialized")
+    except Exception as e:
+        logger.error(f"Failed to initialize per-user scheduler: {str(e)}", exc_info=True)
+        app.state.per_user_scheduler = None
 
     yield
 
     # Shutdown
     logger.info("🛑 Shutting down AI Chatbot API...")
 
-    # Stop the autonomous researcher
-    if hasattr(app.state, "autonomous_researcher") and app.state.autonomous_researcher:
+    # Stop per-user scheduler
+    if hasattr(app.state, "per_user_scheduler") and app.state.per_user_scheduler:
         try:
-            logger.info("🔬 Stopping Autonomous Research Engine...")
-            await app.state.autonomous_researcher.stop()
-            logger.info("🔬 Autonomous Research Engine stopped successfully")
+            logger.info("⏱️ Stopping per-user scheduler...")
+            await app.state.per_user_scheduler.stop_all()
+            logger.info("⏱️ Per-user scheduler stopped successfully")
         except Exception as e:
-            logger.error(f"🔬 Error stopping Autonomous Research Engine: {str(e)}")
+            logger.error(f"⏱️ Error stopping per-user scheduler: {str(e)}")
 
 
 app = FastAPI(title="AI Chatbot API", version="1.0.0", lifespan=lifespan)

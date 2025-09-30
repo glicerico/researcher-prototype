@@ -7,7 +7,10 @@ import {
   updateUserPreferences,
   getUserPersonalizationData,
   updateUserDisplayName,
-  updateUserEmail
+  updateUserEmail,
+  getUserAutonomy,
+  setUserAutonomy,
+  runAutonomyNow
 } from '../services/api';
 import PersonalizationDashboard from './PersonalizationDashboard';
 import '../styles/UserProfile.css';
@@ -24,6 +27,7 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
   const [editedTone, setEditedTone] = useState('');
   const [editedPreferences, setEditedPreferences] = useState(null);
   const [editedEmail, setEditedEmail] = useState('');
+  const [autonomy, setAutonomy] = useState({ enabled: false, running: false, next_run_at: null });
 
   useEffect(() => {
     const loadData = async () => {
@@ -31,23 +35,23 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
         setIsLoading(true);
         
         // Load user profile, preferences, and personalization data in parallel
-        const [userData, presetsData, preferencesData, personalizationDataResponse] = await Promise.all([
+        const [userData, presetsData, preferencesData, personalizationDataResponse, autonomyStatus] = await Promise.all([
           getCurrentUser(),
           getPersonalityPresets(),
           getUserPreferences().catch(() => null),
-          getUserPersonalizationData().catch(() => null)
+          getUserPersonalizationData().catch(() => null),
+          getUserAutonomy().catch(() => ({ enabled: false, running: false, next_run_at: null }))
         ]);
         
         setProfile(userData);
         setPresets(presetsData.presets || {});
         setPreferences(preferencesData);
         setPersonalizationData(personalizationDataResponse);
-        
-        // Initialize editing form with current values
         setEditedStyle(userData.personality.style);
         setEditedTone(userData.personality.tone);
         setEditedPreferences(preferencesData);
         setEditedEmail(userData.metadata?.email || '');
+        setAutonomy(autonomyStatus);
       } catch (error) {
         console.error('👤 UserProfile: ❌ Error loading user profile:', error);
         console.error('👤 UserProfile: ❌ Failed to load data for user:', userId);
@@ -169,6 +173,25 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
         }
       }
     }));
+  };
+
+  const toggleAutonomy = async () => {
+    try {
+      const target = !autonomy.enabled;
+      const res = await setUserAutonomy(target);
+      setAutonomy((prev) => ({ ...prev, enabled: !!res.enabled }));
+    } catch (e) {
+      console.error('Failed to toggle autonomy', e);
+      alert('Failed to update autonomous research setting');
+    }
+  };
+
+  const formatNextRun = (ts) => {
+    if (!ts) return '—';
+    const ms = Math.max(0, Math.round(ts * 1000 - Date.now()));
+    const mins = Math.ceil(ms / 60000);
+    if (mins <= 1) return '< 1 min';
+    return `${mins} min`;
   };
 
   if (isLoading) {
@@ -415,6 +438,17 @@ const UserProfile = ({ userId, onProfileUpdated }) => {
       <div className="user-profile-header">
         <h3>User Settings</h3>
         <div className="header-actions">
+          <div className="autonomy-toggle">
+            <label className="switch">
+              <input type="checkbox" checked={!!autonomy.enabled} onChange={toggleAutonomy} />
+              <span className="slider" />
+            </label>
+            <span className="autonomy-label">Autonomous research</span>
+            <span className="next-run">Next run: {formatNextRun(autonomy.next_run_at)}</span>
+            <button className="run-now-btn" onClick={async () => {
+              try { await runAutonomyNow(); } catch (e) { console.error(e); }
+            }}>Run now</button>
+          </div>
           {!isEditing ? (
             <button 
               className="edit-profile-btn"

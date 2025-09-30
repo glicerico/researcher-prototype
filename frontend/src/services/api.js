@@ -481,15 +481,7 @@ export const deleteAllTopicFindings = async (topicName) => {
   }
 };
 
-export const getResearchEngineStatus = async () => {
-  try {
-    const response = await api.get('/research/status');
-    return response.data;
-  } catch (error) {
-    console.error('Error fetching research engine status:', error);
-    throw error;
-  }
-};
+// Removed global research engine status; use per-user autonomy endpoints instead
 
 export const getMotivationStatus = async () => {
   try {
@@ -564,32 +556,35 @@ export const triggerManualResearch = async (userId) => {
 };
 
 // Research engine control functions
-export const startResearchEngine = async () => {
+// Removed global research engine controls; use per-user autonomy endpoints instead
+
+// Per-user autonomy controls
+export const getUserAutonomy = async () => {
   try {
-    const response = await api.post('/research/control/start');
+    const response = await api.get('/user/autonomy');
     return response.data;
   } catch (error) {
-    console.error('Error starting research engine:', error);
+    console.error('Error fetching user autonomy status:', error);
     throw error;
   }
 };
 
-export const stopResearchEngine = async () => {
+export const setUserAutonomy = async (enabled) => {
   try {
-    const response = await api.post('/research/control/stop');
+    const response = await api.post('/user/autonomy', null, { params: { enabled } });
     return response.data;
   } catch (error) {
-    console.error('Error stopping research engine:', error);
+    console.error('Error updating user autonomy:', error);
     throw error;
   }
 };
 
-export const restartResearchEngine = async () => {
+export const runAutonomyNow = async () => {
   try {
-    const response = await api.post('/research/control/restart');
+    const response = await api.post('/user/autonomy/run-now');
     return response.data;
   } catch (error) {
-    console.error('Error restarting research engine:', error);
+    console.error('Error triggering autonomy run-now:', error);
     throw error;
   }
 };

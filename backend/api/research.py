@@ -10,7 +10,6 @@ from dependencies import (
     zep_manager,
     _motivation_config_override,
 )
-from services.autonomous_research_engine import initialize_autonomous_researcher
 from services.logging_config import get_logger
 from services.topic_expansion_service import TopicExpansionService, ExpansionCandidate
 import config
@@ -231,19 +230,6 @@ async def delete_all_topic_findings(topic_name: str, user_id: str = Depends(get_
         raise HTTPException(status_code=500, detail=f"Error deleting topic findings: {str(e)}")
 
 
-@router.get("/research/status")
-async def get_research_engine_status(request: Request):
-    """Get the current status of the autonomous research engine."""
-    try:
-        if hasattr(request.app.state, "autonomous_researcher"):
-            status = request.app.state.autonomous_researcher.get_status()
-            return status
-        else:
-            return {"enabled": False, "running": False, "error": "Autonomous researcher not initialized"}
-
-    except Exception as e:
-        logger.error(f"Error getting research engine status: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error getting research status: {str(e)}")
 
 
 class ExpansionRequest(BaseModel):
@@ -625,109 +611,6 @@ async def trigger_research_for_user(request: Request, user_id: str):
         raise HTTPException(status_code=500, detail=f"Error triggering research: {str(e)}")
 
 
-@router.post("/research/control/start")
-async def start_research_engine(request: Request):
-    """Start the autonomous research engine."""
-    try:
-        if hasattr(request.app.state, "autonomous_researcher") and request.app.state.autonomous_researcher:
-            # Enable and start
-            request.app.state.autonomous_researcher.enable()
-            await request.app.state.autonomous_researcher.start()
-            return {
-                "success": True,
-                "message": "Autonomous research engine started successfully",
-                "status": request.app.state.autonomous_researcher.get_status(),
-            }
-        else:
-            # Try to initialize if not available
-            try:
-                logger.info("🔬 Re-initializing Autonomous Research Engine...")
-                request.app.state.autonomous_researcher = initialize_autonomous_researcher(
-                    profile_manager, research_manager, _motivation_config_override
-                )
-                request.app.state.autonomous_researcher.enable()
-                await request.app.state.autonomous_researcher.start()
-                logger.info("🔬 Autonomous Research Engine re-initialized and started successfully")
-                return {
-                    "success": True,
-                    "message": "Autonomous research engine initialized and started successfully",
-                    "status": request.app.state.autonomous_researcher.get_status(),
-                }
-            except Exception as e:
-                logger.error(f"🔬 Failed to initialize/start Autonomous Research Engine: {str(e)}", exc_info=True)
-                raise HTTPException(status_code=503, detail=f"Failed to start research engine: {str(e)}")
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error starting research engine: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error starting research engine: {str(e)}")
-
-
-@router.post("/research/control/stop")
-async def stop_research_engine(request: Request):
-    """Stop the autonomous research engine."""
-    try:
-        if hasattr(request.app.state, "autonomous_researcher") and request.app.state.autonomous_researcher:
-            # Stop and disable
-            await request.app.state.autonomous_researcher.stop()
-            request.app.state.autonomous_researcher.disable()
-            return {
-                "success": True,
-                "message": "Autonomous research engine stopped successfully",
-                "status": request.app.state.autonomous_researcher.get_status(),
-            }
-        else:
-            return {
-                "success": True,
-                "message": "Autonomous research engine was not running",
-                "status": {"enabled": False, "running": False, "error": "Research engine not initialized"},
-            }
-
-    except Exception as e:
-        logger.error(f"Error stopping research engine: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error stopping research engine: {str(e)}")
-
-
-@router.post("/research/control/restart")
-async def restart_research_engine(request: Request):
-    """Restart the autonomous research engine."""
-    try:
-        if hasattr(request.app.state, "autonomous_researcher") and request.app.state.autonomous_researcher:
-            # Stop first
-            await request.app.state.autonomous_researcher.stop()
-            # Then enable and start again
-            request.app.state.autonomous_researcher.enable()
-            await request.app.state.autonomous_researcher.start()
-            return {
-                "success": True,
-                "message": "Autonomous research engine restarted successfully",
-                "status": request.app.state.autonomous_researcher.get_status(),
-            }
-        else:
-            # Try to initialize if not available
-            try:
-                logger.info("🔬 Initializing Autonomous Research Engine for restart...")
-                request.app.state.autonomous_researcher = initialize_autonomous_researcher(
-                    profile_manager, research_manager, _motivation_config_override
-                )
-                request.app.state.autonomous_researcher.enable()
-                await request.app.state.autonomous_researcher.start()
-                logger.info("🔬 Autonomous Research Engine initialized and started successfully")
-                return {
-                    "success": True,
-                    "message": "Autonomous research engine initialized and started successfully",
-                    "status": request.app.state.autonomous_researcher.get_status(),
-                }
-            except Exception as e:
-                logger.error(f"🔬 Failed to initialize/restart Autonomous Research Engine: {str(e)}", exc_info=True)
-                raise HTTPException(status_code=503, detail=f"Failed to restart research engine: {str(e)}")
-
-    except HTTPException:
-        raise
-    except Exception as e:
-        logger.error(f"Error restarting research engine: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Error restarting research engine: {str(e)}")
 
 
 @router.get("/topics/user/{user_id}/research")

@@ -15,9 +15,6 @@ import {
   deleteNonActivatedTopics,
   enableTopicResearchById,
   disableTopicResearchById,
-  getResearchEngineStatus,
-  startResearchEngine,
-  stopResearchEngine,
   triggerManualResearch
 } from '../services/api';
 import '../styles/TopicsDashboard.css';
@@ -72,10 +69,9 @@ const TopicsDashboard = () => {
         setError(null);
       }
       
-      const [topicsResponse, statsResponse, engineStatus] = await Promise.all([
+      const [topicsResponse, statsResponse] = await Promise.all([
         getAllTopicSuggestions(),
-        getTopicStatistics(),
-        getResearchEngineStatus().catch(() => ({ available: false, enabled: false, running: false }))
+        getTopicStatistics()
       ]);
       
       const topicsData = topicsResponse.topic_suggestions || [];
@@ -84,7 +80,7 @@ const TopicsDashboard = () => {
       setActiveTopicsCount(
         topicsData.filter(topic => topic.is_active_research).length
       );
-      setResearchEngineStatus(engineStatus);
+      setResearchEngineStatus(null);
       
     } catch (err) {
       console.error('Error loading topics data:', err);
@@ -110,29 +106,7 @@ const TopicsDashboard = () => {
   }, [userId, loadData]);
 
   // Handle global research engine toggle
-  const handleToggleGlobalResearch = async () => {
-    if (!researchEngineStatus) return;
-    
-    try {
-      setResearchEngineLoading(true);
-      
-      if (researchEngineStatus.running) {
-        await stopResearchEngine();
-        setResearchEngineStatus(prev => ({ ...prev, running: false }));
-      } else {
-        await startResearchEngine();
-        setResearchEngineStatus(prev => ({ ...prev, running: true }));
-      }
-      
-    } catch (err) {
-      console.error('Error toggling research engine:', err);
-      setError('Failed to toggle research engine. Please try again.');
-      // Refresh status to get correct state
-      loadData();
-    } finally {
-      setResearchEngineLoading(false);
-    }
-  };
+  const handleToggleGlobalResearch = async () => {};
 
   // Handle immediate research trigger
   const handleImmediateResearch = async () => {

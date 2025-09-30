@@ -138,8 +138,6 @@ TOPIC_MAX_SUGGESTIONS = int(os.getenv("TOPIC_MAX_SUGGESTIONS", "3"))
 TOPIC_EXTRACTION_TEMPERATURE = float(os.getenv("TOPIC_EXTRACTION_TEMPERATURE", "0.3"))
 TOPIC_EXTRACTION_MAX_TOKENS = int(os.getenv("TOPIC_EXTRACTION_MAX_TOKENS", "800"))
 
-# Autonomous Research Engine configuration
-RESEARCH_ENGINE_ENABLED = os.getenv("RESEARCH_ENGINE_ENABLED", "false").lower() == "true"
 RESEARCH_MODEL = os.getenv("RESEARCH_MODEL", "gpt-4o-mini")
 RESEARCH_QUALITY_THRESHOLD = float(os.getenv("RESEARCH_QUALITY_THRESHOLD", "0.6"))
 RESEARCH_MAX_TOPICS_PER_USER = int(os.getenv("RESEARCH_MAX_TOPICS_PER_USER", "3"))
@@ -151,9 +149,8 @@ MAX_ACTIVE_RESEARCH_TOPICS_PER_USER = _clamp_int(int(os.getenv("MAX_ACTIVE_RESEA
 # Search Results Configuration
 SEARCH_RESULTS_LIMIT = 10  # Standard limit for all search API calls
 
-# Motivation system configuration
-MOTIVATION_CHECK_INTERVAL = int(os.getenv("MOTIVATION_CHECK_INTERVAL", "60"))
-MOTIVATION_THRESHOLD = float(os.getenv("MOTIVATION_THRESHOLD", "2.0"))  # Conservative default
+# Motivation system configuration (used to compute prioritization and lifecycle)
+MOTIVATION_THRESHOLD = float(os.getenv("MOTIVATION_THRESHOLD", "2.0"))
 MOTIVATION_BOREDOM_RATE = float(os.getenv("MOTIVATION_BOREDOM_RATE", "0.0002"))
 MOTIVATION_CURIOSITY_DECAY = float(os.getenv("MOTIVATION_CURIOSITY_DECAY", "0.0002"))
 MOTIVATION_TIREDNESS_DECAY = float(os.getenv("MOTIVATION_TIREDNESS_DECAY", "0.0002"))
@@ -179,11 +176,11 @@ ENGAGEMENT_INTEGRATION_BONUS_MAX = 0.6     # Max integration bonus
 ENGAGEMENT_SCORE_MAX = 2.0                 # Cap total engagement score
 
 # Research timing constants - operational defaults
-RESEARCH_CYCLE_SLEEP_INTERVAL = 300        # Sleep between research cycles (seconds)
 RESEARCH_TOPIC_DELAY = 1.0                 # Delay between topics (seconds)  
 RESEARCH_MANUAL_DELAY = 0.5                # Delay in manual research (seconds)
 RESEARCH_MAX_TOKENS = 2000                 # Max tokens for research LLM calls
 STATUS_MIN_INTERVAL = 0.3                  # Minimum seconds between status updates
+AUTONOMY_INTERVAL_SECONDS = int(os.getenv("AUTONOMY_INTERVAL_SECONDS", "3600"))
 
 # Admin interface configuration
 ADMIN_PASSWORD = os.getenv("ADMIN_PASSWORD", "admin123")  # Change this in production!
