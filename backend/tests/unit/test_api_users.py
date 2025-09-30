@@ -1,8 +1,9 @@
 import pytest
 from fastapi.testclient import TestClient
+from unittest.mock import Mock, AsyncMock, patch
 
 from app import app
-from dependencies import get_existing_user_id
+from dependencies import get_existing_user_id, get_or_create_user_id
 
 client = TestClient(app)
 
@@ -32,4 +33,3 @@ def test_admin_delete_all_users(monkeypatch):
 
     response = client.delete("/admin/users", headers={"Authorization": "Bearer test"})
     assert response.status_code == 200
-
