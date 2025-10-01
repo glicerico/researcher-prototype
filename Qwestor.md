@@ -110,3 +110,4 @@ Known limitations (before a production launch):
 Qwestor already demonstrates the key value proposition: faster answers with credible sources and proactive, ongoing discovery on the user’s behalf. With modest engineering investment, it can evolve from a robust prototype into a pilot‑ready product focused on reliability, manageability, and team features—while keeping costs controllable through configurable research cadence and topic limits.
 
 
+
