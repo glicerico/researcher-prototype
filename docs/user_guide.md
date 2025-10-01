@@ -24,7 +24,10 @@ Welcome!  This guide walks you through everyday use of the **Researcher-Prototyp
 
 ## 3. Personalising the Assistant
 
-Click the **User Settings** button, to display the current settings.
+
+
+### Personality Settings
+
 Click Edit to modify:
 
 | Setting | Description |
@@ -34,6 +37,19 @@ Click Edit to modify:
 | Presets | One-click combos such as *Friendly Helper* |
 
 Changes apply instantly and are stored in your profile.
+
+### Autonomous Research Control
+
+In the User Settings modal, you can control your personal autonomous research scheduler:
+
+* **Autonomous Research Toggle** – Enable/disable background research for your topics
+  - **Disabled by default** – you must explicitly enable it
+  - When enabled, research runs every 30 minutes (configurable)
+  - Only researches **your** active topics
+* **Next Run Time** – Shows when the next research cycle will occur (if enabled)
+* **Run Now Button** – Trigger immediate research without waiting for the next scheduled cycle
+
+This gives you complete control over when and how often the system researches on your behalf.
 
 ---
 
@@ -72,14 +88,13 @@ After each message the system may suggest **Topics** related to your conversatio
 
 Click **📊 Dashboards** then **🔍 Research Topics** to open a full dashboard where you can:
 
-* **▶️ Enable Engine** – Enable/disable the autonomous researcher.
-* **🚀 Research Now** – trigger immediate research; ignores motivation threshold.
-* **💡 View Drives** -  Monitor the real-time values for the **boredom**, **curiosity**, **tiredness** and **satisfaction** parameters.  When boredom + curiosity ≥ threshold a new research cycle is launched automatically.
-* **⏰ Research timing** – See the current estimated research frequency, or select a quick preset to change it.
+* View all topics (active + inactive) per user
+* **Toggle switch** – start/stop research for a specific topic
+* **➕ Add Topic** – Create custom research topics manually
+* **💡 View Drives** – Monitor the real-time values for the **boredom**, **curiosity**, **tiredness** and **satisfaction** parameters (affects which topics get prioritized during research cycles)
+* **⏰ Research timing** – See the current estimated research frequency, or select a quick preset to change it
 
-* View all topics (active + inactive) per user.
-* **Toggle switch** – start/stop research for a topic.
-* **➕ Add Topic** – Create custom research topics manually.
+**Note:** To control whether autonomous research runs at all, use the **Autonomous Research toggle** in your User Settings modal.
 
 ### Creating Custom Topics
 

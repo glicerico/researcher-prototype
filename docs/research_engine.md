@@ -144,11 +144,21 @@ graph LR
 
 ## Controlling the Engine
 
+The autonomous research engine runs **per-user**, with each user having independent control over their research scheduler:
+
 | Action | HTTP route | Front-end |
 |--------|-----------|-----------|
-| Start | `POST /research/control/start` | EngineSettings modal |
-| Stop  | `POST /research/control/stop`  | EngineSettings modal |
-| Trigger single cycle | `POST /research/trigger/{userId}` |  Topics dashboard "🚀 Research Now" |
+| Get user status | `GET /user/autonomy` | User Profile modal |
+| Enable for user | `POST /user/autonomy?enabled=true` | User Profile modal toggle |
+| Disable for user | `POST /user/autonomy?enabled=false` | User Profile modal toggle |
+| Trigger single cycle | `POST /user/autonomy/run-now` | User Profile modal "Run Now" button |
+
+**Per-User Behavior:**
+* Each user's autonomous research is **disabled by default**
+* When enabled, a dedicated scheduler starts for that user only
+* Research cycle runs every 30 minutes (default `AUTONOMY_INTERVAL_SECONDS=1800`)
+* Only researches that user's active topics
+* User can trigger immediate research without waiting for next scheduled cycle
 
 ### Motivation debug
 
@@ -318,8 +328,10 @@ curl -X POST "http://localhost:8000/api/research/debug/expand/your-user-id" \
 All variables live in `backend/.env` (see template):
 
 ```env
+# Per-User Autonomous Research
+AUTONOMY_INTERVAL_SECONDS=1800        # Research cycle interval per user (default: 30 min)
+
 # Research Engine
-RESEARCH_ENGINE_ENABLED=true
 RESEARCH_MODEL=gpt-4o-mini
 RESEARCH_QUALITY_THRESHOLD=0.6
 RESEARCH_MAX_TOPICS_PER_USER=3
