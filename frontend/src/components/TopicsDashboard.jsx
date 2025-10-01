@@ -563,7 +563,7 @@ const TopicsDashboard = () => {
                 <div 
                   key={topicKey} 
                   className={`topic-item ${isSelected ? 'selected' : ''} ${topic.is_active_research ? 'active-research' : ''} ${depth > 0 ? 'child-topic' : 'root-topic'} depth-${depth}`}
-                  style={{ ['--depth-indent']: `${Math.min(depth, 6) * 16}px` }}
+                  style={{ '--depth-indent': `${Math.min(depth, 6) * 16}px` }}
                 >
                   <div 
                     className="topic-header"

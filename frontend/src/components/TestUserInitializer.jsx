@@ -24,12 +24,13 @@ const TestUserInitializer = ({ onInitialized }) => {
         }
       })();
     }
-    // Pre-fill a random username
-    if (!username) {
-      const rand = Math.random().toString(36).slice(2, 6);
-      setUsername(`user-${rand}`);
-    }
   }, [onInitialized]);
+
+  useEffect(() => {
+    // Pre-fill a random username on first render if missing
+    const rand = Math.random().toString(36).slice(2, 6);
+    setUsername(prev => (prev ? prev : `user-${rand}`));
+  }, []);
 
   const createUserWithOptionalEmail = async () => {
     try {

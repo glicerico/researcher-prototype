@@ -6,7 +6,6 @@ import {
   getUserPreferences,
   updateUserPreferences,
   getUserPersonalizationData,
-  updateUserDisplayName,
   updateUserEmail
 } from '../services/api';
 import PersonalizationDashboard from './PersonalizationDashboard';
