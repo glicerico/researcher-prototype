@@ -23,6 +23,7 @@ import json
 import argparse
 import asyncio
 from typing import Optional
+import pytest
 
 def _ensure_backend_on_path() -> None:
     """Ensure the backend directory is on the Python path."""
@@ -43,6 +44,7 @@ from services.logging_config import get_logger
 logger = get_logger(__name__)
 
 
+@pytest.mark.skip(reason="Manual test script - run directly with: python tests/integration/test_zep_manual.py --user <user_id> --query <query>")
 async def test_zep_search(
     user_id: str,
     query: str,
@@ -369,6 +371,7 @@ async def test_zep_search(
             traceback.print_exc()
 
 
+@pytest.mark.skip(reason="Manual test script - run directly with: python tests/integration/test_zep_manual.py --user <user_id> --store-test-conversation")
 async def test_conversation_storage(user_id: str, verbose: bool = False) -> None:
     """Test storing a conversation and checking if it creates graph data."""
     
