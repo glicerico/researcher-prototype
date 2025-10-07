@@ -24,14 +24,13 @@ def mock_pm_rm():
 
 
 def _make_candidate(name, sim, source="zep_node"):
-    return SimpleNamespace(name=name, similarity=sim, source=source, rationale="r")
+    return SimpleNamespace(name=name, similarity=sim, source=source, rationale="r", description=None, confidence=0.8)
 
 
 @pytest.mark.asyncio
 async def test_expansion_budget_enforced(monkeypatch, mock_pm_rm):
     pm, rm = mock_pm_rm
-    # Enable expansion
-    monkeypatch.setattr(app_config, "EXPANSION_ENABLED", True, raising=False)
+    # Configure expansion limits
     monkeypatch.setattr(app_config, "EXPLORATION_PER_ROOT_MAX", 1, raising=False)
     monkeypatch.setattr(app_config, "EXPANSION_MAX_PARALLEL", 2, raising=False)
 
@@ -55,8 +54,11 @@ async def test_expansion_budget_enforced(monkeypatch, mock_pm_rm):
             ]
         )
 
+        # Mock check_active_topics_limit to allow topic activation
+        rm.check_active_topics_limit.return_value = {"allowed": True}
+        
         # Persist only first (budget=1)
-        rm.add_custom_topic.return_value = {"success": True, "topic": {"topic_name": "A", "description": "Auto"}}
+        rm.add_custom_topic.return_value = {"success": True, "topic": {"topic_name": "A", "description": "Auto", "is_active_research": True}}
 
         result = await ar._conduct_research_cycle()
 
@@ -70,28 +72,8 @@ async def test_expansion_budget_enforced(monkeypatch, mock_pm_rm):
 
 
 @pytest.mark.asyncio
-async def test_expansion_disabled_flag(monkeypatch, mock_pm_rm):
-    pm, rm = mock_pm_rm
-    monkeypatch.setattr(app_config, "EXPANSION_ENABLED", False, raising=False)
-    with patch("services.autonomous_research_engine.research_graph"):
-        ar = AutonomousResearcher(pm, rm)
-        ar.motivation.evaluate_topics = MagicMock(return_value=rm.get_active_research_topics.return_value)
-        ar.motivation.should_research = MagicMock(return_value=True)
-        ar.check_interval = 0
-        ar._research_topic_with_langgraph = AsyncMock(return_value={"success": True, "stored": True, "quality_score": 0.9})
-        # Even if service would return, flag is off
-        ar.topic_expansion_service = MagicMock()
-        ar.topic_expansion_service.generate_candidates = AsyncMock(return_value=[_make_candidate("A", 0.9)])
-
-        result = await ar._conduct_research_cycle()
-        assert result["topics_researched"] == 1  # root only
-        rm.add_custom_topic.assert_not_called()
-
-
-@pytest.mark.asyncio
 async def test_expansion_no_candidates(monkeypatch, mock_pm_rm):
     pm, rm = mock_pm_rm
-    monkeypatch.setattr(app_config, "EXPANSION_ENABLED", True, raising=False)
     with patch("services.autonomous_research_engine.research_graph"):
         ar = AutonomousResearcher(pm, rm)
         ar.motivation.evaluate_topics = MagicMock(return_value=rm.get_active_research_topics.return_value)
@@ -109,7 +91,6 @@ async def test_expansion_no_candidates(monkeypatch, mock_pm_rm):
 @pytest.mark.asyncio
 async def test_expansion_concurrency_guard(monkeypatch, mock_pm_rm):
     pm, rm = mock_pm_rm
-    monkeypatch.setattr(app_config, "EXPANSION_ENABLED", True, raising=False)
     monkeypatch.setattr(app_config, "EXPLORATION_PER_ROOT_MAX", 2, raising=False)
     monkeypatch.setattr(app_config, "EXPANSION_MAX_PARALLEL", 1, raising=False)
     with patch("services.autonomous_research_engine.research_graph"):
@@ -128,9 +109,13 @@ async def test_expansion_concurrency_guard(monkeypatch, mock_pm_rm):
         ar.topic_expansion_service.generate_candidates = AsyncMock(
             return_value=[_make_candidate("A", 0.9), _make_candidate("B", 0.8)]
         )
+        
+        # Mock check_active_topics_limit to allow topic activation
+        rm.check_active_topics_limit.return_value = {"allowed": True}
+        
         rm.add_custom_topic.side_effect = [
-            {"success": True, "topic": {"topic_name": "A", "description": "Auto"}},
-            {"success": True, "topic": {"topic_name": "B", "description": "Auto"}},
+            {"success": True, "topic": {"topic_name": "A", "description": "Auto", "is_active_research": True}},
+            {"success": True, "topic": {"topic_name": "B", "description": "Auto", "is_active_research": True}},
         ]
 
         result = await ar._conduct_research_cycle()

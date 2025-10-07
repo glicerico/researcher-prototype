@@ -314,7 +314,7 @@ class TestAutonomousResearchLoop:
         autonomous_researcher.check_interval = 0.1
         
         # Mock the research cycle to return quickly
-        autonomous_researcher._conduct_research_cycle = AsyncMock(return_value={"average_quality": 0.7})
+        autonomous_researcher._conduct_research_cycle = AsyncMock(return_value={"topics_researched": 1, "average_quality": 0.7})
         
         # Start and let it run one cycle
         await autonomous_researcher.start()

@@ -310,8 +310,9 @@ class AutonomousResearcher:
                                         )
                                         for cand in selected:
                                             # Use description from LLM expansion selection (if available)
-                                            if cand.description:
-                                                desc = cand.description
+                                            desc_from_llm = getattr(cand, 'description', None)
+                                            if desc_from_llm:
+                                                desc = desc_from_llm
                                                 logger.debug(f"🔬 Using LLM description for '{cand.name}': {desc[:100]}...")
                                             else:
                                                 desc = f"Research into {cand.name.lower()} and its relationship to {root_name.lower()}"

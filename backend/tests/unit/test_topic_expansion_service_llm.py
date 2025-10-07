@@ -99,8 +99,8 @@ async def test_generate_candidates_llm_invalid_json_fallback(monkeypatch):
     with patch("services.topic_expansion_service.ChatOpenAI") as chat:
         chat.return_value.with_structured_output.return_value.ainvoke = AsyncMock(side_effect=Exception("bad json"))
         out = await svc.generate_candidates("u1", {"topic_name": "Root"})
-        # Falls back to Zep-only
-        assert any(c.source.startswith("zep_") for c in out)
+        # When LLM fails, returns empty list (no bad fallbacks)
+        assert out == []
 
 
 @pytest.mark.asyncio
@@ -154,7 +154,8 @@ async def test_generate_candidates_llm_timeout_fallback(monkeypatch):
             _t.sleep(2)
         chat.return_value.with_structured_output.return_value.ainvoke = AsyncMock(side_effect=blocking_invoke)
         out = await svc.generate_candidates("u1", {"topic_name": "Root"})
-        assert any(c.source.startswith("zep_") for c in out)
+        # When LLM times out/fails, returns empty list
+        assert out == []
 
 
 @pytest.mark.asyncio

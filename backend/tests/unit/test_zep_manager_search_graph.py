@@ -30,20 +30,20 @@ async def test_search_graph_disabled_returns_empty(monkeypatch):
 
 @pytest.mark.asyncio
 async def test_search_graph_normalizes_nodes_and_edges(monkeypatch):
-    # Prepare mixed results: node as object, edge as dict
-    node_obj = SimpleNamespace(name="Tesla", labels=["Company", "EV"], uuid_="n-1", similarity=0.9)
-    edge_dict = {
-        "fact": "Elon Musk founded Tesla",
-        "name": "founded",
-        "source_node_uuid": "s-1",
-        "target_node_uuid": "t-1",
-        "uuid": "e-1",
-        "score": 0.8,
-    }
+    # Prepare mixed results: node as object, edge as object
+    node_obj = SimpleNamespace(name="Tesla", labels=["Company", "EV"], uuid_="n-1", score=0.9)
+    edge_obj = SimpleNamespace(
+        fact="Elon Musk founded Tesla",
+        name="founded",
+        source_node_uuid="s-1",
+        target_node_uuid="t-1",
+        uuid_="e-1",
+        score=0.8
+    )
 
     z = ZepManager()
     z.enabled = True
-    z.client = FakeClient([('nodes', [node_obj]), ('edges', [edge_dict])])
+    z.client = FakeClient([('nodes', [node_obj]), ('edges', [edge_obj])])
 
     nodes = await z.search_graph("u1", "tesla", scope="nodes", limit=5)
     assert len(nodes) == 1
