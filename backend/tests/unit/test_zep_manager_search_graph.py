@@ -43,7 +43,7 @@ async def test_search_graph_normalizes_nodes_and_edges(monkeypatch):
 
     z = ZepManager()
     z.enabled = True
-    z.client = FakeClient([node_obj, edge_dict])
+    z.client = FakeClient([('nodes', [node_obj]), ('edges', [edge_dict])])
 
     nodes = await z.search_graph("u1", "tesla", scope="nodes", limit=5)
     assert len(nodes) == 1
