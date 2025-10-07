@@ -54,7 +54,6 @@ def _clamp_int(v: int, lo: int = 0, hi: int = 1_000_000) -> int:
 EXPANSION_MAX_PARALLEL = _clamp_int(int(os.getenv("EXPANSION_MAX_PARALLEL", "2")), 1, 64)
 
 # Expansion LLM selection and augmentation - always enabled for quality
-# EXPANSION_LLM_ENABLED removed - LLM is always used for topic expansion
 EXPANSION_LLM_MODEL = os.getenv("EXPANSION_LLM_MODEL", "gpt-4o-mini")
 EXPANSION_LLM_CONFIDENCE_THRESHOLD = _clamp_float(float(os.getenv("EXPANSION_LLM_CONFIDENCE_THRESHOLD", "0.6")), 0.0, 1.0)
 EXPANSION_LLM_TIMEOUT_SECONDS = _clamp_int(int(os.getenv("EXPANSION_LLM_TIMEOUT_SECONDS", "30")), 1, 120)
