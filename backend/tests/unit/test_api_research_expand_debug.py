@@ -87,27 +87,3 @@ def test_expand_debug_invalid_root_topic_returns_error(client, monkeypatch):
         data = resp.json()
         assert data["success"] is False
         assert "Invalid root_topic.topic_name" in data["error"]
-
-
-def test_expand_debug_ignores_expansion_flag_when_false(client, monkeypatch):
-    # EXPANSION_ENABLED=false should not block debug endpoint
-    monkeypatch.setattr(app_config, "EXPANSION_ENABLED", False, raising=False)
-    monkeypatch.setattr(app_config, "ZEP_ENABLED", True, raising=False)
-
-    with patch("api.research.zep_manager") as zm, patch("api.research.research_manager") as rm, patch(
-        "api.research.TopicExpansionService"
-    ) as svc_cls:
-        zm.is_enabled.return_value = True
-
-        svc = MagicMock()
-        svc.generate_candidates = AsyncMock(
-            return_value=[type("C", (), {"name": "Topic A", "source": "zep_node", "similarity": 0.9, "rationale": "related KG node"})(),]
-        )
-        svc_cls.return_value = svc
-
-        body = {"root_topic": {"topic_name": "Root"}}
-        resp = client.post("/api/research/debug/expand/u1", json=body)
-        assert resp.status_code == 200
-        data = resp.json()
-        assert data["success"] is True
-        assert data["candidates"][0]["name"] == "Topic A"

@@ -51,7 +51,9 @@ def mock_research_graph():
 @pytest.fixture
 def autonomous_researcher(mock_profile_manager, mock_research_manager):
     """Create an AutonomousResearcher with mocked dependencies."""
-    with patch('services.autonomous_research_engine.research_graph') as mock_graph:
+    with patch('services.autonomous_research_engine.research_graph') as mock_graph, \
+         patch('services.autonomous_research_engine.TopicExpansionService') as mock_expansion:
+        
         mock_graph.ainvoke = AsyncMock(return_value={
             "module_results": {
                 "research_storage": {
@@ -64,8 +66,14 @@ def autonomous_researcher(mock_profile_manager, mock_research_manager):
             }
         })
         
+        # Mock topic expansion service to return no candidates
+        mock_expansion_instance = AsyncMock()
+        mock_expansion_instance.generate_candidates.return_value = []
+        mock_expansion.return_value = mock_expansion_instance
+        
         researcher = AutonomousResearcher(mock_profile_manager, mock_research_manager)
         researcher.research_graph = mock_graph
+        researcher.topic_expansion_service = mock_expansion_instance
         return researcher
 
 
@@ -306,7 +314,7 @@ class TestAutonomousResearchLoop:
         autonomous_researcher.check_interval = 0.1
         
         # Mock the research cycle to return quickly
-        autonomous_researcher._conduct_research_cycle = AsyncMock(return_value={"average_quality": 0.7})
+        autonomous_researcher._conduct_research_cycle = AsyncMock(return_value={"topics_researched": 1, "average_quality": 0.7})
         
         # Start and let it run one cycle
         await autonomous_researcher.start()

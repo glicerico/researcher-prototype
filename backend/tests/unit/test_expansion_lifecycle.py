@@ -95,7 +95,6 @@ async def test_lifecycle_retire_after_ttl(monkeypatch, pm_rm):
 @pytest.mark.asyncio
 async def test_depth_and_backoff_gate(monkeypatch, pm_rm):
     pm, rm = pm_rm
-    monkeypatch.setattr(app_config, "EXPANSION_ENABLED", True, raising=False)
     monkeypatch.setattr(app_config, "EXPANSION_MAX_DEPTH", 1, raising=False)
     with patch("services.autonomous_research_engine.research_graph"):
         ar = AutonomousResearcher(pm, rm)
@@ -115,7 +114,6 @@ async def test_depth_and_backoff_gate(monkeypatch, pm_rm):
 @pytest.mark.asyncio
 async def test_gating_only_affects_expansions(monkeypatch, pm_rm):
     pm, rm = pm_rm
-    monkeypatch.setattr(app_config, "EXPANSION_ENABLED", True, raising=False)
     with patch("services.autonomous_research_engine.research_graph"):
         ar = AutonomousResearcher(pm, rm)
         root = {"topic_name": "Root", "is_expansion": False}
