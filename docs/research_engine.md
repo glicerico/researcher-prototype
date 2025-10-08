@@ -15,7 +15,7 @@ The **autonomous research engine** runs in the background, gathering high-qualit
 3. **Topic expansion** – the system automatically discovers related topics using knowledge graph analysis and AI selection (requires Zep).
 4. **Intelligent motivation model** – hierarchical system with global drives (boredom/curiosity/tiredness/satisfaction) that gate overall research activity, plus per-topic evaluation that prioritizes which specific topics to research based on staleness, user engagement, and success rates.
 5. **Graph workflow** – the research LangGraph (`research_graph_builder.py`) runs: initialization ➜ query generation ➜ source selection ➜ multi-source search coordination ➜ integration ➜ quality scoring ➜ deduplication ➜ storage.
-6. **Review** – findings appear in the sidebar with summary, quality bars & source links.
+6. **Review** – findings appear in the results dashboard with summary, quality bars & source links.
 
 ## Multi-Source Search Architecture
 
@@ -34,7 +34,7 @@ For search queries, the system automatically selects up to 3 relevant sources:
 - **Social Search** (`social_search`): Community discussions via Hacker News API
 - **Medical Search** (`medical_search`): Medical literature via PubMed
 
-### Parallel Execution
+### Parallel Source Exploration
 The `source_coordinator_node` executes selected search sources concurrently using LangGraph's fan-out/fan-in pattern, then the `integrator_node` synthesizes results from all successful sources while gracefully handling any failures.
 
 ## Autonomous Research Multi-Source Flow
@@ -126,7 +126,7 @@ stateDiagram-v2
     Researching --> Idle : "research complete<br/>satisfaction ↑, tiredness ↑"
     
     note right of Idle : "• Global drives accumulate/decay<br/>• Topic staleness increases"
-    note right of TopicEval : "• Evaluate each topic:<br/>  staleness + engagement + quality<br/>• Sort by priority"
+    note right of TopicEval : "• Evaluate each topic's<br/>  staleness + engagement + quality<br/>• Sort by priority"
     note right of Researching : "• Research highest priority topics<br/>• Update engagement data"
 ```
 
